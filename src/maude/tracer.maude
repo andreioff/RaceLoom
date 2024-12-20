@@ -1,0 +1,92 @@
+load /home/andrei/Desktop/Master/_Final_Project/Tracer/src/maude/dnk_vc.maude
+
+fmod MAP_UTIL{X :: TRIV, Y :: TRIV} is
+  protecting NAT .
+  protecting MAP {X, Y} .
+
+  op mapLength_ : Map {X, Y} -> Nat .
+
+  var I : X$Elt .
+  var E : Y$Elt .
+  var M : Map {X, Y} .
+
+  eq mapLength empty = 0 .
+  eq mapLength ((I |-> E) , M) = s(mapLength M) .
+endfm
+
+fmod TRACER_UTIL is 
+  protecting STRING .
+	protecting MAP_UTIL {Nat, String} * (sort Map {Nat, String} to SwMap) .
+
+  op concatSws_ : SwMap -> String .
+  op network__ : SwMap String -> String [gather (E e)].
+  op bigSwitch__ : SwMap String -> String [gather (E e)].
+
+  var Sws : SwMap .
+  var I : Nat .
+  vars L, X : String .
+
+  eq concatSws empty = "" .
+  eq concatSws (I |-> X , empty) = X .
+  eq concatSws (I |-> X , Sws) = X + "+" + concatSws Sws .
+
+  eq network Sws L = "(" + (concatSws Sws) + ") . " + L .
+  eq bigSwitch Sws L = (network Sws L) + " . (" + (network Sws L) + ")*" .
+endfm
+
+fmod TRACER is
+	protecting RECURSIVE-DNA .
+  protecting TRACER_UTIL .
+  --- protecting MAP_UTIL {Nat, DNA} * (sort Map {Nat, DNA} to Controllers) .
+  protecting MAP_UTIL {Nat, DNA_VC} * (sort Map {Nat, DNA_VC} to Controllers) .
+
+  ---op parallelJoin___ : DNA Controllers Nat -> DNA_VC [gather (e E e)].
+  op parallelJoin__ : DNA_VC Controllers -> DNA_VC [gather (e E)].
+
+  --- Operator with special hook. Works only with the Python package Maude.
+  --- More details here: https://github.com/fadoss/maude-bindings
+  op NetKATToNF : String -> String [special (
+      id-hook SpecialHubSymbol
+  )] .
+
+	---op tracer{_}(_,_) : Nat DNA Controllers -> DNA_VC [gather (e e E e)].
+	op tracer{_}(_,_) : Nat DNA_VC Controllers -> DNA_VC [gather (e e E)].
+
+  var Cs : Controllers . 
+  vars BSw C : DNA_VC .
+  var N VCSize : Nat .
+
+  --- eq parallelJoin BSw empty VCSize = withVC(BSw, (newVC VCSize), 0) .
+  --- eq parallelJoin BSw (N |-> C , Cs) VCSize = (parallelJoin BSw Cs VCSize) || withVC(C, (newVC VCSize), s(N)) .
+  eq parallelJoin BSw empty = BSw .
+  eq parallelJoin BSw (N |-> C , Cs) = (parallelJoin BSw Cs) || C .
+
+  --- TODO Maybe apply the delta operator as well for transitions of type (X ! P) or (X ? P)
+  --- i.e., those transitions where the switch and the controller do not sync to produce an rcfg
+  --- eq tracer{N}(BSw, Cs) = pi{N}(parallelJoin BSw Cs s(mapLength Cs)) .
+  eq tracer{N}(BSw, Cs) = pi{N}(parallelJoin BSw Cs) .
+
+endfm
+
+fmod TESTING is
+  protecting NAT .
+  protecting STRING .
+  protecting TRACER .
+  protecting VECTOR_CLOCK .
+
+  op SDN_ : SwMap -> DNA .
+  op C0 : -> DNA .
+  op Link : -> String .
+	op Up0 : -> Channel .
+
+  var Sws : SwMap .
+  var VC : VClock .
+  var I : Nat .
+
+  eq Link = "(p=3).(p<-0) + (p=1).(p<-15)" .
+  --- TODO: INSERT HERE THE CALL TO NetKATToNF to process the big switch notation
+  eq getRecPol(withVC(SDN Sws, VC, I)) = withVC((bigSwitch Sws "") ; SDN Sws, VC, I) o+
+                          withVC((Up0 ? "test0") ; SDN insert(0, "test0", Sws), VC, I) .
+  
+  eq getRecPol(withVC(C0, VC, I)) = withVC((Up0 ! "test0") ; C0, VC, I) .
+endfm

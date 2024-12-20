@@ -1,0 +1,167 @@
+---- Copyright (c) 2021 University of Konstanz
+---- 
+---- Permission is hereby granted, free of charge, to any person obtaining a copy
+---- of this software and associated documentation files (the "Software"), to deal
+---- in the Software without restriction, including without limitation the rights
+---- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+---- copies of the Software, and to permit persons to whom the Software is
+---- furnished to do so, subject to the following conditions:
+---- 
+---- The above copyright notice and this permission notice shall be included in all
+---- copies or substantial portions of the Software.
+---- 
+---- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+---- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+---- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+---- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+---- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+---- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+---- SOFTWARE.
+
+fmod VECTOR_CLOCK is 
+	protecting MAP {Nat, Nat} * (sort Map {Nat, Nat} to VClock) .
+  
+  op newVC_ : Nat -> VClock .
+  op inc__ : VClock Nat -> VClock [gather (E e)] .
+
+  op maxVC(_, _) : VClock VClock -> VClock .
+
+  vars VC1 VC2 : VClock .
+  vars N I J X : Nat .
+
+  eq (newVC 0) = empty .
+  eq (newVC s(N)) = insert(N, 0, (newVC N)) .
+
+  ceq (inc VC1 I) = insert(I, s(VC1[I]), VC1) if not VC1[I] == undefined .
+
+  
+  ---- Returns a new vector clock with the maximum values of all common entries of the two given vector clocks
+  ---- Example: maxVC((0 |-> 1, 1 |-> 3, 2 |-> 4),
+  ----                (0 |-> 2, 2 |-> 2, 4 |-> 5)) reduces to (0 |-> 2, 2 |-> 4)
+
+  eq maxVC(VC1, empty) = empty .
+  eq maxVC(empty, VC2) = empty .
+  eq maxVC((I |-> X, VC1), VC2)
+    = if VC2[I] =/= undefined
+      then insert(I, max(X, VC2[I]), maxVC(VC1, VC2))
+      else maxVC(VC1, VC2)
+      fi .
+endfm
+
+fmod COMM is
+	protecting STRING .
+	sorts Comm Channel .
+
+	op _?_ : Channel String -> Comm .
+	op _!_ : Channel String -> Comm .
+endfm
+
+view Comm from TRIV to COMM is
+	sort Elt to Comm .
+endv
+
+fmod DNA is
+	protecting COMM .
+	protecting TRUTH-VALUE .
+  protecting VECTOR_CLOCK .
+
+	sorts DNA Recursive UnguardedTerm DNA_VC .
+	subsort Recursive < UnguardedTerm < DNA_VC .
+
+  op withVC(_, _, _) : DNA VClock Nat -> DNA_VC .
+
+	op _o+_ : DNA_VC DNA_VC -> DNA_VC [ctor comm assoc metadata "nondeterministic choice" prec 43] .
+	op _;_ : String DNA -> DNA [ctor metadata "sequential composition" prec 40 gather (E e)] .
+	op _;_ : Comm DNA -> DNA [ctor metadata "sequential composition" prec 40 gather (E e)] .
+	op _;_ : DNA_VC DNA_VC -> DNA_VC [ctor metadata "sequential composition" prec 40 gather (E e)] .
+	op _||_ : DNA_VC DNA_VC -> DNA_VC [ctor comm metadata "parallel composition" prec 42 gather (E e)] .
+	op _|_ : DNA_VC DNA_VC -> DNA_VC [ctor comm prec 42 gather (E e)] .
+	op _||<_ : DNA_VC DNA_VC -> DNA_VC [ctor metadata "left merge" prec 42 gather (e E)] .
+
+	op bot : -> DNA .
+	op rcfg(_,_) : Channel String -> Comm .
+	op pi{_}(_) : Nat DNA_VC -> DNA_VC .
+
+	vars M I J : Nat .
+	var X : Channel .
+	vars P Q R : DNA_VC .
+	var U V : DNA .
+  vars VC1 VC2 : VClock .
+	vars N Z : String .
+
+	op zero : -> String .
+
+	eq [A0] : withVC((zero ; U), VC1, I) = withVC(bot, (inc VC1 I), I) .
+
+	eq [A1] : withVC((N + Z) ; U, VC1, I) = withVC(N ; U, VC1, I) o+ withVC(Z ; U, VC1, I) .
+	---A2: added comm to _o+_
+	---A3: added assoc to _o+_
+	eq [A4] : (P o+ P) = P .
+	eq [A5] : (P o+ withVC(bot, VC1, I)) = P .
+	---A6: added comm to _||_
+	---A?: added assoc to _||_
+	eq [A7] : (P || withVC(bot, VC1, I)) = P .
+	ceq [A8] : (P || Q) = (P ||< Q) o+ (Q ||< P) o+ (P | Q) if not (P :: Recursive) /\ not (P :: UnguardedTerm) /\ not (Q :: Recursive) /\ not (Q :: UnguardedTerm) .
+	eq [A9] : (withVC(bot, VC1, I) ||< P) = withVC(bot, VC1, I) .
+
+	eq [A10-netkat] : withVC(N ; U, VC1, I) ||< Q = withVC(N ; bot, (inc VC1 I), I) ; (withVC(U, (inc VC1 I), I) || Q) .
+	eq [A10-send] : withVC((X ! N) ; U, VC1, I) ||< R = (withVC((X ! N) ; bot, VC1, I) ; (withVC(U, VC1, I) || R)) .
+	eq [A10-receive] : withVC((X ? N) ; U, VC1, I) ||< R = (withVC((X ? N) ; bot, VC1, I) ; (withVC(U, VC1, I) || R)) .
+	eq [A10-rcfg] : withVC(rcfg(X, N) ; U, VC1, I) ||< R = (withVC(rcfg(X, N) ; bot, VC1, I) ; (withVC(U, VC1, I) || R)) .
+
+	eq [A11] : (P o+ Q) ||< R = (P ||< R) o+ (Q ||< R) .
+
+	eq [A12] : withVC((X ? N) ; U, VC1, I) | withVC((X ! N) ; V, VC2, J) = withVC(rcfg(X, N) ; bot, (inc maxVC(VC1, (inc VC2 J)) I), I) ; (withVC(U, (inc maxVC(VC1, (inc VC2 J)) I), I) || withVC(V, (inc VC2 J), J)) .
+	eq [A13] : (P o+ Q) | R = (P | R) o+ (Q | R) .
+	---A14: added comm to _|_
+	ceq [A15] : P | Q = withVC(bot, (newVC 0), 0) if not (P :: Recursive) /\ not (P :: UnguardedTerm) /\ not (Q :: Recursive) /\ not (Q :: UnguardedTerm) [owise] .
+
+  --- TODO Delta operator?
+
+	eq [PI-0] : pi{0}(withVC(U, VC1, I)) = withVC(bot, VC1, I) .
+	eq [PI-1] : pi{M}(withVC(bot, VC1, I)) = withVC(bot, VC1, I) .
+	eq [PI-netkat] : pi{s(M)}(withVC(N ; bot, VC1, I) ; Q) = withVC(N ; bot, VC1, I) ; pi{M}(Q) .
+
+	eq [PI-receive] : pi{s(M)}(withVC((X ? N) ; bot, VC1, I) ; Q) = withVC((X ? N) ; bot, VC1, I) ; pi{M}(Q) .
+	eq [PI-send] : pi{s(M)}(withVC((X ! N) ; bot, VC1, I) ; Q) = withVC((X ! N) ; bot, VC1, I) ; pi{M}(Q) .
+	eq [PI-rcfg] : pi{s(M)}(withVC(rcfg(X, N) ; bot, VC1, I) ; Q) = withVC(rcfg(X, N) ; bot, VC1, I) ; pi{M}(Q) .
+	eq [PI-plus] : pi{s(M)}(P o+ Q) = pi{s(M)}(P) o+ pi{s(M)}(Q) .
+
+
+	eq [cr-1] : P ||< withVC(bot, VC1, I) = P .
+endfm
+
+view DNA_VC from TRIV to DNA is
+  sort Elt to DNA_VC .
+endv
+
+fmod RECURSIVE-DNA is
+	protecting DNA .
+
+	var C : Comm .
+	var N : String .
+	var M : Nat .
+	vars P Q R : DNA_VC .
+
+	op getRecPol(_) : Recursive -> DNA_VC .
+	op unfold(_) : DNA_VC -> DNA_VC .
+	op notUnfolded(_) : DNA_VC -> Bool .
+
+
+	---unfolding the recursive variables at once is very inefficient.
+	---we perform the unfolding on the fly when it is necessary
+	---i.e. when the index of pi operator is still a positive integer
+	---and the execution cannot continue because the terms are not guarded.
+	
+	ceq unfold(P || Q) = unfold(P) || Q if (P :: UnguardedTerm) .
+	ceq unfold(P ||< Q) = unfold(P) ||< Q if (P :: UnguardedTerm) .
+	ceq unfold(P | Q) = unfold(P) | Q if (P :: UnguardedTerm) .
+	ceq unfold(P) = getRecPol(P) if (P :: Recursive) .
+
+	eq notUnfolded(unfold(P)) = false .
+	eq notUnfolded(P) = true [owise] .
+
+	ceq [rec-1] : pi{s(M)}(P) = pi{s(M)}(unfold(P)) if notUnfolded(P) [owise] .
+	cmb [rec-2] : P || Q : UnguardedTerm if ((P :: Recursive) or (P :: UnguardedTerm)) .
+	cmb [rec-3] : P ||< Q : UnguardedTerm if ((P :: Recursive) or (P :: UnguardedTerm)) .
+endfm

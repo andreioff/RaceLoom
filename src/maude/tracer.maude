@@ -34,48 +34,150 @@ fmod TRACER_UTIL is
   eq bigSwitch Sws L = (network Sws L) + " . (" + (network Sws L) + ")*" .
 endfm
 
-fmod TRACER is
-	protecting RECURSIVE-DNA .
-  protecting TRACER_UTIL .
-  --- protecting MAP_UTIL {Nat, DNA} * (sort Map {Nat, DNA} to Controllers) .
-  protecting MAP_UTIL {Nat, DNA_VC} * (sort Map {Nat, DNA_VC} to Controllers) .
 
-  ---op parallelJoin___ : DNA Controllers Nat -> DNA_VC [gather (e E e)].
-  op parallelJoin__ : DNA_VC Controllers -> DNA_VC [gather (e E)].
+fmod SYM_DNA is 
+  protecting DNA .
+  protecting VECTOR_CLOCK .
+  protecting MAP_UTIL {Nat, DNA} * (sort Map {Nat, DNA} to DNAMap) .
+  protecting LIST {DNA_VC} * (sort List {DNA_VC} to DNAVCList) .
+
+  op vc : DNA VClock Nat -> DNA_VC .
+
+	op _||_ : DNA_VC DNA_VC -> DNA_VC [ctor comm metadata "parallel composition" prec 42 gather (E e)] .
+	op _|_ : DNA_VC DNA_VC -> DNA_VC [ctor comm prec 42 gather (E e)] .
+	op _||<_ : DNA_VC DNA_VC -> DNA_VC [ctor metadata "left merge" prec 42 gather (e E)] .
+
+	op rd{_}(_,_) : Nat DNA_VC DNAVCList -> DNAVCList .
+
+  var Trace : DNAVCList . 
+  var X : Channel .
+  vars P Q : DNA_VC .
+  vars U V : DNA .
+  vars VC1 VC2 : VClock .
+  var D I J : Nat .
+  var N : String .
+
+  eq rd{0}(P, Trace) = nil .
+  eq rd{D}(vc(bot, VC1, I), Trace) = nil .
+	---A5: added comm to _||_
+	---A6: added assoc to _||_
+
+	--- eq [A7] : (P || bot) = P .
+  eq [A7] : rd{D}((P || vc(bot, VC1, I)), Trace) = rd{D}(P, Trace) .
+	--- ceq [A8] : (P || Q) = (P ||< Q) o+ (Q ||< P) o+ (P | Q) if not (P :: Recursive) /\ not (P :: UnguardedTerm) /\ not (Q :: Recursive) /\ not (Q :: UnguardedTerm) .
+  ceq [A8] : rd{D}((P || Q), Trace)
+    = if rd{D}((P ||< Q), Trace) =/= nil 
+    then rd{D}((P ||< Q), Trace)
+    else if rd{D}((Q ||< P), Trace) =/= nil
+      then rd{D}((Q ||< P), Trace)
+      else rd{D}((P | Q), Trace)
+      fi
+    fi if not (P :: RecursiveVC) /\ not (P :: UnguardedTerm) /\ not (Q :: RecursiveVC) /\ not (Q :: UnguardedTerm) .
+
+	--- eq [A9] : (bot ||< P) = bot .
+  eq [A9] : rd{D}((vc(bot, VC1, I) || P), Trace) = rd{D}(vc(bot, VC1, I), Trace) .
+
+	--- eq [A10-netkat] : (N ; P) ||< Q = N ; (P || Q) .
+  eq [A10-netkat] : rd{s(D)}((vc(N ; U, VC1, I) ||< Q), Trace) = rd{D}((vc(U, (inc VC1 I), I) || Q), append(Trace, vc(N ; bot, (inc VC1 I), I))) .
+	--- eq [A10-send] : ((X ! N) ; Q) ||< R = ((X ! N) ; (Q || R)) .
+  eq [A10-send] : rd{s(D)}((vc((X ! N) ; U, VC1, I) ||< Q), Trace) = rd{D}((vc(U, VC1, I) || Q), Trace) . ---- Sending alone does not count in the trace
+	--- eq [A10-receive] : ((X ? N) ; Q) ||< R = ((X ? N) ; (Q || R)) .
+  eq [A10-receive] : rd{s(D)}((vc((X ? N) ; U, VC1, I) ||< Q), Trace) = rd{D}((vc(U, VC1, I) || Q), Trace) . ---- Receiving alone does not count in the trace
+	--- eq [A10-rcfg] : ((rcfg(X, N)) ; Q) ||< R = ((rcfg(X, N)) ; (Q || R)) .
+  --- A12 appends the rcfg directly to the trace, so A10-rcfg is not needed anymore
+
+	--- eq [A11] : (P o+ Q) ||< R = (P ||< R) o+ (Q ||< R) .
+  eq [A11] : rd{D}((vc(U o+ V, VC1, I) ||< Q), Trace)
+    = if rd{D}((vc(U, VC1, I) ||< Q), Trace) =/= nil
+    then rd{D}((vc(U, VC1, I) ||< Q), Trace)
+    else rd{D}((vc(V, VC1, I) ||< Q), Trace)
+    fi .
+
+	--- eq [A12] : ((X ? N) ; Q) | ((X ! N) ; R) = (rcfg(X, N)) ; (Q || R) .
+  eq [A12] : rd{s(D)}((vc((X ? N) ; U, VC1, I) | vc((X ! N) ; V, VC2, J)), Trace) = rd{D}((vc(U, VC1, I) || vc(V, VC2, J)), append(Trace,
+                                                                                        vc(rcfg(X, N) ; bot, (inc maxVC(VC1, (inc VC2 J)) I), I))) .
+
+	--- eq [A13] : (P o+ Q) | R = (P | R) o+ (Q | R) .
+  eq [A13] : rd{D}((vc(U o+ V, VC1, I) | Q), Trace)
+    = if rd{D}((vc(U, VC1, I) | Q), Trace) =/= nil
+    then rd{D}((vc(U, VC1, I) | Q), Trace)
+    else rd{D}((vc(V, VC1, I) | Q), Trace)
+    fi .
+
+	---A14: added comm to _|_
+
+	--- ceq [A15] : P | Q = bot if not (P :: Recursive) /\ not (P :: UnguardedTerm) /\ not (Q :: Recursive) /\ not (Q :: UnguardedTerm) [owise] .
+	ceq [A15] : rd{D}((P | Q), Trace) = nil if not (P :: RecursiveVC) /\ not (P :: UnguardedTerm) /\ not (Q :: RecursiveVC) /\ not (Q :: UnguardedTerm) .
+
+	--- eq [cr-1] : P ||< bot = P .
+  eq [cr-1] : rd{D}((P ||< vc(bot, VC1, I)), Trace) = rd{D}(P, Trace) .
+endfm
+
+fmod RECURSIVE_SYM_DNA is
+	protecting SYM_DNA .
+
+  var Trace : DNAVCList . 
+	var C : Comm .
+	var N : String .
+  var D I : Nat .
+	vars P Q : DNA_VC .
+  var U : DNA .
+  var VC : VClock .
+
+	op getRecPol(_) : Recursive -> DNA .
+	op unfold(_) : DNA_VC -> DNA_VC .
+	op notUnfolded(_) : DNA_VC -> Bool .
+
+
+	---unfolding the recursive variables at once is very inefficient.
+	---we perform the unfolding on the fly when it is necessary
+	---i.e. when the index of pi operator is still a positive integer
+	---and the execution cannot continue because the terms are not guarded.
+	
+	ceq unfold(P || Q) = (unfold(P) || Q) if (P :: UnguardedTerm) .
+	ceq unfold(P ||< Q) = (unfold(P) ||< Q) if (P :: UnguardedTerm) .
+	ceq unfold(P | Q) = (unfold(P) | Q) if (P :: UnguardedTerm) .
+	ceq unfold(vc(U, VC, I)) = vc(getRecPol(U), VC, I) if (U :: Recursive) .
+
+	eq notUnfolded(unfold(P)) = false .
+	eq notUnfolded(P) = true [owise] .
+
+	ceq [rec-1] : rd{s(D)}(P, Trace) = rd{s(D)}(unfold(P), Trace) if notUnfolded(P) [owise] .
+	cmb [rec-2] : (P || Q) : UnguardedTerm if ((P :: RecursiveVC) or (P :: UnguardedTerm)) .
+	cmb [rec-3] : (P ||< Q) : UnguardedTerm if ((P :: RecursiveVC) or (P :: UnguardedTerm)) .
+  cmb [rec-4] : vc(U, VC, I) : RecursiveVC if (U :: Recursive) .
+endfm
+
+fmod TRACER is
+	protecting RECURSIVE_SYM_DNA .
+  protecting TRACER_UTIL .
 
   --- Operator with special hook. Works only with the Python package Maude.
   --- More details here: https://github.com/fadoss/maude-bindings
   op NetKATToNF : String -> String [special (
       id-hook SpecialHubSymbol
   )] .
+  
+  op parallelJoin___ : DNA DNAMap Nat -> DNA_VC .
+	op tracer{_}(_,_) : Nat DNA DNAMap -> DNAVCList [gather (e e E)] .
 
-	---op tracer{_}(_,_) : Nat DNA Controllers -> DNA_VC [gather (e e E e)].
-	op tracer{_}(_,_) : Nat DNA_VC Controllers -> DNA_VC [gather (e e E)].
-
-  var Cs : Controllers . 
-  vars BSw C : DNA_VC .
+  vars Cs : DNAMap . 
+  vars BSw C : DNA .
   var N VCSize : Nat .
 
-  --- eq parallelJoin BSw empty VCSize = withVC(BSw, (newVC VCSize), 0) .
-  --- eq parallelJoin BSw (N |-> C , Cs) VCSize = (parallelJoin BSw Cs VCSize) || withVC(C, (newVC VCSize), s(N)) .
-  eq parallelJoin BSw empty = BSw .
-  eq parallelJoin BSw (N |-> C , Cs) = (parallelJoin BSw Cs) || C .
+  eq parallelJoin BSw empty VCSize = vc(BSw, (newVC VCSize), 0) .
+  eq parallelJoin BSw (N |-> C , Cs) VCSize = ((parallelJoin BSw Cs VCSize) || vc(C, (newVC VCSize), s(N))) .
 
-  --- TODO Maybe apply the delta operator as well for transitions of type (X ! P) or (X ? P)
-  --- i.e., those transitions where the switch and the controller do not sync to produce an rcfg
-  --- eq tracer{N}(BSw, Cs) = pi{N}(parallelJoin BSw Cs s(mapLength Cs)) .
-  eq tracer{N}(BSw, Cs) = pi{N}(parallelJoin BSw Cs) .
+  eq tracer{N}(BSw, Cs) = rd{N}((parallelJoin BSw Cs s(mapLength(Cs))), nil) .
 
 endfm
 
 fmod TESTING is
-  protecting NAT .
-  protecting STRING .
   protecting TRACER .
   protecting VECTOR_CLOCK .
 
-  op SDN_ : SwMap -> DNA .
-  op C0 : -> DNA .
+  op SDN_ : SwMap -> Recursive .
+  op C0 : -> Recursive .
   op Link : -> String .
 	op Up0 : -> Channel .
 
@@ -84,9 +186,10 @@ fmod TESTING is
   var I : Nat .
 
   eq Link = "(p=3).(p<-0) + (p=1).(p<-15)" .
+
   --- TODO: INSERT HERE THE CALL TO NetKATToNF to process the big switch notation
-  eq getRecPol(withVC(SDN Sws, VC, I)) = withVC((bigSwitch Sws "") ; SDN Sws, VC, I) o+
-                          withVC((Up0 ? "test0") ; SDN insert(0, "test0", Sws), VC, I) .
+  eq getRecPol(SDN Sws) = (bigSwitch Sws "") ; SDN Sws o+
+                          (Up0 ? "test0") ; SDN insert(0, "test0", Sws) .
   
-  eq getRecPol(withVC(C0, VC, I)) = withVC((Up0 ! "test0") ; C0, VC, I) .
+  eq getRecPol(C0) = (Up0 ! "test0") ; C0 .
 endfm

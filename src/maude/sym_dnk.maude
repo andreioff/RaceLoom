@@ -1,99 +1,100 @@
 load dnk_vc.maude
 
-fmod MAP_UTIL{X :: TRIV, Y :: TRIV} is
-  protecting NAT .
-  protecting MAP {X, Y} .
+fmod DNA_VC_MAP is
+  protecting VECTOR_CLOCK_MAP .
+  protecting DNA .
 
-  op mapLength_ : Map {X, Y} -> Nat .
+  sort DNA_VC_MAP .
 
-  var I : X$Elt .
-  var E : Y$Elt .
-  var M : Map {X, Y} .
+  --- DNA term + map of vector clocks
+  op dnaVCMap(_,_) : DNA VCMap -> DNA_VC_MAP .
 
-  eq mapLength empty = 0 .
-  eq mapLength ((I |-> E) , M) = s(mapLength M) .
+  --- DNA term + key of corresponding vector clock in a map
+  op vc : DNA Nat -> DNA_VC .
 endfm
 
-fmod SYM_DNA is 
-  protecting DNA .
-  protecting VECTOR_CLOCK .
-  protecting MAP_UTIL {Nat, DNA} * (sort Map {Nat, DNA} to DNAMap) .
-  protecting LIST {DNA_VC} * (sort List {DNA_VC} to DNAVCList) .
+view DNA_VC_MAP from TRIV to DNA_VC_MAP is
+  sort Elt to DNA_VC_MAP .
+endv
 
-  op vc : DNA VClock Nat -> DNA_VC .
+fmod SYM_DNA is 
+  protecting DNA_VC_MAP .
+  protecting LIST {DNA_VC_MAP} * (sort List {DNA_VC_MAP} to DNAVCList) .
 
 	op _||_ : DNA_VC DNA_VC -> DNA_VC [ctor comm metadata "parallel composition" prec 42 gather (E e)] .
 	op _|_ : DNA_VC DNA_VC -> DNA_VC [ctor comm prec 42 gather (E e)] .
 	op _||<_ : DNA_VC DNA_VC -> DNA_VC [ctor metadata "left merge" prec 42 gather (e E)] .
 
-	op rd{_}(_,_) : Nat DNA_VC DNAVCList -> DNAVCList .
+	op rd{_}(_,_,_) : Nat DNA_VC VCMap DNA_VC_MAP -> DNAVCList .
 
   var Trace : DNAVCList . 
+  var VCs : VCMap .
   var X : Channel .
   vars P Q : DNA_VC .
   vars U V : DNA .
-  vars VC1 VC2 : VClock .
   var D I J : Nat .
   var N : String .
 
-  eq rd{0}(P, Trace) = nil .
-  eq rd{D}(vc(bot, VC1, I), Trace) = nil .
+  eq rd{0}(P, VCs, Trace) = nil .
+  eq rd{D}(vc(bot, I), VCs, Trace) = nil .
 	---A5: added comm to _||_
 	---A6: added assoc to _||_
 
 	--- eq [A7] : (P || bot) = P .
-  eq [A7] : rd{D}((P || vc(bot, VC1, I)), Trace) = rd{D}(P, Trace) .
+  eq [A7] : rd{D}((P || vc(bot, I)), VCs, Trace) = rd{D}(P, VCs, Trace) .
 
 	--- ceq [A8] : (P || Q) = (P ||< Q) o+ (Q ||< P) o+ (P | Q) if not (P :: Recursive) /\ not (P :: UnguardedTerm) /\ not (Q :: Recursive) /\ not (Q :: UnguardedTerm) .
-  ceq [A8] : rd{D}((P || Q), Trace)
-    = if rd{D}((P ||< Q), Trace) =/= nil 
-    then rd{D}((P ||< Q), Trace)
-    else if rd{D}((Q ||< P), Trace) =/= nil
-      then rd{D}((Q ||< P), Trace)
-      else rd{D}((P | Q), Trace)
+  ceq [A8] : rd{D}((P || Q), VCs, Trace)
+    = if rd{D}((P ||< Q), VCs, Trace) =/= nil 
+    then rd{D}((P ||< Q), VCs, Trace)
+    else if rd{D}((Q ||< P), VCs, Trace) =/= nil
+      then rd{D}((Q ||< P), VCs, Trace)
+      else rd{D}((P | Q), VCs, Trace)
       fi
     fi if not (P :: RecursiveVC) /\ not (P :: UnguardedTerm) /\ not (Q :: RecursiveVC) /\ not (Q :: UnguardedTerm) .
 
 	--- eq [A9] : (bot ||< P) = bot .
-  eq [A9] : rd{D}((vc(bot, VC1, I) || P), Trace) = rd{D}(vc(bot, VC1, I), Trace) .
+  eq [A9] : rd{D}((vc(bot, I) || P), VCs, Trace) = rd{D}(vc(bot, I), VCs, Trace) .
 
 	--- eq [A10-netkat] : (N ; P) ||< Q = N ; (P || Q) .
-  eq [A10-netkat] : rd{s(D)}((vc(N ; U, VC1, I) ||< Q), Trace) = rd{D}((vc(U, (inc VC1 I), I) || Q), append(Trace, vc(N ; bot, (inc VC1 I), I))) .
+  eq [A10-netkat] : rd{s(D)}((vc(N ; U, I) ||< Q), VCs, Trace) = rd{D}((vc(U, I) || Q), inc(VCs, I), append(Trace, dnaVCMap(N ; bot, inc(VCs, I)))) .
 
 	--- eq [A10-send] : ((X ! N) ; Q) ||< R = ((X ! N) ; (Q || R)) .
-  eq [A10-send] : rd{s(D)}((vc((X ! N) ; U, VC1, I) ||< Q), Trace) = rd{D}((vc(U, VC1, I) || Q), Trace) . ---- Sending alone does not count in the trace
+  eq [A10-send] : rd{s(D)}((vc((X ! N) ; U, I) ||< Q), VCs, Trace) = rd{D}((vc(U, I) || Q), VCs, Trace) . ---- Sending alone does not count in the trace
 
 	--- eq [A10-receive] : ((X ? N) ; Q) ||< R = ((X ? N) ; (Q || R)) .
-  eq [A10-receive] : rd{s(D)}((vc((X ? N) ; U, VC1, I) ||< Q), Trace) = rd{D}((vc(U, VC1, I) || Q), Trace) . ---- Receiving alone does not count in the trace
+  eq [A10-receive] : rd{s(D)}((vc((X ? N) ; U, I) ||< Q), VCs, Trace) = rd{D}((vc(U, I) || Q), VCs, Trace) . ---- Receiving alone does not count in the trace
 
 	--- eq [A10-rcfg] : ((rcfg(X, N)) ; Q) ||< R = ((rcfg(X, N)) ; (Q || R)) .
   --- A12 appends the rcfg directly to the trace, so A10-rcfg is not needed anymore
 
 	--- eq [A11] : (P o+ Q) ||< R = (P ||< R) o+ (Q ||< R) .
-  eq [A11] : rd{D}((vc(U o+ V, VC1, I) ||< Q), Trace)
-    = if rd{D}((vc(U, VC1, I) ||< Q), Trace) =/= nil
-    then rd{D}((vc(U, VC1, I) ||< Q), Trace)
-    else rd{D}((vc(V, VC1, I) ||< Q), Trace)
+  eq [A11] : rd{D}((vc(U o+ V, I) ||< Q), VCs, Trace)
+    = if rd{D}((vc(U, I) ||< Q), VCs, Trace) =/= nil
+    then rd{D}((vc(U, I) ||< Q), VCs, Trace)
+    else rd{D}((vc(V, I) ||< Q), VCs, Trace)
     fi .
 
 	--- eq [A12] : ((X ? N) ; Q) | ((X ! N) ; R) = (rcfg(X, N)) ; (Q || R) .
-  eq [A12] : rd{s(D)}((vc((X ? N) ; U, VC1, I) | vc((X ! N) ; V, VC2, J)), Trace) = rd{D}((vc(U, VC1, I) || vc(V, VC2, J)), append(Trace,
-                                                                                        vc(rcfg(X, N) ; bot, (inc maxVC(VC1, (inc VC2 J)) I), I))) .
+  eq [A12] : rd{s(D)}((vc((X ? N) ; U, I) | vc((X ! N) ; V, J)), VCs, Trace) = rd{D}((vc(U, I) || vc(V, J)),
+                                                                                     transferVC(VCs, J, I),
+                                                                                     append(Trace, dnaVCMap(rcfg(X, N) ; bot, transferVC(VCs, J, I)))
+                                                                                    ) .
 
 	--- eq [A13] : (P o+ Q) | R = (P | R) o+ (Q | R) .
-  eq [A13] : rd{D}((vc(U o+ V, VC1, I) | Q), Trace)
-    = if rd{D}((vc(U, VC1, I) | Q), Trace) =/= nil
-    then rd{D}((vc(U, VC1, I) | Q), Trace)
-    else rd{D}((vc(V, VC1, I) | Q), Trace)
+  eq [A13] : rd{D}((vc(U o+ V, I) | Q), VCs, Trace)
+    = if rd{D}((vc(U, I) | Q), VCs, Trace) =/= nil
+    then rd{D}((vc(U, I) | Q), VCs, Trace)
+    else rd{D}((vc(V, I) | Q), VCs, Trace)
     fi .
 
 	---A14: added comm to _|_
 
 	--- ceq [A15] : P | Q = bot if not (P :: Recursive) /\ not (P :: UnguardedTerm) /\ not (Q :: Recursive) /\ not (Q :: UnguardedTerm) [owise] .
-	ceq [A15] : rd{D}((P | Q), Trace) = nil if not (P :: RecursiveVC) /\ not (P :: UnguardedTerm) /\ not (Q :: RecursiveVC) /\ not (Q :: UnguardedTerm) .
+	ceq [A15] : rd{D}((P | Q), VCs, Trace) = nil if not (P :: RecursiveVC) /\ not (P :: UnguardedTerm) /\ not (Q :: RecursiveVC) /\ not (Q :: UnguardedTerm) .
 
 	--- eq [cr-1] : P ||< bot = P .
-  eq [cr-1] : rd{D}((P ||< vc(bot, VC1, I)), Trace) = rd{D}(P, Trace) .
+  eq [cr-1] : rd{D}((P ||< vc(bot, I)), VCs, Trace) = rd{D}(P, VCs, Trace) .
 endfm
 
 fmod RECURSIVE_SYM_DNA is
@@ -105,7 +106,7 @@ fmod RECURSIVE_SYM_DNA is
   var D I : Nat .
 	vars P Q : DNA_VC .
   var U : DNA .
-  var VC : VClock .
+  var VCs : VCMap .
 
 	op getRecPol(_) : Recursive -> DNA .
 	op unfold(_) : DNA_VC -> DNA_VC .
@@ -120,13 +121,13 @@ fmod RECURSIVE_SYM_DNA is
 	ceq unfold(P || Q) = (unfold(P) || Q) if (P :: UnguardedTerm) .
 	ceq unfold(P ||< Q) = (unfold(P) ||< Q) if (P :: UnguardedTerm) .
 	ceq unfold(P | Q) = (unfold(P) | Q) if (P :: UnguardedTerm) .
-	ceq unfold(vc(U, VC, I)) = vc(getRecPol(U), VC, I) if (U :: Recursive) .
+	ceq unfold(vc(U, I)) = vc(getRecPol(U), I) if (U :: Recursive) .
 
 	eq notUnfolded(unfold(P)) = false .
 	eq notUnfolded(P) = true [owise] .
 
-	ceq [rec-1] : rd{s(D)}(P, Trace) = rd{s(D)}(unfold(P), Trace) if notUnfolded(P) [owise] .
+	ceq [rec-1] : rd{s(D)}(P, VCs, Trace) = rd{s(D)}(unfold(P), VCs, Trace) if notUnfolded(P) [owise] .
 	cmb [rec-2] : (P || Q) : UnguardedTerm if ((P :: RecursiveVC) or (P :: UnguardedTerm)) .
 	cmb [rec-3] : (P ||< Q) : UnguardedTerm if ((P :: RecursiveVC) or (P :: UnguardedTerm)) .
-  cmb [rec-4] : vc(U, VC, I) : RecursiveVC if (U :: Recursive) .
+  cmb [rec-4] : vc(U, I) : RecursiveVC if (U :: Recursive) .
 endfm

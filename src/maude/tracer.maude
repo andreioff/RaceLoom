@@ -22,6 +22,7 @@ endfm
 
 fmod TRACER is
 	protecting RECURSIVE_SYM_DNA .
+  protecting MAP_UTIL {Nat, DNA} * (sort Map {Nat, DNA} to DNAMap) .
   protecting TRACER_UTIL .
 
   --- Operator with special hook. Works only with the Python package Maude.
@@ -30,23 +31,25 @@ fmod TRACER is
       id-hook SpecialHubSymbol
   )] .
   
-  op parallelJoin___ : DNA DNAMap Nat -> DNA_VC .
+  op parallelJoin(_,_,_) : DNA DNAMap Nat -> DNA_VC .
 	op tracer{_}(_,_) : Nat DNA DNAMap -> DNAVCList [gather (e e E)] .
 
   vars Cs : DNAMap . 
   vars BSw C : DNA .
   var N VCSize : Nat .
 
-  eq parallelJoin BSw empty VCSize = vc(BSw, (newVC VCSize), 0) .
-  eq parallelJoin BSw (N |-> C , Cs) VCSize = ((parallelJoin BSw Cs VCSize) || vc(C, (newVC VCSize), s(N))) .
+  eq parallelJoin(BSw, empty, VCSize) = vc(BSw, 0) .
+  eq parallelJoin(BSw, (N |-> C , Cs), VCSize) = (parallelJoin(BSw, Cs, VCSize) || vc(C, s(N))) .
 
-  eq tracer{N}(BSw, Cs) = rd{N}((parallelJoin BSw Cs s(mapLength(Cs))), nil) .
-
+  --- Assumes that the Cs map mimics an array, i.e. its keys start from 0 and increase by 1 with every position.
+  --- E.g. 0 |-> first_DNA, 1 |-> second_DNA, 2 |-> third_DNA, etc.
+  eq tracer{N}(BSw, Cs) = rd{N}(parallelJoin(BSw, Cs, s(mapLength(Cs))),
+                                newVCMap(s(mapLength(Cs))),
+                                nil) .
 endfm
 
 fmod TESTING is
   protecting TRACER .
-  protecting VECTOR_CLOCK .
 
   op SDN_ : SwMap -> Recursive .
   op C0 : -> Recursive .

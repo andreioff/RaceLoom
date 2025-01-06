@@ -1,0 +1,26 @@
+[tool.pylsp-mypy]
+enabled = true
+strict = true
+report_progress = true
+exclude = ["test/*"]
+overrides = [
+  true,
+  "--warn-return-any",
+  "--warn-unreachable",
+  "--strict-equality",
+
+  # disallow the usage of 'any'
+  # https://mypy.readthedocs.io/en/latest/command_line.html#disallow-dynamic-typing
+  "--disallow-any-unimported",
+  "--disallow-any-expr",
+  "--disallow-any-decorated",
+  "--disallow-any-explicit",
+  "--disallow-any-generics",
+  "--disallow-subclassing-any",
+
+  # disallow untyped code
+  # https://mypy.readthedocs.io/en/latest/command_line.html#untyped-definitions-and-calls
+  "--disallow-untyped-calls",
+  "--disallow-untyped-defs",
+  "--disallow-untyped-decorators",
+]

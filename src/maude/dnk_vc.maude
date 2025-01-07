@@ -35,19 +35,18 @@ endfm
 fmod VECTOR_CLOCK is 
 	protecting MAP {Nat, Nat} * (sort Map {Nat, Nat} to VClock) .
   
-  op newVC_ : Nat -> VClock .
-  --- TODO Just add paranthesis to this...
-  op inc__ : VClock Nat -> VClock [gather (E e)] .
+  op newVC(_) : Nat -> VClock .
+  op inc(_,_) : VClock Nat -> VClock .
 
-  op maxVC(_, _) : VClock VClock -> VClock .
+  op maxVC(_,_) : VClock VClock -> VClock .
 
   vars VC1 VC2 : VClock .
   vars N I J X : Nat .
 
-  eq (newVC 0) = empty .
-  eq (newVC s(N)) = insert(N, 0, (newVC N)) .
+  eq newVC(0) = empty .
+  eq newVC(s(N)) = insert(N, 0, newVC(N)) .
 
-  ceq (inc VC1 I) = insert(I, s(VC1[I]), VC1) if not VC1[I] == undefined .
+  ceq inc(VC1, I) = insert(I, s(VC1[I]), VC1) if not VC1[I] == undefined .
 
   
   ---- Returns a new vector clock with the maximum values of all common entries of the two given vector clocks
@@ -81,14 +80,14 @@ fmod VECTOR_CLOCK_MAP is
   var VCs : VCMap .
   vars I J VCSize : Nat .
 
-  ceq inc(VCs, I) = insert(I, (inc VCs[I] I), VCs) if VCs[I] =/= undefined .
+  ceq inc(VCs, I) = insert(I, inc(VCs[I], I), VCs) if VCs[I] =/= undefined .
 
-  ceq transferVC(VCs, I, J) = insert(J, (inc maxVC((inc VCs[I] I), VCs[J]) J), inc(VCs, I)) if (VCs[I] =/= undefined) /\ (VCs[J] =/= undefined) .
+  ceq transferVC(VCs, I, J) = insert(J, inc(maxVC(inc(VCs[I], I), VCs[J]), J), inc(VCs, I)) if (VCs[I] =/= undefined) /\ (VCs[J] =/= undefined) .
 
   --- creates a map containing the same amount of vector clocks as a vector clock size (equivalent to the nr of components)
   eq newVCMap(VCSize) = newVCMapAux(VCSize, VCSize) .
   eq newVCMapAux(0, VCSize) = empty .
-  eq newVCMapAux(s(I), VCSize) = insert(I, (newVC VCSize), newVCMapAux(I, VCSize)) .
+  eq newVCMapAux(s(I), VCSize) = insert(I, newVC(VCSize), newVCMapAux(I, VCSize)) .
 endfm
 
 fmod COMM is

@@ -1,4 +1,5 @@
 load dnk_vc.maude
+load vector_clock.maude
 
 fmod DNA_VC_MAP is
   protecting VECTOR_CLOCK_MAP .
@@ -26,6 +27,7 @@ fmod SYM_DNA is
 	op _||<_ : DNA_VC DNA_VC -> DNA_VC [ctor metadata "left merge" prec 42 gather (e E)] .
 
 	op rd{_}(_,_,_) : Nat DNA_VC VCMap DNA_VC_MAP -> DNAVCList .
+	op rdCheckVCs{_}(_,_,_) : Nat DNA_VC VCMap DNA_VC_MAP -> DNAVCList .
 
   var Trace : DNAVCList . 
   var VCs : VCMap .
@@ -34,6 +36,9 @@ fmod SYM_DNA is
   vars U V : DNA .
   var D I J : Nat .
   var N : String .
+
+  ceq rdCheckVCs{D}(P, VCs, Trace) = Trace if hasIncmpVCs(VCs) .
+  eq rdCheckVCs{D}(P, VCs, Trace) = rd{D}(P, VCs, Trace) [owise] .
 
   eq rd{0}(P, VCs, Trace) = nil .
   eq rd{D}(vc(bot, I), VCs, Trace) = nil .
@@ -54,10 +59,10 @@ fmod SYM_DNA is
     fi if not (P :: RecursiveVC) /\ not (P :: UnguardedTerm) /\ not (Q :: RecursiveVC) /\ not (Q :: UnguardedTerm) .
 
 	--- eq [A9] : (bot ||< P) = bot .
-  eq [A9] : rd{D}((vc(bot, I) || P), VCs, Trace) = rd{D}(vc(bot, I), VCs, Trace) .
+  eq [A9] : rd{D}((vc(bot, I) ||< P), VCs, Trace) = rd{D}(vc(bot, I), VCs, Trace) .
 
 	--- eq [A10-netkat] : (N ; P) ||< Q = N ; (P || Q) .
-  eq [A10-netkat] : rd{s(D)}((vc(N ; U, I) ||< Q), VCs, Trace) = rd{D}((vc(U, I) || Q), inc(VCs, I), append(Trace, dnaVCMap(N ; bot, inc(VCs, I)))) .
+  eq [A10-netkat] : rd{s(D)}((vc(N ; U, I) ||< Q), VCs, Trace) = rdCheckVCs{D}((vc(U, I) || Q), inc(VCs, I), append(Trace, dnaVCMap(N ; bot, inc(VCs, I)))) .
 
 	--- eq [A10-send] : ((X ! N) ; Q) ||< R = ((X ! N) ; (Q || R)) .
   eq [A10-send] : rd{s(D)}((vc((X ! N) ; U, I) ||< Q), VCs, Trace) = rd{D}((vc(U, I) || Q), VCs, Trace) . ---- Sending alone does not count in the trace
@@ -76,7 +81,7 @@ fmod SYM_DNA is
     fi .
 
 	--- eq [A12] : ((X ? N) ; Q) | ((X ! N) ; R) = (rcfg(X, N)) ; (Q || R) .
-  eq [A12] : rd{s(D)}((vc((X ? N) ; U, I) | vc((X ! N) ; V, J)), VCs, Trace) = rd{D}((vc(U, I) || vc(V, J)),
+  eq [A12] : rd{s(D)}((vc((X ? N) ; U, I) | vc((X ! N) ; V, J)), VCs, Trace) = rdCheckVCs{D}((vc(U, I) || vc(V, J)),
                                                                                      transferVC(VCs, J, I),
                                                                                      append(Trace, dnaVCMap(rcfg(X, N) ; bot, transferVC(VCs, J, I)))
                                                                                     ) .

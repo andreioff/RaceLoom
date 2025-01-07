@@ -52,19 +52,14 @@ fmod TESTING is
   protecting TRACER .
 
   op SDN_ : SwMap -> Recursive .
-  op C0 : -> Recursive .
-  op Link : -> String .
-	op Up0 : -> Channel .
+  ops SW SWP C C0 : -> Recursive .
+	ops Help Up Up0 : -> Channel .
 
   var Sws : SwMap .
-  var VC : VClock .
-  var I : Nat .
 
-  eq Link = "(p=3).(p<-0) + (p=1).(p<-15)" .
-
-  --- TODO: INSERT HERE THE CALL TO NetKATToNF to process the big switch notation
-  eq getRecPol(SDN Sws) = (bigSwitch Sws "") ; SDN Sws o+
-                          (Up0 ? "test0") ; SDN insert(0, "test0", Sws) .
-  
-  eq getRecPol(C0) = (Up0 ! "test0") ; C0 .
+  eq getRecPol(SW) = "(f = r) . (pt = 1) . (pt <- 2)" ; SW o+
+                      "(f = b) . (pt = 1)" ; ( (Help ! "one") ; SW ) o+
+                      (Up ? "one") ; SWP .
+  eq getRecPol(SWP) = "zero" ; SWP . ---- the "zero" atom should be without quotes, but the axioms reduce it to bot which prevents rd from finishing
+  eq getRecPol(C) = (Help ? "one") ; ( (Up ! "one") ; C ) .
 endfm

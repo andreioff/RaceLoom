@@ -1,0 +1,13 @@
+fmod MAP_UTIL{X :: TRIV, Y :: TRIV} is
+  protecting NAT .
+  protecting MAP {X, Y} .
+
+  op mapLength_ : Map {X, Y} -> Nat .
+
+  var I : X$Elt .
+  var E : Y$Elt .
+  var M : Map {X, Y} .
+
+  eq mapLength empty = 0 .
+  eq mapLength ((I |-> E) , M) = s(mapLength M) .
+endfm

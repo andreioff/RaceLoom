@@ -2,14 +2,26 @@ load sym_dnk.maude
 
 fmod TRACER_UTIL is 
   protecting STRING .
+	protecting RECURSIVE_SYM_DNA .
 	protecting MAP_UTIL {Nat, String} * (sort Map {Nat, String} to SwMap) .
+  protecting MAP_UTIL {Nat, DNA} * (sort Map {Nat, DNA} to DNAMap) .
+
+
+  --- Operator with special hook. Works only with the Python package Maude.
+  --- More details here: https://github.com/fadoss/maude-bindings
+  op NetKATToNF : String -> String [special (
+      id-hook SpecialHubSymbol
+  )] .
 
   op concatSws_ : SwMap -> String .
   op network__ : SwMap String -> String [gather (E e)].
   op bigSwitch__ : SwMap String -> String [gather (E e)].
+  op parallelJoin(_,_,_) : DNA DNAMap Nat -> DNA_VC .
 
   var Sws : SwMap .
-  var I : Nat .
+  var Cs : DNAMap . 
+  vars BSw C : DNA .
+  vars I VCSize : Nat .
   vars L, X : String .
 
   eq concatSws empty = "" .
@@ -18,34 +30,50 @@ fmod TRACER_UTIL is
 
   eq network Sws L = "(" + (concatSws Sws) + ") . " + L .
   eq bigSwitch Sws L = (network Sws L) + " . (" + (network Sws L) + ")*" .
+
+  eq parallelJoin(BSw, empty, VCSize) = vc(BSw, 0) .
+  eq parallelJoin(BSw, (I |-> C , Cs), VCSize) = (parallelJoin(BSw, Cs, VCSize) || vc(C, s(I))) .
 endfm
 
 fmod TRACER is
-	protecting RECURSIVE_SYM_DNA .
-  protecting MAP_UTIL {Nat, DNA} * (sort Map {Nat, DNA} to DNAMap) .
   protecting TRACER_UTIL .
+  protecting LIST {DNA_VC_MAP} * (sort List {DNA_VC_MAP} to DNAVCList) .
 
-  --- Operator with special hook. Works only with the Python package Maude.
-  --- More details here: https://github.com/fadoss/maude-bindings
-  op NetKATToNF : String -> String [special (
-      id-hook SpecialHubSymbol
-  )] .
-  
-  op parallelJoin(_,_,_) : DNA DNAMap Nat -> DNA_VC .
-	op tracer{_}(_,_) : Nat DNA DNAMap -> DNAVCList [gather (e e E)] .
+	op rd{_}(_,_) : Nat DNA_VC VCMap -> DNAVCList .
+	op procResult{_}(_,_) : Nat SymRuleResults VCMap -> DNAVCList .
 
-  vars Cs : DNAMap . 
-  vars BSw C : DNA .
-  var N VCSize : Nat .
+	op tracer{_}(_,_) : Nat DNA DNAMap -> DNAVCList .
 
-  eq parallelJoin(BSw, empty, VCSize) = vc(BSw, 0) .
-  eq parallelJoin(BSw, (N |-> C , Cs), VCSize) = (parallelJoin(BSw, Cs, VCSize) || vc(C, s(N))) .
+  var Results : SymRuleResults .
+  var Cs : DNAMap . 
+  var P : DNA_VC .
+  var X : Channel .
+  var N : String .
+  vars NewVCs VCs : VCMap .
+  vars BSw T : DNA .
+  vars I D : Nat .
+
+  eq procResult{0}(Results, VCs) = nil .
+  eq procResult{D}(nil, VCs) = nil .
+
+  ceq procResult{D}((rewriteRes(P) Results), VCs) = rd{D}(P, VCs) if (rd{D}(P, VCs) =/= nil) .
+  eq procResult{D}((rewriteRes(P) Results), VCs) = procResult{D}(Results, VCs) [owise] .
+
+  eq procResult{s(D)}((transRes(P, ((X ! N) ; bot), NewVCs) nil), VCs) = rd{D}(P, VCs) . ---- Sending or receiving alone do not count in the trace
+  eq procResult{s(D)}((transRes(P, ((X ? N) ; bot), NewVCs) nil), VCs) = rd{D}(P, VCs) .
+  ceq procResult{s(D)}((transRes(P, T, NewVCs) nil), VCs) = (dnaVCMap(T, NewVCs) nil) if hasIncmpVCs(NewVCs) .
+  ceq procResult{s(D)}((transRes(P, T, NewVCs) nil), VCs) = append(dnaVCMap(T, NewVCs), rd{D}(P, NewVCs)) if (rd{D}(P, NewVCs) =/= nil) .
+  eq procResult{s(D)}((transRes(P, T, NewVCs) nil), VCs) = nil [owise] .
+
+
+  eq rd{0}(P, VCs) = nil .
+  eq rd{D}(vc(bot, I), VCs) = nil .
+  eq rd{D}(P, VCs) = procResult{D}(applySymRule(P, VCs), VCs) .
 
   --- Assumes that the Cs map mimics an array, i.e. its keys start from 0 and increase by 1 with every position.
   --- E.g. 0 |-> first_DNA, 1 |-> second_DNA, 2 |-> third_DNA, etc.
-  eq tracer{N}(BSw, Cs) = rd{N}(parallelJoin(BSw, Cs, s(mapLength(Cs))),
-                                newVCMap(s(mapLength(Cs))),
-                                nil) .
+  eq tracer{D}(BSw, Cs) = rd{D}(parallelJoin(BSw, Cs, s(mapLength(Cs))),
+                                newVCMap(s(mapLength(Cs)))) .
 endfm
 
 fmod TESTING is
@@ -53,13 +81,24 @@ fmod TESTING is
 
   op SDN_ : SwMap -> Recursive .
   ops SW SWP C C0 : -> Recursive .
+  op Link : -> String .
 	ops Help Up Up0 : -> Channel .
 
   var Sws : SwMap .
+  var I : Nat .
+
+  eq Link = "(p=3).(p<-0) + (p=1).(p<-15)" .
+
+  ---- TODO: INSERT HERE THE CALL TO NetKATToNF to process the big switch notation
+  ---- eq getRecPol(SDN Sws) = (bigSwitch Sws "") ; SDN Sws o+
+  ----                         (Up0 ? "test0") ; SDN insert(0, "test0", Sws) .
+  ---- 
+  ---- eq getRecPol(C0) = (Up0 ! "test0") ; C0 .
+
 
   eq getRecPol(SW) = "(f = r) . (pt = 1) . (pt <- 2)" ; SW o+
                       "(f = b) . (pt = 1)" ; ( (Help ! "one") ; SW ) o+
                       (Up ? "one") ; SWP .
-  eq getRecPol(SWP) = "zero" ; SWP . ---- the "zero" atom should be without quotes, but the axioms reduce it to bot which prevents rd from finishing
+  eq getRecPol(SWP) = "zero" ; SWP .
   eq getRecPol(C) = (Help ? "one") ; ( (Up ! "one") ; C ) .
 endfm

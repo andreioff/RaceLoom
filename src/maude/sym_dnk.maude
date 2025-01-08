@@ -14,101 +14,96 @@ fmod DNA_VC_MAP is
   op vc : DNA Nat -> DNA_VC .
 endfm
 
+
 view DNA_VC_MAP from TRIV to DNA_VC_MAP is
   sort Elt to DNA_VC_MAP .
 endv
 
-fmod SYM_DNA is 
+
+fmod SYMBOLIC_RULE_RESULT is
   protecting DNA_VC_MAP .
-  protecting LIST {DNA_VC_MAP} * (sort List {DNA_VC_MAP} to DNAVCList) .
+
+  sort SymRuleResult .
+
+  --- A symbolic rule result contains a symbolic configuration after applying 1 symbolic semantic rule on it, 
+  --- a corresponding transition step (if any), and the updated map of vector clocks (if modified)
+  op transRes(_,_,_) : DNA_VC DNA VCMap -> SymRuleResult .
+  op rewriteRes(_) : DNA_VC -> SymRuleResult .
+endfm
+
+
+view SYMBOLIC_RULE_RESULT from TRIV to SYMBOLIC_RULE_RESULT is
+  sort Elt to SymRuleResult .
+endv
+
+
+fmod SYM_DNA is 
+  protecting SYMBOLIC_RULE_RESULT .
+  protecting LIST {SYMBOLIC_RULE_RESULT} * (sort List {SYMBOLIC_RULE_RESULT} to SymRuleResults) .
+
+  op applySymRule(_,_) : DNA_VC VCMap -> SymRuleResults .
 
 	op _||_ : DNA_VC DNA_VC -> DNA_VC [ctor comm metadata "parallel composition" prec 42 gather (E e)] .
 	op _|_ : DNA_VC DNA_VC -> DNA_VC [ctor comm prec 42 gather (E e)] .
 	op _||<_ : DNA_VC DNA_VC -> DNA_VC [ctor metadata "left merge" prec 42 gather (e E)] .
 
-	op rd{_}(_,_,_) : Nat DNA_VC VCMap DNA_VC_MAP -> DNAVCList .
-	op rdCheckVCs{_}(_,_,_) : Nat DNA_VC VCMap DNA_VC_MAP -> DNAVCList .
-
-  var Trace : DNAVCList . 
   var VCs : VCMap .
   var X : Channel .
   vars P Q : DNA_VC .
   vars U V : DNA .
-  var D I J : Nat .
+  vars D I J : Nat .
   var N : String .
 
-  ceq rdCheckVCs{D}(P, VCs, Trace) = Trace if hasIncmpVCs(VCs) .
-  eq rdCheckVCs{D}(P, VCs, Trace) = rd{D}(P, VCs, Trace) [owise] .
-
-  eq rd{0}(P, VCs, Trace) = nil .
-  eq rd{D}(vc(bot, I), VCs, Trace) = nil .
 	---A5: added comm to _||_
 	---A6: added assoc to _||_
 
 	--- eq [A7] : (P || bot) = P .
-  eq [A7] : rd{D}((P || vc(bot, I)), VCs, Trace) = rd{D}(P, VCs, Trace) .
+  eq [A7] : applySymRule((P || vc(bot, I)), VCs) = (rewriteRes(P) nil) .
 
 	--- ceq [A8] : (P || Q) = (P ||< Q) o+ (Q ||< P) o+ (P | Q) if not (P :: Recursive) /\ not (P :: UnguardedTerm) /\ not (Q :: Recursive) /\ not (Q :: UnguardedTerm) .
-  ceq [A8] : rd{D}((P || Q), VCs, Trace)
-    = if rd{D}((P ||< Q), VCs, Trace) =/= nil 
-    then rd{D}((P ||< Q), VCs, Trace)
-    else if rd{D}((Q ||< P), VCs, Trace) =/= nil
-      then rd{D}((Q ||< P), VCs, Trace)
-      else rd{D}((P | Q), VCs, Trace)
-      fi
-    fi if not (P :: RecursiveVC) /\ not (P :: UnguardedTerm) /\ not (Q :: RecursiveVC) /\ not (Q :: UnguardedTerm) .
+  ceq [A8] : applySymRule((P || Q), VCs) = (rewriteRes(P ||< Q) rewriteRes(Q ||< P) rewriteRes(P | Q) nil)
+                                    if not (P :: RecursiveVC) /\ not (P :: UnguardedTerm) /\ not (Q :: RecursiveVC) /\ not (Q :: UnguardedTerm) .
 
 	--- eq [A9] : (bot ||< P) = bot .
-  eq [A9] : rd{D}((vc(bot, I) ||< P), VCs, Trace) = rd{D}(vc(bot, I), VCs, Trace) .
+  eq [A9] : applySymRule((vc(bot, I) ||< P), VCs) = (rewriteRes(vc(bot, I)) nil) .
 
 	--- eq [A10-netkat] : (N ; P) ||< Q = N ; (P || Q) .
-  eq [A10-netkat] : rd{s(D)}((vc(N ; U, I) ||< Q), VCs, Trace) = rdCheckVCs{D}((vc(U, I) || Q), inc(VCs, I), append(Trace, dnaVCMap(N ; bot, inc(VCs, I)))) .
+  eq [A10-netkat] : applySymRule((vc(N ; U, I) ||< Q), VCs) = (transRes((vc(U, I) || Q), (N ; bot), inc(VCs, I)) nil) .
 
 	--- eq [A10-send] : ((X ! N) ; Q) ||< R = ((X ! N) ; (Q || R)) .
-  eq [A10-send] : rd{s(D)}((vc((X ! N) ; U, I) ||< Q), VCs, Trace) = rd{D}((vc(U, I) || Q), VCs, Trace) . ---- Sending alone does not count in the trace
+  eq [A10-send] : applySymRule((vc((X ! N) ; U, I) ||< Q), VCs) = (transRes((vc(U, I) || Q), ((X ! N) ; bot), inc(VCs, I)) nil) .
 
 	--- eq [A10-receive] : ((X ? N) ; Q) ||< R = ((X ? N) ; (Q || R)) .
-  eq [A10-receive] : rd{s(D)}((vc((X ? N) ; U, I) ||< Q), VCs, Trace) = rd{D}((vc(U, I) || Q), VCs, Trace) . ---- Receiving alone does not count in the trace
+  eq [A10-receive] : applySymRule((vc((X ? N) ; U, I) ||< Q), VCs) = (transRes((vc(U, I) || Q), ((X ? N) ; bot), inc(VCs, I)) nil) .
 
 	--- eq [A10-rcfg] : ((rcfg(X, N)) ; Q) ||< R = ((rcfg(X, N)) ; (Q || R)) .
-  --- A12 appends the rcfg directly to the trace, so A10-rcfg is not needed anymore
+  --- A12 produces the rcfg as transition, so A10-rcfg is not needed anymore
 
 	--- eq [A11] : (P o+ Q) ||< R = (P ||< R) o+ (Q ||< R) .
-  eq [A11] : rd{D}((vc(U o+ V, I) ||< Q), VCs, Trace)
-    = if rd{D}((vc(U, I) ||< Q), VCs, Trace) =/= nil
-    then rd{D}((vc(U, I) ||< Q), VCs, Trace)
-    else rd{D}((vc(V, I) ||< Q), VCs, Trace)
-    fi .
+  eq [A11] : applySymRule((vc(U o+ V, I) ||< Q), VCs) = (rewriteRes(vc(U, I) ||< Q) rewriteRes(vc(V, I) ||< Q) nil) .
 
 	--- eq [A12] : ((X ? N) ; Q) | ((X ! N) ; R) = (rcfg(X, N)) ; (Q || R) .
-  eq [A12] : rd{s(D)}((vc((X ? N) ; U, I) | vc((X ! N) ; V, J)), VCs, Trace) = rdCheckVCs{D}((vc(U, I) || vc(V, J)),
-                                                                                     transferVC(VCs, J, I),
-                                                                                     append(Trace, dnaVCMap(rcfg(X, N) ; bot, transferVC(VCs, J, I)))
-                                                                                    ) .
+  eq [A12] : applySymRule((vc((X ? N) ; U, I) | vc((X ! N) ; V, J)), VCs) = (transRes((vc(U, I) || vc(V, J)), (rcfg(X, N) ; bot), transferVC(VCs, J, I)) nil) .
 
 	--- eq [A13] : (P o+ Q) | R = (P | R) o+ (Q | R) .
-  eq [A13] : rd{D}((vc(U o+ V, I) | Q), VCs, Trace)
-    = if rd{D}((vc(U, I) | Q), VCs, Trace) =/= nil
-    then rd{D}((vc(U, I) | Q), VCs, Trace)
-    else rd{D}((vc(V, I) | Q), VCs, Trace)
-    fi .
+  eq [A13] : applySymRule((vc(U o+ V, I) | Q), VCs) = (rewriteRes(vc(U, I) | Q) rewriteRes(vc(V, I) | Q) nil) .
 
 	---A14: added comm to _|_
 
 	--- ceq [A15] : P | Q = bot if not (P :: Recursive) /\ not (P :: UnguardedTerm) /\ not (Q :: Recursive) /\ not (Q :: UnguardedTerm) [owise] .
-	ceq [A15] : rd{D}((P | Q), VCs, Trace) = nil if not (P :: RecursiveVC) /\ not (P :: UnguardedTerm) /\ not (Q :: RecursiveVC) /\ not (Q :: UnguardedTerm) .
+	ceq [A15] : applySymRule((P | Q), VCs) = nil if not (P :: RecursiveVC) /\ not (P :: UnguardedTerm) /\ not (Q :: RecursiveVC) /\ not (Q :: UnguardedTerm) .
 
 	--- eq [cr-1] : P ||< bot = P .
-  eq [cr-1] : rd{D}((P ||< vc(bot, I)), VCs, Trace) = rd{D}(P, VCs, Trace) .
+  eq [cr-1] : applySymRule((P ||< vc(bot, I)), VCs) = (rewriteRes(P) nil) .
 endfm
+
 
 fmod RECURSIVE_SYM_DNA is
 	protecting SYM_DNA .
 
-  var Trace : DNAVCList . 
 	var C : Comm .
 	var N : String .
-  var D I : Nat .
+  var I : Nat .
 	vars P Q : DNA_VC .
   var U : DNA .
   var VCs : VCMap .
@@ -120,8 +115,7 @@ fmod RECURSIVE_SYM_DNA is
 
 	---unfolding the recursive variables at once is very inefficient.
 	---we perform the unfolding on the fly when it is necessary
-	---i.e. when the index of rd operator is still a positive integer
-	---and the execution cannot continue because the terms are not guarded.
+	---i.e. when the execution cannot continue because the terms are not guarded.
 	
 	ceq unfold(P || Q) = (unfold(P) || Q) if (P :: UnguardedTerm) .
 	ceq unfold(P ||< Q) = (unfold(P) ||< Q) if (P :: UnguardedTerm) .
@@ -131,7 +125,7 @@ fmod RECURSIVE_SYM_DNA is
 	eq notUnfolded(unfold(P)) = false .
 	eq notUnfolded(P) = true [owise] .
 
-	ceq [rec-1] : rd{s(D)}(P, VCs, Trace) = rd{s(D)}(unfold(P), VCs, Trace) if notUnfolded(P) [owise] .
+	ceq [rec-1] : applySymRule(P, VCs) = applySymRule(unfold(P), VCs) if notUnfolded(P) [owise] .
 	cmb [rec-2] : (P || Q) : UnguardedTerm if ((P :: RecursiveVC) or (P :: UnguardedTerm)) .
 	cmb [rec-3] : (P ||< Q) : UnguardedTerm if ((P :: RecursiveVC) or (P :: UnguardedTerm)) .
   cmb [rec-4] : vc(U, I) : RecursiveVC if (U :: Recursive) .

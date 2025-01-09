@@ -39,6 +39,8 @@ fmod DNA is
   subsort Recursive < DNA .
 	subsort RecursiveVC < UnguardedTerm < DNA_VC .
 
+  ---- NetKAT OR symbol (i.e. +) used in normal form encodings
+  op _n+_ : String String -> String [ctor metadata "NetKAT +"] .
 	op _o+_ : DNA DNA -> DNA [ctor comm assoc metadata "nondeterministic choice" prec 43] .
 	op _;_ : String DNA -> DNA [ctor metadata "sequential composition" prec 40 gather (E e)] .
 	op _;_ : Comm DNA -> DNA [ctor metadata "sequential composition" prec 40 gather (E e)] .
@@ -58,7 +60,9 @@ fmod DNA is
 
 	eq zero ; P = bot .
 
-	eq [A0] : (N + Z) ; R = N ; R o+ Z ; R .
+  ---- Assumes all NetKAT encodings are in normal form and each term 
+  ---- in the sum is a conjunction of complete test and complete assignment
+	eq [A0] : (N n+ Z) ; R = N ; R o+ Z ; R .
 	---A1: added comm to _o+_
 	---A2: added assoc to _o+_
 	eq [A3] : (P o+ P) = P .

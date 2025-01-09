@@ -1,6 +1,6 @@
-from typing import Self, Any
-from src.util import DyNetKATSymbols as sym
+from typing import Any, Self
 
+from src.util import DyNetKATSymbols as sym
 
 KEY_FIELD = "field"
 KEY_OLD_VALUE = "oldValue"
@@ -17,18 +17,22 @@ class Packet:
         return sym.AND.join(self.completeTest + self.completeAssign)
 
     def fromJson(self, json: Any) -> (Self, str | None):
-        '''Takes a JSON object of the form [{key: value, ...}, ...]
+        """Takes a JSON object of the form [{key: value, ...}, ...]
         and converts it into an object of this class.
         Returns an object of this class and an error string if the provided
-        JSON is invalid, or None otherwise.'''
+        JSON is invalid, or None otherwise."""
 
         if not isinstance(json, list):
             return self, "JSON object is not a list"
         for pktField in json:
-            if not (isinstance(pktField, dict) and
-                    self.__hasExpectedJSONPairs(pktField)):
-                return (self, "JSON packet field is not a dictionary or " +
-                        "doesn't contain the expected key-value pairs!")
+            if not (
+                isinstance(pktField, dict) and self.__hasExpectedJSONPairs(pktField)
+            ):
+                return (
+                    self,
+                    "JSON packet field is not a dictionary or "
+                    + "doesn't contain the expected key-value pairs!",
+                )
             self.__processField(pktField)
         return self, None
 

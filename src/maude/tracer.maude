@@ -72,9 +72,9 @@ fmod TRACER is
   eq procResult{s(D), All}((transRes(P, (X ? N), NewVCs) nil), VCs) = TEmpty .
   eq procResult{D, All}(commTransRes, VCs) = procResult{D, All}((ToStrTrans(commTransRes) nil), VCs) . --- Any other communication is converted to string
 
-  ceq procResult{s(D), All}((transRes(P, N, NewVCs) nil), VCs) = TAppend(TNode(N, NewVCs, TEmpty), TEmpty) if hasIncmpVCs(NewVCs) .
-  eq procResult{s(D), true}((transRes(P, N, NewVCs) nil), VCs) = TAppend(TNode(N, NewVCs, rd{D, true}(P, NewVCs)), TEmpty) .
-  ceq procResult{s(D), false}((transRes(P, N, NewVCs) nil), VCs) = TAppend(TNode(N, NewVCs, rd{D, false}(P, NewVCs)), TEmpty) if (rd{D, false}(P, NewVCs) =/= TEmpty) .
+  ceq procResult{s(D), All}((transRes(P, N, NewVCs) nil), VCs) = TAppend(TNode(TDR, N, NewVCs, TEmpty), TEmpty) if hasIncmpVCs(NewVCs) .
+  eq procResult{s(D), true}((transRes(P, N, NewVCs) nil), VCs) = TAppend(TNode(TNORMAL, N, NewVCs, rd{D, true}(P, NewVCs)), TEmpty) .
+  ceq procResult{s(D), false}((transRes(P, N, NewVCs) nil), VCs) = TAppend(TNode(TNORMAL, N, NewVCs, rd{D, false}(P, NewVCs)), TEmpty) if (rd{D, false}(P, NewVCs) =/= TEmpty) .
   eq procResult{s(D), false}((transRes(P, N, NewVCs) nil), VCs) = TEmpty [owise] .
 
 
@@ -86,13 +86,14 @@ fmod TRACER is
   --- E.g. 0 |-> first_DNA, 1 |-> second_DNA, 2 |-> third_DNA, etc.
   eq tracer{D, All}(BSw, Cs) = tracerAux{D, All}(parallelJoin(BSw, Cs, s(mapLength(Cs))),
                                        newVCMap(s(mapLength(Cs)))) .
-  ceq tracerAux{D, All}(P, VCs) = TAppend(TNode("", VCs, rd{D, All}(P, VCs)), TEmpty) if rd{D, All}(P, VCs) =/= TEmpty . ---- Add start node if trace is not empty
+  ceq tracerAux{D, All}(P, VCs) = TAppend(TNode(TSTART, "", VCs, rd{D, All}(P, VCs)), TEmpty) if rd{D, All}(P, VCs) =/= TEmpty . ---- Add start node if trace is not empty
   eq tracerAux{D, All}(P, VCs) = TEmpty [owise] .
 endfm
 
 
 fmod TESTING is
   protecting TRACER .
+  protecting TRACE_TREE_TO_DOT .
 
   op SDN_ : SwMap -> Recursive .
   ops SW SWP C C0 : -> Recursive .

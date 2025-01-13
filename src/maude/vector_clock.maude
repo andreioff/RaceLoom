@@ -1,6 +1,7 @@
 load map_util.maude
 
 fmod VECTOR_CLOCK is 
+  protecting CONVERSION .
   protecting TRUTH-VALUE .
 	protecting MAP {Nat, Nat} * (sort Map {Nat, Nat} to VClock) .
   
@@ -9,6 +10,7 @@ fmod VECTOR_CLOCK is
   op maxVC(_,_) : VClock VClock -> VClock .
   op areIncmp(_,_) : VClock VClock -> Bool .
   op smallerEq(_,_) : VClock VClock -> Bool .
+  op VCToString(_) : VClock -> String .
 
   vars VC1 VC2 : VClock .
   vars N I J X : Nat .
@@ -42,6 +44,10 @@ fmod VECTOR_CLOCK is
   eq smallerEq(VC1, empty) = true .
   ceq smallerEq((I |-> X, VC1), VC2) = false if VC2[I] =/= undefined /\ X > VC2[I] .
   eq smallerEq((I |-> X, VC1), VC2) = smallerEq(VC1, VC2) [owise] .
+
+  eq VCToString(empty) = "" .
+  eq VCToString(I |-> X, empty) = string(X, 10) + "" .
+  eq VCToString(I |-> X, VC1) = string(X, 10) + ", " + VCToString(VC1) .
 endfm
 
 view VCLOCK from TRIV to VECTOR_CLOCK is
@@ -60,6 +66,7 @@ fmod VECTOR_CLOCK_MAP is
   op newVCMapAux(_,_) : Nat Nat -> VCMap .
   op hasIncmpVCs(_) : VCMap -> Bool .
   op hasIncmpVCsAux(_,_) : VClock VCMap -> Bool .
+  op VCMapToString(_) : VCMap -> String .
 
   var VCs : VCMap .
   var VC1 VC2 : VClock .
@@ -81,4 +88,8 @@ fmod VECTOR_CLOCK_MAP is
   eq hasIncmpVCsAux(VC1, empty) = false .
   ceq hasIncmpVCsAux(VC1, (I |-> VC2, VCs)) = true if areIncmp(VC1, VC2) .
   eq hasIncmpVCsAux(VC1, (I |-> VC2, VCs)) = hasIncmpVCsAux(VC1, VCs) [owise] .
+
+  eq VCMapToString(empty) = "" .
+  eq VCMapToString(I |-> VC1, empty) = "<" + VCToString(VC1) + ">" .
+  eq VCMapToString(I |-> VC1, VCs) = "<" + VCToString(VC1) + "> || " + VCMapToString(VCs) .
 endfm

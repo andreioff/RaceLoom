@@ -12,7 +12,7 @@ fmod TRACE_TREE is
   op TNode(_,_,_) : String VCMap TraceNodes -> TraceNode .
   ---- empty list of nodes
   op TEmpty : -> TraceNodes .
-  op appendTNode(_,_) : TraceNode TraceNodes -> TraceNodes .
+  op TAppend(_,_) : TraceNode TraceNodes -> TraceNodes .
   op TConcat(_,_) : TraceNodes TraceNodes -> TraceNodes .
 
   op TraceToDOT(_) : TraceNodes -> String .
@@ -28,7 +28,7 @@ fmod TRACE_TREE is
   var Nodes RemNodes : TraceNodes .
 
   eq TConcat(TEmpty, Nodes) = Nodes .
-  eq TConcat(appendTNode(TN, RemNodes), Nodes) = TConcat(RemNodes, appendTNode(TN, Nodes)) .
+  eq TConcat(TAppend(TN, RemNodes), Nodes) = TConcat(RemNodes, TAppend(TN, Nodes)) .
 
   ceq getNodeId(N, PID) = PID + string(N, 10) if PID =/= "" .
   eq getNodeId(N, PID) = "n" + string(N, 10) [owise] . 
@@ -41,8 +41,8 @@ fmod TRACE_TREE is
   eq TraceToDOT(Nodes) = "digraph G {\n" + TraceToDOTAux(0, "", Nodes) + "}" .
   
   eq TraceToDOTAux(N, PID, TEmpty) = "" .
-  eq TraceToDOTAux(N, PID, appendTNode(TLeaf, RemNodes)) = TraceToDOTAux(N, PID, RemNodes) .
-  eq TraceToDOTAux(N, PID, appendTNode(TNode(S, VCs, Nodes), RemNodes)) = declareNode(N, PID, VCs) +
+  eq TraceToDOTAux(N, PID, TAppend(TLeaf, RemNodes)) = TraceToDOTAux(N, PID, RemNodes) .
+  eq TraceToDOTAux(N, PID, TAppend(TNode(S, VCs, Nodes), RemNodes)) = declareNode(N, PID, VCs) +
                                                                           declareEdge(PID, getNodeId(N, PID), S) +
                                                                           TraceToDOTAux(N, getNodeId(N, PID), Nodes) +
                                                                           TraceToDOTAux(s(N), PID, RemNodes) .

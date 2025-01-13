@@ -1,0 +1,16 @@
+load vector_clock.maude
+
+fmod TRACE_TREE is
+  protecting VECTOR_CLOCK_MAP .
+  protecting CONVERSION .
+
+  sorts TraceNode TraceNodes .
+
+  op TLeaf : -> TraceNode .
+  ---- A trace node contains a transition, a vector clock map,
+  ---- and the next neighbors the node is connected to in the trace
+  op TNode(_,_,_) : String VCMap TraceNodes -> TraceNode .
+  ---- empty list of nodes
+  op TEmpty : -> TraceNodes .
+  op appendTNode(_,_) : TraceNode TraceNodes -> TraceNodes .
+endfm

@@ -1,34 +1,27 @@
 load dnk_vc.maude
-load vector_clock.maude
-
-fmod DNA_VC_MAP is
-  protecting VECTOR_CLOCK_MAP .
-  protecting DNA .
-
-  sort DNA_VC_MAP .
-
-  --- DNA term + map of vector clocks
-  op dnaVCMap(_,_) : DNA VCMap -> DNA_VC_MAP .
-
-  --- DNA term + key of corresponding vector clock in a map
-  op vc : DNA Nat -> DNA_VC .
-endfm
-
-
-view DNA_VC_MAP from TRIV to DNA_VC_MAP is
-  sort Elt to DNA_VC_MAP .
-endv
+load trace_tree.maude
 
 
 fmod SYMBOLIC_RULE_RESULT is
-  protecting DNA_VC_MAP .
+  protecting COMM_STRING_CONVERSION .
+  protecting TRACE_TREE .
+  protecting DNA .
 
-  sort SymRuleResult .
+  sorts SymRuleResult CommTransResult .
+  subsort CommTransResult < SymRuleResult .
 
   --- A symbolic rule result contains a symbolic configuration after applying 1 symbolic semantic rule on it, 
   --- a corresponding transition step (if any), and the updated map of vector clocks (if modified)
-  op transRes(_,_,_) : DNA_VC DNA VCMap -> SymRuleResult .
+  op transRes(_,_,_) : DNA_VC String VCMap -> SymRuleResult .
+  op transRes(_,_,_) : DNA_VC Comm VCMap -> CommTransResult .
   op rewriteRes(_) : DNA_VC -> SymRuleResult .
+  op ToStrTrans(_) : CommTransResult -> SymRuleResult .
+
+  var P : DNA_VC .
+  var C : Comm .
+  var VCs : VCMap .
+
+  eq ToStrTrans(transRes(P, C, VCs)) = transRes(P, commToString(C), VCs) .
 endfm
 
 
@@ -41,6 +34,8 @@ fmod SYM_DNA is
   protecting SYMBOLIC_RULE_RESULT .
   protecting LIST {SYMBOLIC_RULE_RESULT} * (sort List {SYMBOLIC_RULE_RESULT} to SymRuleResults) .
 
+  --- DNA term + key of corresponding vector clock in a map
+  op vc(_,_) : DNA Nat -> DNA_VC .
   op applySymRule(_,_) : DNA_VC VCMap -> SymRuleResults .
 
 	op _||_ : DNA_VC DNA_VC -> DNA_VC [ctor comm metadata "parallel composition" prec 42 gather (E e)] .
@@ -68,13 +63,13 @@ fmod SYM_DNA is
   eq [A9] : applySymRule((vc(bot, I) ||< P), VCs) = (rewriteRes(vc(bot, I)) nil) .
 
 	--- eq [A10-netkat] : (N ; P) ||< Q = N ; (P || Q) .
-  eq [A10-netkat] : applySymRule((vc(N ; U, I) ||< Q), VCs) = (transRes((vc(U, I) || Q), (N ; bot), inc(VCs, I)) nil) .
+  eq [A10-netkat] : applySymRule((vc(N ; U, I) ||< Q), VCs) = (transRes((vc(U, I) || Q), N, inc(VCs, I)) nil) .
 
 	--- eq [A10-send] : ((X ! N) ; Q) ||< R = ((X ! N) ; (Q || R)) .
-  eq [A10-send] : applySymRule((vc((X ! N) ; U, I) ||< Q), VCs) = (transRes((vc(U, I) || Q), ((X ! N) ; bot), inc(VCs, I)) nil) .
+  eq [A10-send] : applySymRule((vc((X ! N) ; U, I) ||< Q), VCs) = (transRes((vc(U, I) || Q), (X ! N), inc(VCs, I)) nil) .
 
 	--- eq [A10-receive] : ((X ? N) ; Q) ||< R = ((X ? N) ; (Q || R)) .
-  eq [A10-receive] : applySymRule((vc((X ? N) ; U, I) ||< Q), VCs) = (transRes((vc(U, I) || Q), ((X ? N) ; bot), inc(VCs, I)) nil) .
+  eq [A10-receive] : applySymRule((vc((X ? N) ; U, I) ||< Q), VCs) = (transRes((vc(U, I) || Q), (X ? N), inc(VCs, I)) nil) .
 
 	--- eq [A10-rcfg] : ((rcfg(X, N)) ; Q) ||< R = ((rcfg(X, N)) ; (Q || R)) .
   --- A12 produces the rcfg as transition, so A10-rcfg is not needed anymore
@@ -83,7 +78,7 @@ fmod SYM_DNA is
   eq [A11] : applySymRule((vc(U o+ V, I) ||< Q), VCs) = (rewriteRes(vc(U, I) ||< Q) rewriteRes(vc(V, I) ||< Q) nil) .
 
 	--- eq [A12] : ((X ? N) ; Q) | ((X ! N) ; R) = (rcfg(X, N)) ; (Q || R) .
-  eq [A12] : applySymRule((vc((X ? N) ; U, I) | vc((X ! N) ; V, J)), VCs) = (transRes((vc(U, I) || vc(V, J)), (rcfg(X, N) ; bot), transferVC(VCs, J, I)) nil) .
+  eq [A12] : applySymRule((vc((X ? N) ; U, I) | vc((X ! N) ; V, J)), VCs) = (transRes((vc(U, I) || vc(V, J)), rcfg(X, N), transferVC(VCs, J, I)) nil) .
 
 	--- eq [A13] : (P o+ Q) | R = (P | R) o+ (Q | R) .
   eq [A13] : applySymRule((vc(U o+ V, I) | Q), VCs) = (rewriteRes(vc(U, I) | Q) rewriteRes(vc(V, I) | Q) nil) .

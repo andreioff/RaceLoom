@@ -69,9 +69,32 @@ fmod DNA is
 	eq [A4] : (P o+ bot) = P .
 endfm
 
+
+fmod COMM_STRING_CONVERSION is
+  protecting DNA .
+  protecting META-LEVEL .
+  protecting META-TERM .
+  protecting QID .
+
+  op commToString(_) : Comm -> String .
+
+  var X : Channel .
+  var S : String .
+  var C : Comm .
+
+  ---- Use meta programming to get the channel name: move the channel variable 1 reflexion level up,
+  ---- then get its name as QID and convert it to string
+  eq commToString(rcfg(X, S)) = "rcfg(" + string(getName(upTerm(X))) + ", '" + S + "')" .
+  eq commToString(X ? S) = string(getName(upTerm(X))) + " ? '" + S + "'" .
+  eq commToString(X ! S) = string(getName(upTerm(X))) + " ! '" + S + "'" .
+  eq commToString(C) = "" [owise] .
+endfm
+
+
 view DNA from TRIV to DNA is
   sort Elt to DNA .
 endv
+
 
 view DNA_VC from TRIV to DNA is
   sort Elt to DNA_VC .

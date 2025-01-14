@@ -28,6 +28,7 @@ endfm
 fmod TRACE_TREE_TO_DOT is
   protecting TRACE_TREE .
   protecting CONVERSION .
+  protecting EXT-BOOL .
 
   op TraceToDOT(_) : TraceNodes -> String .
   op TraceToDOTAux(_,_,_) : Nat String TraceNodes -> String .
@@ -47,15 +48,19 @@ fmod TRACE_TREE_TO_DOT is
   eq getNodeColor(TDR) = "#e62739" .
   eq getNodeColor(T) = "#e1e8f0" [owise] .
 
-  ceq getNodeId(N, PID) = PID + string(N, 10) if PID =/= "" .
-  eq getNodeId(N, PID) = "n" + string(N, 10) [owise] . 
+  eq getNodeId(N, PID) = if PID == ""
+                         then "n" + string(N, 10)
+                         else PID + string(N, 10)
+                         fi .
 
   eq declareNode(T, N, PID, VCs) = getNodeId(N, PID) + " [label=\"" + VCMapToString(VCs) + 
                                    "\", shape=rectangle, style=filled, fillcolor=\"" +
                                    getNodeColor(T) + "\"];\n" .
 
-  ceq declareEdge(From, To, S) = From + " -> " + To + "[label=\"" + S + "\"];\n" if (From =/= "") /\ (To =/= "") .
-  eq declareEdge(From, To, S) = "" [owise] .
+  eq declareEdge(From, To, S) = if ((From =/= "") and-then (To =/= ""))
+                                then From + " -> " + To + "[label=\"" + S + "\"];\n"
+                                else ""
+                                fi .
 
   eq TraceToDOT(Nodes) = "digraph G {\n" + TraceToDOTAux(0, "", Nodes) + "}" .
   

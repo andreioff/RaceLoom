@@ -2,7 +2,7 @@ load map_util.maude
 
 fmod VECTOR_CLOCK is 
   protecting CONVERSION .
-  protecting TRUTH-VALUE .
+  protecting EXT-BOOL .
 	protecting MAP {Nat, Nat} * (sort Map {Nat, Nat} to VClock) .
   
   op newVC(_) : Nat -> VClock .
@@ -19,31 +19,42 @@ fmod VECTOR_CLOCK is
   eq newVC(0) = empty .
   eq newVC(s(N)) = insert(N, 0, newVC(N)) .
 
-  ceq inc(VC1, I) = insert(I, s(VC1[I]), VC1) if not VC1[I] == undefined .
-
+  eq inc(VC1, I) =
+    if (VC1[I] =/= undefined)
+    then insert(I, s(VC1[I]), VC1)
+    else VC1
+    fi .
   
   ---- Returns a new vector clock with the maximum values of all COMMON entries of the two given vector clocks
   ---- Example: maxVC((0 |-> 1, 1 |-> 3, 2 |-> 4),
   ----                (0 |-> 2, 2 |-> 2, 4 |-> 5)) reduces to (0 |-> 2, 2 |-> 4)
   eq maxVC(empty, VC2) = empty .
   eq maxVC(VC1, empty) = empty .
-  ceq maxVC((I |-> X, VC1), VC2) = insert(I, max(X, VC2[I]), maxVC(VC1, VC2)) if VC2[I] =/= undefined .
-  eq maxVC((I |-> X, VC1), VC2) = maxVC(VC1, VC2) [owise] .
+  eq maxVC((I |-> X, VC1), VC2) =
+    if VC2[I] =/= undefined
+    then insert(I, max(X, VC2[I]), maxVC(VC1, VC2))
+    else maxVC(VC1, VC2)
+    fi .
 
   eq areIncmp(empty, VC2) = false .
   eq areIncmp(VC1, empty) = false .
-  ceq areIncmp((I |-> X, VC1), VC2)
-     = if X < VC2[I] 
-       then (not smallerEq(VC1, VC2))
-       else (not smallerEq(VC2, VC1))
-       fi if (VC2[I] =/= undefined) /\ (VC2[I] =/= X) .
-  eq areIncmp((I |-> X, VC1), VC2) = areIncmp(VC1, VC2) [owise] .
+  eq areIncmp((I |-> X, VC1), VC2) =
+    if ((VC2[I] =/= undefined) and-then (VC2[I] =/= X))
+    then (if X < VC2[I] 
+      then (not smallerEq(VC1, VC2))
+      else (not smallerEq(VC2, VC1))
+      fi)
+    else areIncmp(VC1, VC2)
+    fi .
 
   --- comparison is done only on the common elements
   eq smallerEq(empty, VC2) = true .
   eq smallerEq(VC1, empty) = true .
-  ceq smallerEq((I |-> X, VC1), VC2) = false if VC2[I] =/= undefined /\ X > VC2[I] .
-  eq smallerEq((I |-> X, VC1), VC2) = smallerEq(VC1, VC2) [owise] .
+  eq smallerEq((I |-> X, VC1), VC2) =
+    if ((VC2[I] =/= undefined) and-then (X > VC2[I]))
+    then false
+    else smallerEq(VC1, VC2)
+    fi .
 
   eq VCToString(empty) = "" .
   eq VCToString(I |-> X, empty) = string(X, 10) + "" .
@@ -72,9 +83,17 @@ fmod VECTOR_CLOCK_MAP is
   var VC1 VC2 : VClock .
   vars I J VCSize : Nat .
 
-  ceq inc(VCs, I) = insert(I, inc(VCs[I], I), VCs) if VCs[I] =/= undefined .
+  eq inc(VCs, I) =
+    if VCs[I] =/= undefined
+    then insert(I, inc(VCs[I], I), VCs)
+    else VCs
+    fi .
 
-  ceq transferVC(VCs, I, J) = insert(J, inc(maxVC(inc(VCs[I], I), VCs[J]), J), inc(VCs, I)) if (VCs[I] =/= undefined) /\ (VCs[J] =/= undefined) .
+  eq transferVC(VCs, I, J) =
+    if ((VCs[I] =/= undefined) and-then (VCs[J] =/= undefined))
+    then insert(J, inc(maxVC(inc(VCs[I], I), VCs[J]), J), inc(VCs, I))
+    else VCs
+    fi .
 
   --- creates a map containing the same amount of vector clocks as a vector clock size (equivalent to the nr of components)
   eq newVCMap(VCSize) = newVCMapAux(VCSize, VCSize) .
@@ -82,12 +101,18 @@ fmod VECTOR_CLOCK_MAP is
   eq newVCMapAux(s(I), VCSize) = insert(I, newVC(VCSize), newVCMapAux(I, VCSize)) .
 
   eq hasIncmpVCs(empty) = false .
-  ceq hasIncmpVCs(I |-> VC1, VCs) = true if hasIncmpVCsAux(VC1, VCs) .
-  eq hasIncmpVCs(I |-> VC1, VCs) = hasIncmpVCs(VCs) [owise] . 
+  eq hasIncmpVCs(I |-> VC1, VCs) =
+    if hasIncmpVCsAux(VC1, VCs)
+    then true
+    else hasIncmpVCs(VCs)
+    fi .
 
   eq hasIncmpVCsAux(VC1, empty) = false .
-  ceq hasIncmpVCsAux(VC1, (I |-> VC2, VCs)) = true if areIncmp(VC1, VC2) .
-  eq hasIncmpVCsAux(VC1, (I |-> VC2, VCs)) = hasIncmpVCsAux(VC1, VCs) [owise] .
+  eq hasIncmpVCsAux(VC1, (I |-> VC2, VCs)) =
+    if areIncmp(VC1, VC2)
+    then true
+    else hasIncmpVCsAux(VC1, VCs)
+    fi .
 
   eq VCMapToString(empty) = "" .
   eq VCMapToString(I |-> VC1, empty) = "<" + VCToString(VC1) + ">" .

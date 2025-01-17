@@ -40,7 +40,7 @@ fmod DNA is
 	subsort RecursiveVC < UnguardedTerm < DNA_VC .
 
   ---- NetKAT OR symbol (i.e. +) used in normal form encodings
-  op _n+_ : String String -> String [ctor metadata "NetKAT +"] .
+  op _n+_ : String String -> String [ctor metadata "NetKAT +" assoc] .
 	op _o+_ : DNA DNA -> DNA [ctor comm assoc metadata "nondeterministic choice" prec 43] .
 	op _;_ : String DNA -> DNA [ctor metadata "sequential composition" prec 40 gather (E e)] .
 	op _;_ : Comm DNA -> DNA [ctor metadata "sequential composition" prec 40 gather (E e)] .

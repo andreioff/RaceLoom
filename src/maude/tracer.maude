@@ -2,7 +2,6 @@ load sym_dnk.maude
 
 fmod TRACER_UTIL is 
   protecting STRING .
-  protecting TRACE_TREE .
 	protecting RECURSIVE_SYM_DNA .
 	protecting MAP_UTIL {Nat, String} * (sort Map {Nat, String} to SwMap) .
   protecting MAP_UTIL {Nat, DNA} * (sort Map {Nat, DNA} to DNAMap) .
@@ -38,6 +37,7 @@ endfm
 
 
 fmod TRACER is
+  protecting TRACE_TREE .
   protecting TRACER_UTIL .
 
 	op rd{_,_}(_,_) : Nat Bool DNA_VC VCMap -> TraceNodes .
@@ -88,35 +88,4 @@ fmod TRACER is
                                        newVCMap(s(mapLength(Cs)))) .
   ceq tracerAux{D, All}(P, VCs) = TAppend(TNode(TSTART, "", VCs, rd{D, All}(P, VCs)), TEmpty) if rd{D, All}(P, VCs) =/= TEmpty . ---- Add start node if trace is not empty
   eq tracerAux{D, All}(P, VCs) = TEmpty [owise] .
-endfm
-
-
-fmod TESTING is
-  protecting TRACER .
-  protecting TRACE_TREE_TO_DOT .
-
-  op SDN_ : SwMap -> Recursive .
-  ops SW SWP C C0 : -> Recursive .
-  op Link : -> String .
-	ops Help Up Up0 : -> Channel .
-
-  var Sws : SwMap .
-  var I : Nat .
-  var Trace : TraceNode .
-  var Traces : TraceNodes .
-
-  eq Link = "(p=3).(p<-0) + (p=1).(p<-15)" .
-
-  ---- TODO: INSERT HERE THE CALL TO NetKATToNF to process the big switch notation
-  ---- eq getRecPol(SDN Sws) = (bigSwitch Sws "") ; SDN Sws o+
-  ----                         (Up0 ? "test0") ; SDN insert(0, "test0", Sws) .
-  ---- 
-  ---- eq getRecPol(C0) = (Up0 ! "test0") ; C0 .
-
-
-  eq getRecPol(SW) = "(f = r) . (pt = 1) . (pt <- 2)" ; SW o+
-                      "(f = b) . (pt = 1)" ; ( (Help ! "one") ; SW ) o+
-                      (Up ? "one") ; SWP .
-  eq getRecPol(SWP) = "zero" ; SWP .
-  eq getRecPol(C) = (Help ? "one") ; ( (Up ! "one") ; C ) .
 endfm

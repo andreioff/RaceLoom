@@ -77,6 +77,9 @@ fmod SYM_DNA is
 	--- eq [A11] : (P o+ Q) ||< R = (P ||< R) o+ (Q ||< R) .
   eq [A11] : applySymRule((vc(U o+ V, I) ||< Q), VCs) = (rewriteRes(vc(U, I) ||< Q) rewriteRes(vc(V, I) ||< Q) nil) .
 
+	--- eq [cr-1] : P ||< bot = P .
+  eq [cr-1] : applySymRule((P ||< vc(bot, I)), VCs) = (rewriteRes(P) nil) .
+
 	--- eq [A12] : ((X ? N) ; Q) | ((X ! N) ; R) = (rcfg(X, N)) ; (Q || R) .
   eq [A12] : applySymRule((vc((X ? N) ; U, I) | vc((X ! N) ; V, J)), VCs) = (transRes((vc(U, I) || vc(V, J)), rcfg(X, N), transferVC(VCs, J, I)) nil) .
 
@@ -87,14 +90,11 @@ fmod SYM_DNA is
 
 	--- ceq [A15] : P | Q = bot if not (P :: Recursive) /\ not (P :: UnguardedTerm) /\ not (Q :: Recursive) /\ not (Q :: UnguardedTerm) [owise] .
 	ceq [A15] : applySymRule((P | Q), VCs) = nil if not (P :: RecursiveVC) /\ not (P :: UnguardedTerm) /\ not (Q :: RecursiveVC) /\ not (Q :: UnguardedTerm) .
-
-	--- eq [cr-1] : P ||< bot = P .
-  eq [cr-1] : applySymRule((P ||< vc(bot, I)), VCs) = (rewriteRes(P) nil) .
 endfm
 
 
 fmod RECURSIVE_SYM_DNA is
-	protecting SYM_DNA .
+	including SYM_DNA .
 
 	var C : Comm .
 	var N : String .

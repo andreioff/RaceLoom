@@ -1,4 +1,5 @@
 [tool.pylsp-mypy]
+plugins = "pydantic.mypy"
 enabled = true
 strict = true
 report_progress = true

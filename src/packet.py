@@ -1,14 +1,23 @@
-from typing import Any, Self
+from typing import List, Self
+
+from pydantic import BaseModel, ValidationError
 
 from src.util import DyNetKATSymbols as sym
 
-KEY_FIELD = "field"
-KEY_OLD_VALUE = "oldValue"
-KEY_NEW_VALUE = "newValue"
 WILD_CARD = "?"  # matches any value a packet field can take
 
 
-class Packet:
+class PacketField(BaseModel):  # type: ignore
+    field: str
+    newValue: str
+    oldValue: str
+
+
+class PacketList(BaseModel):  # type: ignore
+    packets: List[List[PacketField]]
+
+
+class NetKATSymbolicPacket:
     def __init__(self) -> None:
         self.completeTest: list[str] = []
         self.completeAssign: list[str] = []
@@ -16,44 +25,37 @@ class Packet:
     def toString(self) -> str:
         return sym.AND.join(self.completeTest + self.completeAssign)
 
-    def fromJson(self, json: Any) -> (Self, str | None):
-        """Takes a JSON object of the form [{key: value, ...}, ...]
-        and converts it into an object of this class.
-        Returns an object of this class and an error string if the provided
-        JSON is invalid, or None otherwise."""
+    def fromJsonPacket(self, pktFieldList: List[PacketField]) -> Self:
+        """Takes a list of PacketField objects and converts it
+        into an object of this class.
+        Returns an object of this class.
+        Raises pydantic.ValidationError if the 'newValue' and 'oldValue'
+        attributes of the list objects are not integers or wild card."""
 
-        if not isinstance(json, list):
-            return self, "JSON object is not a list"
-        for pktField in json:
-            if not (
-                isinstance(pktField, dict) and self.__hasExpectedJSONPairs(pktField)
-            ):
-                return (
-                    self,
-                    "JSON packet field is not a dictionary or "
-                    + "doesn't contain the expected key-value pairs!",
+        for pktField in pktFieldList:
+            if not self.__hasExpectedValues(pktField):
+                raise ValidationError(
+                    "JSON packet field doesn't contain the expected value pairs!", []
                 )
             self.__processField(pktField)
-        return self, None
+        return self
 
-    def __hasExpectedJSONPairs(self, pcktField: dict) -> bool:
-        for key in [KEY_FIELD, KEY_OLD_VALUE, KEY_NEW_VALUE]:
-            if key not in pcktField:
-                return False
+    def __hasExpectedValues(self, pcktField: PacketField) -> bool:
+        for value in [pcktField.oldValue, pcktField.newValue]:
+            if value == WILD_CARD:
+                continue
 
-        for key in [KEY_OLD_VALUE, KEY_NEW_VALUE]:
             try:
-                int(pcktField[key])
+                int(value)
             except (TypeError, ValueError):
                 return False
 
         return True
 
-    def __processField(self, pcktField: dict) -> bool:
-        field = pcktField[KEY_FIELD]
-        oldVal = pcktField[KEY_OLD_VALUE]
-        newVal = pcktField[KEY_NEW_VALUE]
-        if oldVal != WILD_CARD:
-            self.completeTest.append(f"{field}{sym.EQUAL}{oldVal}")
-        if newVal != WILD_CARD:
-            self.completeAssign.append(f"{field}{sym.ASSIGN}{newVal}")
+    def __processField(self, pktField: PacketField) -> None:
+        if pktField.oldValue != WILD_CARD:
+            self.completeTest.append(f"{pktField.field}{sym.EQUAL}{pktField.oldValue}")
+        if pktField.newValue != WILD_CARD:
+            self.completeAssign.append(
+                f"{pktField.field}{sym.ASSIGN}{pktField.newValue}"
+            )

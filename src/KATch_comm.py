@@ -1,9 +1,11 @@
-import json
 import os
 import re
+import string
 from typing import Tuple
 
-from src.packet import Packet
+from pydantic import ValidationError
+
+from src.packet import NetKATSymbolicPacket, PacketList
 from src.util import DyNetKATSymbols as sym
 from src.util import execute_cmd, export_file, get_temp_file_path
 
@@ -32,36 +34,44 @@ class KATchComm:
         if res is None:
             return "", "KATchComm: Could not match packet mapping output."
 
-        jsonRes = json.loads(res.group(2))
-        if not isinstance(jsonRes, list):
-            return "", "KATchComm: Matched output is not a JSON list!"
-        return self.__processJSONPackets(jsonRes)
+        jsonRes = str(res.group(2))  # type: ignore
+        # remove whitespaces
+        jsonRes = jsonRes.translate(str.maketrans("", "", string.whitespace))
 
-    def __processJSONPackets(self, jsonRes: list) -> Tuple[str, str | None]:
-        """Takes a list of packets as JSON objects, converts them
-        into DyNetKAT expressions in Head-Normal Form, and joins
-        them together using the DyNetKAT OR symbol.
-        Returns the resulting expression and an error if the operation
-        is unsuccessful, or None otherwise."""
         # drop all packets by default
-        if len(jsonRes) == 0:
+        if jsonRes == "":
             return sym.ZERO, None
 
         # KATch may reduce a given network to True or False, which corresponds
         # to forwarding and dropping all packets, respectively.
-        if len(jsonRes) == 1 and isinstance(jsonRes[0], list):
-            if jsonRes[0] == [KATCH_TRUE]:
-                return sym.ONE, None
-            if jsonRes[0] == [KATCH_FALSE]:
-                return sym.ZERO, None
+        if jsonRes == f"[[{KATCH_TRUE}]]":
+            return sym.ONE, None
+        if jsonRes == f"[[{KATCH_FALSE}]]":
+            return sym.ZERO, None
 
-        hnfPackets: list[str] = []
-        for jsonP in jsonRes:
-            p, err = Packet().fromJson(jsonP)
-            if err is not None:
-                return "", "KATchComm: " + err
-            hnfPackets.append(f'"{p.toString()}"')
-        return f" {sym.OR_ALT} ".join(hnfPackets), None
+        return self.__processJSONPackets(f'{{"packets": {jsonRes}}}')
+
+    def __processJSONPackets(self, jsonRes: str) -> Tuple[str, str | None]:
+        """Takes a JSON object of the form
+        {"packets": <list of lists of packet fields>}, converts it into
+        DyNetKAT symbolic packet expressions in Head-Normal Form, and joins
+        them together using the NetKAT OR symbol.
+        Returns a tuple of the resulting expression and an error if the operation
+        is unsuccessful, or None otherwise."""
+        try:
+            res = PacketList.model_validate_json(jsonRes)
+
+            hnfPackets: list[str] = []
+            for jsonP in res.packets:
+                p = NetKATSymbolicPacket().fromJsonPacket(jsonP)
+                hnfPackets.append(f'"{p.toString()}"')
+
+            if len(hnfPackets) == 0:
+                return sym.ZERO, None
+            return f" {sym.OR_ALT} ".join(hnfPackets), None
+
+        except ValidationError as e:
+            return "", f"KATchComm: Invalid JSON!\n{e}"
 
     def tool_format(self, netkatEncoding: str) -> str:
         """Converts the given NetKAT encoding into

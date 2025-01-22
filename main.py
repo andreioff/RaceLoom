@@ -1,39 +1,89 @@
-import inspect
+import optparse
 import os
+import string
+import sys
 
-import src
+from pydantic import ValidationError
+
 from src.dnk_model import DNKModel
 from src.tracer import MaudeError, Tracer, TracerConfig
-from src.util import export_file
+from src.util import createDir, exportFile, isExe, isJson, readFile
 
-KATCH_PATH = (
-    "/home/andrei/Desktop/Master/_Final_Project" + "/NetKAT_Tests/KATch_forked/katch"
-)
-OUTPUT_DIR_PATH = "/home/andrei/Desktop/Master/_Final_Project/Tracer/output"
+PROJECT_DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+OUTPUT_DIR_PATH = os.path.join(PROJECT_DIR_PATH, "output")
+MAUDE_FILES_DIR_PATH = os.path.join(PROJECT_DIR_PATH, "src", "maude")
+RESULT_FILE_NAME = "result"
 
 
 def main() -> None:
-    # load src module directory
-    srcDir = os.path.dirname(inspect.getfile(src))
+    parser = optparse.OptionParser()
+    parser.add_option(
+        "-d",
+        "--depth",
+        type="int",
+        dest="depth",
+        default=5,
+        help="Depth of search (default is 5)",
+    )
+    parser.add_option(
+        "-a",
+        "--all-traces",
+        dest="allTraces",
+        default=False,
+        action="store_true",
+        help="Passing this option instructs the tool to extract \
+                all traces that lead to concurrent behavior \
+                instead of only the first one (impacts performance)",
+    )
 
+    (options, args) = parser.parse_args()
+
+    if len(args) < 2:
+        print("Error: provide the arguments <path_to_katch> <input_file>.")
+        sys.exit()
+
+    if not os.path.exists(args[0]) or not isExe(args[0]):
+        print("KATch tool could not be found in the given path!")
+        sys.exit()
+
+    if not isJson(args[1]) or not os.path.isfile(args[1]):
+        print("Please provide a .json input file!")
+        sys.exit()
+
+    createDir(OUTPUT_DIR_PATH)
     config = TracerConfig(
         outputDirPath=OUTPUT_DIR_PATH,
-        katchPath=KATCH_PATH,
-        maudeFilesDirPath=f"{srcDir}/maude",
-        depth=5,
-        allTraces=True,
+        katchPath=args[0],
+        maudeFilesDirPath=MAUDE_FILES_DIR_PATH,
+        depth=options.depth,  # type: ignore
+        allTraces=options.allTraces,  # type: ignore
     )
 
     try:
+        jsonStr = readFile(args[1])
+
         tracer = Tracer(config)
 
-        dotTrace = tracer.run(DNKModel())
+        dotTrace = tracer.run(DNKModel().fromJson(jsonStr))
         execStats = tracer.getExecTimeStats()
         for key in execStats:
             print(f"{key}: {execStats[key]}")
-        export_file(f"{OUTPUT_DIR_PATH}/tracerOutput.gv", dotTrace)
+
+        if dotTrace.translate(str.maketrans("", "", string.whitespace)) == "digraphG{}":
+            print(
+                "Could not find any concurrent behavior \
+                        for the given network and depth!"
+            )
+            sys.exit()
+
+        exportFilePath = f"{OUTPUT_DIR_PATH}/{RESULT_FILE_NAME}.gv"
+        exportFile(exportFilePath, dotTrace)
+        print(f"Concurrent behavior detected! Trace(s) written to: {exportFilePath}.")
+
     except MaudeError as e:
         print(f"Error encountered while executing Maude:\n\t{e}")
+    except ValidationError as e:
+        print(f"Invalid JSON file!\n{e}")
 
 
 if __name__ == "__main__":

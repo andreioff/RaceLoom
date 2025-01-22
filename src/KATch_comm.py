@@ -7,7 +7,7 @@ from pydantic import ValidationError
 
 from src.packet import NetKATSymbolicPacket, PacketList
 from src.util import DyNetKATSymbols as sym
-from src.util import execute_cmd, export_file, get_temp_file_path
+from src.util import executeCmd, exportFile, getTempFilePath
 
 KATCH_FILE_EXT = "nkpl"
 NKPL_LARROW = b"\xe2\x86\x90".decode("utf-8")  # ←
@@ -106,12 +106,12 @@ class KATchComm:
         KATch, parses the obtained result, and returns it.
         """
 
-        outfile = get_temp_file_path(self.output_dir, KATCH_FILE_EXT)
+        outfile = getTempFilePath(self.output_dir, KATCH_FILE_EXT)
         npklProgram = self.tool_format(netkatEncoding)
-        export_file(outfile, npklProgram)
+        exportFile(outfile, npklProgram)
 
         cmd = [self.tool_path, "run", outfile]
-        output, error = execute_cmd(cmd)
+        output, error = executeCmd(cmd)
         if error is not None:
             return output, error
 

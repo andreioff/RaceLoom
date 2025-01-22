@@ -5,7 +5,7 @@ from time import perf_counter
 import maude
 from src.dnk_model import DNKModel
 from src.KATch_comm import KATchComm
-from src.KATch_hook import CACHE_HIT, KATCH_CALL, KATchHook
+from src.KATch_hook import KATCH_HOOK_MAUDE_NAME, KATchHook
 
 DNK_MODEL_MODULE_NAME = "DNK_MODEL"
 
@@ -46,7 +46,7 @@ class Tracer:
                 "Failed to initialize Maude library! "
                 + "Initialization should happen once, maybe it is done multiple times?"
             )
-        maude.connectEqHook("NetKATToNF", self.katchHook)
+        maude.connectEqHook(KATCH_HOOK_MAUDE_NAME, self.katchHook)
 
         for fileName in ["tracer.maude"]:
             filePath = f"{self.config.maudeFilesDirPath}/{fileName}"
@@ -85,12 +85,12 @@ class Tracer:
     def __buildTracerMaudeEntryPoint(
         self, model: DNKModel, mod: maude.Module
     ) -> maude.Term:
-        sws = model.getSwitchesMaudeMap()
+        sws = model.getBigSwitch()
         cs = model.getControllersMaudeMap()
         allTracesFlag = "true" if self.config.allTraces else "false"
 
         term = mod.parseTerm(
-            f"tracer{{{self.config.depth}, {allTracesFlag}}}(({sws}), ({cs}))"
+            f"tracer{{{self.config.depth}, {allTracesFlag}}}({sws}, {cs})"
         )
         if term is None:
             raise MaudeError("Failed to declare Tracer entry point.")
@@ -107,15 +107,15 @@ class Tracer:
         t2.reduce()
         return str(t2)[1:-1].replace("\\n", "\n").replace('\\"', '"')
 
-    def getExecTimeStats(self) -> dict[str, float | int]:
+    def getExecTimeStats(self) -> dict[str, str]:
         hookStats = self.katchHook.execStats
-        return {
-            "Computing trace(s)": self.runExecTime,
-            "KATch command calls": len(hookStats[KATCH_CALL]),
-            "KATch command total execution time": sum(hookStats[KATCH_CALL]),
-            "KATch cache hits": len(hookStats[CACHE_HIT]),
-            "KATch cache total querying time": sum(hookStats[CACHE_HIT]),
+        stats: dict[str, str] = {
+            "Computing trace(s) time": f"{self.runExecTime} seconds",
         }
+        for key, times in hookStats.items():
+            stats[key] = f"{len(times)}"
+            stats[key + " total processing time"] = f"{sum(times)} seconds"
+        return stats
 
     def reset(self) -> None:
         self.runExecTime = -1.0

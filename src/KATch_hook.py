@@ -6,8 +6,9 @@ from typing import List, Tuple
 import maude
 from src.KATch_comm import KATchComm
 
-CACHE_HIT = "cache hits"
-KATCH_CALL = "KATch calls"
+CACHE_HIT = "KATch cache hits"
+KATCH_CALL = "KATch command calls"
+KATCH_HOOK_MAUDE_NAME = "NetKATToNF"
 
 
 class KATchError(Exception):
@@ -50,6 +51,7 @@ class KATchHook(maude.Hook):  # type: ignore
 
         output, error = self.katchComm.execute(expr)
         if error is not None:
+            print(f"An error occured when running KATch:\n{error}")
             raise KATchError(error)
 
         self.cache[expr] = output

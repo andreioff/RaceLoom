@@ -3,7 +3,7 @@ load sym_dnk.maude
 fmod TRACER_UTIL is 
   protecting STRING .
 	protecting RECURSIVE_SYM_DNA .
-	protecting MAP_UTIL {Nat, String} * (sort Map {Nat, String} to SwMap) .
+	protecting MAP_UTIL {Nat, String} * (sort Map {Nat, String} to StrMap) .
   protecting MAP_UTIL {Nat, DNA} * (sort Map {Nat, DNA} to DNAMap) .
 
 
@@ -13,12 +13,12 @@ fmod TRACER_UTIL is
       id-hook SpecialHubSymbol
   )] .
 
-  op concatSws_ : SwMap -> String .
-  op network__ : SwMap String -> String [gather (E e)].
-  op bigSwitch__ : SwMap String -> String [gather (E e)].
+  op concatSws_ : StrMap -> String .
+  op network__ : StrMap String -> String [gather (E e)].
+  op bigSwitch__ : StrMap String -> String [gather (E e)].
   op parallelJoin(_,_,_) : DNA DNAMap Nat -> DNA_VC .
 
-  var Sws : SwMap .
+  var Sws : StrMap .
   var Cs : DNAMap . 
   vars BSw C : DNA .
   vars I VCSize : Nat .

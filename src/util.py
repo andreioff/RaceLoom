@@ -1,3 +1,4 @@
+import os
 import subprocess
 import time
 from enum import StrEnum
@@ -15,9 +16,13 @@ class DyNetKATSymbols(StrEnum):
     STAR = "*"
     ZERO = "zero"
     ONE = "one"
+    SEQ = ";"
+    RECV = "?"
+    SEND = "!"
+    OPLUS = "o+"
 
 
-def get_temp_file_path(dirPath: str, ext: str) -> str:
+def getTempFilePath(dirPath: str, ext: str) -> str:
     """
     Returns a unique temporary file path with the given extension.
     @param ext: the extension of the file.
@@ -28,7 +33,7 @@ def get_temp_file_path(dirPath: str, ext: str) -> str:
     return "{}/{}{}.{}".format(dirPath, TMP_FILE_NAME, currTimeMili, ext)
 
 
-def execute_cmd(cmd: list[str]) -> Tuple[str, str | None]:
+def executeCmd(cmd: list[str]) -> Tuple[str, str | None]:
     """Executes a given system command and returns the obtained output."""
     proc = subprocess.run(
         cmd,
@@ -42,7 +47,34 @@ def execute_cmd(cmd: list[str]) -> Tuple[str, str | None]:
     return proc.stdout.decode("utf-8"), error if error != "" else None
 
 
-def export_file(filePath: str, contents: str) -> None:
+def exportFile(filePath: str, contents: str) -> None:
     """Exports a file with the given name and contents."""
     with open(filePath, "w") as f:
         f.write(contents)
+
+
+def readFile(filePath: str) -> str:
+    """
+    Reads the file at the given path and returns its contents as string
+    Raises: FileNotFoundError if the given path does not point to any valid file"""
+    file = open(filePath, "r")
+    content = file.read()
+    file.close()
+
+    return content
+
+
+def isJson(fpath: str) -> bool:
+    """Takes a file path and checks if the file is in .json format."""
+    return len(fpath) > 5 and fpath[-5:] == ".json"
+
+
+def isExe(fpath: str) -> bool:
+    """Takes a file path and checks if the file is an executable."""
+    return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+
+def createDir(dirPath: str) -> None:
+    if os.path.exists(dirPath):
+        return
+    os.mkdir(dirPath)

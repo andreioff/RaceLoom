@@ -55,8 +55,6 @@ def main() -> None:
         outputDirPath=OUTPUT_DIR_PATH,
         katchPath=args[0],
         maudeFilesDirPath=MAUDE_FILES_DIR_PATH,
-        depth=options.depth,  # type: ignore
-        allTraces=options.allTraces,  # type: ignore
     )
 
     try:
@@ -64,7 +62,9 @@ def main() -> None:
 
         tracer = Tracer(config)
 
-        dotTrace = tracer.run(DNKModel().fromJson(jsonStr))
+        dotTrace = tracer.run(
+            DNKModel().fromJson(jsonStr), options.depth, options.allTraces  # type: ignore
+        )
         execStats = tracer.getExecTimeStats()
         for key in execStats:
             print(f"{key}: {execStats[key]}")

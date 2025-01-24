@@ -143,7 +143,7 @@ class DNKModel:
     def __recLeftTerm(self, name: str) -> str:
         return f"getRecPol({name})"
 
-    def getBigSwitch(self) -> str:
+    def getBigSwitchTerm(self) -> str:
         sws: List[str] = []
         for name in self.netkatSwitches.keys():
             sws.append(f"old{name}")

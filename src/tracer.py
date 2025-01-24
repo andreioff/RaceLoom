@@ -27,6 +27,8 @@ class TracerConfig:
 
 
 class Tracer:
+    maudeInitialized: bool = False
+
     def __init__(self, config: TracerConfig) -> None:
         self.config = config
         self.runExecTime = -1.0
@@ -36,6 +38,9 @@ class Tracer:
         self.__initMaude()
 
     def __initMaude(self) -> None:
+        if Tracer.maudeInitialized:
+            return
+
         success = maude.init(advise=False)
         if not success:
             raise MaudeError(
@@ -48,6 +53,7 @@ class Tracer:
         success = maude.load(filePath)
         if not success:
             raise MaudeError(f"Failed to load Maude file: {filePath}.")
+        Tracer.maudeInitialized = True
 
     def run(self, model: DNKModel, depth: int, allTraces: bool) -> str:
         self.reset()

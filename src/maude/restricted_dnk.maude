@@ -30,30 +30,26 @@ view Comm from TRIV to COMM is
 	sort Elt to Comm .
 endv
 
-fmod DNA is
+fmod RESTRICTED_DNK is
 	protecting COMM .
 	protecting TRUTH-VALUE .
 	protecting SET {Comm} * (sort Set {Comm} to TermSet) .
 
-	sorts DNA Recursive RecursiveVC UnguardedTerm DNA_VC .
-  subsort Recursive < DNA .
-	subsort RecursiveVC < UnguardedTerm < DNA_VC .
+	sorts RDNK Recursive .
+  subsort Recursive < RDNK .
 
   ---- NetKAT OR symbol (i.e. +) used in normal form encodings
-  op _n+_ : String String -> String [ctor metadata "NetKAT +" assoc] .
-	op _o+_ : DNA DNA -> DNA [ctor comm assoc metadata "nondeterministic choice" prec 43] .
-	op _;_ : String DNA -> DNA [ctor metadata "sequential composition" prec 40 gather (E e)] .
-	op _;_ : Comm DNA -> DNA [ctor metadata "sequential composition" prec 40 gather (E e)] .
+  op _n+_ : String String -> String [ctor metadata "NetKAT +" assoc comm] .
+	op _o+_ : RDNK RDNK -> RDNK [ctor comm assoc metadata "nondeterministic choice" prec 41] .
+	op _;_ : String RDNK -> RDNK [ctor metadata "sequential composition" prec 39 gather (E e)] .
+	op _;_ : Comm RDNK -> RDNK [ctor metadata "sequential composition" prec 39 gather (E e)] .
 
-	op bot : -> DNA .
-	op rcfg(_,_) : Channel String -> Comm .
-	op delta{_}(_) : TermSet DNA -> DNA . 
-	op pi{_}(_) : Nat DNA -> DNA .
+	op bot : -> RDNK .
 
 	var H : TermSet . 
 	var M : Nat .
 	var X : Channel .
-	vars P Q R : DNA .
+	vars P Q R : RDNK .
 	vars N Z : String .
 
 	op zero : -> String .
@@ -70,32 +66,6 @@ fmod DNA is
 endfm
 
 
-fmod COMM_STRING_CONVERSION is
-  protecting DNA .
-  protecting META-LEVEL .
-  protecting META-TERM .
-  protecting QID .
-
-  op commToString(_) : Comm -> String .
-
-  var X : Channel .
-  var S : String .
-  var C : Comm .
-
-  ---- Use meta programming to get the channel name: move the channel variable 1 reflexion level up,
-  ---- then get its name as QID and convert it to string
-  eq commToString(rcfg(X, S)) = "rcfg(" + string(getName(upTerm(X))) + ", '" + S + "')" .
-  eq commToString(X ? S) = string(getName(upTerm(X))) + " ? '" + S + "'" .
-  eq commToString(X ! S) = string(getName(upTerm(X))) + " ! '" + S + "'" .
-  eq commToString(C) = "" [owise] .
-endfm
-
-
-view DNA from TRIV to DNA is
-  sort Elt to DNA .
-endv
-
-
-view DNA_VC from TRIV to DNA is
-  sort Elt to DNA_VC .
+view RDNK from TRIV to RESTRICTED_DNK is
+  sort Elt to RDNK .
 endv

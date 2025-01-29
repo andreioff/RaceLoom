@@ -1,3 +1,26 @@
+[project]
+name = "Tracer"
+version = "0.0.1"
+authors = [
+  { name = "Andrei Covaci", email = "covaci_andrei_i@yahoo.com" }
+]
+requires-python = ">= 3.12.8"
+dependencies = [
+  "maude~=1.4.0",
+]
+
+[project.optional-dependencies]
+test = [ 
+  "pytest==8.3.4",
+  "pytest_cov==6.0.0",
+  "pydot==3.0.4",
+  # If the installation of pygraphviz fails with "...fatal error: graphviz/cgraph.h: No such file or directory",
+  # make sure your system has the `graphviz-dev` package installed. 
+  # For Debian based Linux systems, `sudo apt install graphviz-dev` should suffice.
+  "pygraphviz==1.14",
+  "networkx==3.4.2"
+]
+
 [tool.pylsp-mypy]
 plugins = "pydantic.mypy"
 enabled = true

@@ -8,13 +8,13 @@ import networkx.algorithms as ga
 from networkx.classes.coreviews import AdjacencyView, AtlasView
 
 import src
-from src.dnk_model import DNKModel
+from src.model.dnk_maude_model import DNKMaudeModel
 
 PROJECT_DIR = os.path.dirname(inspect.getabsfile(src))
 TEST_DIR = os.path.dirname(inspect.getabsfile(test.src))
 
 
-class DNKTestModel(DNKModel):
+class DNKTestModel(DNKMaudeModel):
     def __init__(
         self, maudeModuleContent: str, bigSwitch: str, controllersMaudeMap: str
     ):

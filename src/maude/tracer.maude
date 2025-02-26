@@ -29,7 +29,7 @@ fmod TRACER_UTIL is
   eq concatSws (I |-> X , empty) = X .
   eq concatSws (I |-> X , Sws) = X + "+" + concatSws Sws .
 
-  eq network Sws L = "(" + (concatSws Sws) + ") . " + L .
+  eq network Sws L = "(" + (concatSws Sws) + ") . " + "(" + L + ")" .
   eq bigSwitch Sws L = (network Sws L) + " . (" + (network Sws L) + ")*" .
 
   eq parallelJoin(BSw, empty, VCSize) = c(BSw, 0) .

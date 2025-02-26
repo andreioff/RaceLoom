@@ -170,4 +170,4 @@ cython_debug/
 output/
 bin/katch/results/*
 !bin/katch/results/.gitkeep
-
+.python-version

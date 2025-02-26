@@ -5,7 +5,7 @@ import sys
 
 from pydantic import ValidationError
 
-from src.dnk_model import DNKModel
+from src.model.dnk_maude_model import DNKMaudeModel
 from src.tracer import MaudeError, Tracer, TracerConfig
 from src.util import createDir, exportFile, isExe, isJson, readFile
 
@@ -63,7 +63,7 @@ def main() -> None:
         tracer = Tracer(config)
 
         dotTrace = tracer.run(
-            DNKModel().fromJson(jsonStr), options.depth, options.allTraces  # type: ignore
+            DNKMaudeModel().fromJson(jsonStr), options.depth, options.allTraces  # type: ignore
         )
         execStats = tracer.getExecTimeStats()
         for key in execStats:
@@ -76,7 +76,7 @@ def main() -> None:
             )
             sys.exit()
 
-        exportFilePath = f"{OUTPUT_DIR_PATH}/{RESULT_FILE_NAME}.gv"
+        exportFilePath = os.path.join(OUTPUT_DIR_PATH, f"{RESULT_FILE_NAME}.gv")
         exportFile(exportFilePath, dotTrace)
         print(f"Concurrent behavior detected! Trace(s) written to: {exportFilePath}.")
 

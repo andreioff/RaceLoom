@@ -30,7 +30,7 @@ def getTempFilePath(dirPath: str, ext: str) -> str:
     """
 
     currTimeMili = int(round(time.time() * 1000))
-    return "{}/{}{}.{}".format(dirPath, TMP_FILE_NAME, currTimeMili, ext)
+    return os.path.join(dirPath, "{}{}.{}".format(TMP_FILE_NAME, currTimeMili, ext))
 
 
 def executeCmd(cmd: list[str]) -> Tuple[str, str | None]:

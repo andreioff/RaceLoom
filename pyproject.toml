@@ -7,6 +7,7 @@ authors = [
 requires-python = ">= 3.12.8"
 dependencies = [
   "maude~=1.4.0",
+  "pydantic==2.10.5",
 ]
 
 [project.optional-dependencies]

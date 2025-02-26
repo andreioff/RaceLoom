@@ -1,11 +1,12 @@
 # mypy: disable-error-code="import-untyped,no-any-unimported,misc"
 
+import os
 from time import perf_counter
 
 import maude
-from src.dnk_model import DNKModel
 from src.KATch_comm import KATchComm
 from src.KATch_hook import KATCH_HOOK_MAUDE_NAME, KATchHook
+from src.model.dnk_maude_model import DNKMaudeModel
 
 DNK_MODEL_MODULE_NAME = "DNK_MODEL"
 
@@ -49,13 +50,13 @@ class Tracer:
             )
         maude.connectEqHook(KATCH_HOOK_MAUDE_NAME, self.katchHook)
 
-        filePath = f"{self.config.maudeFilesDirPath}/tracer.maude"
+        filePath = os.path.join(self.config.maudeFilesDirPath, "tracer.maude")
         success = maude.load(filePath)
         if not success:
             raise MaudeError(f"Failed to load Maude file: {filePath}.")
         Tracer.maudeInitialized = True
 
-    def run(self, model: DNKModel, depth: int, allTraces: bool) -> str:
+    def run(self, model: DNKMaudeModel, depth: int, allTraces: bool) -> str:
         self.reset()
         mod = self.__declareModelMaudeModule(model)
         term = self.__buildTracerMaudeEntryPoint(model, mod, depth, allTraces)
@@ -67,7 +68,7 @@ class Tracer:
 
         return self.__convertTraceToDOT(term)
 
-    def __declareModelMaudeModule(self, model: DNKModel) -> maude.Module:
+    def __declareModelMaudeModule(self, model: DNKMaudeModel) -> maude.Module:
         modContentStr = model.toMaudeModuleContent()
         maude.input(
             f"""
@@ -84,7 +85,7 @@ class Tracer:
         return mod
 
     def __buildTracerMaudeEntryPoint(
-        self, model: DNKModel, mod: maude.Module, depth: int, allTraces: bool
+        self, model: DNKMaudeModel, mod: maude.Module, depth: int, allTraces: bool
     ) -> maude.Term:
         sws = model.getBigSwitchTerm()
         cs = model.getControllersMaudeMap()

@@ -44,9 +44,9 @@ class KATchComm:
 
         # KATch may reduce a given network to True or False, which corresponds
         # to forwarding and dropping all packets, respectively.
-        if jsonRes == f"[[{KATCH_TRUE}]]":
+        if jsonRes == f'[["{KATCH_TRUE}"]]':
             return sym.ONE, None
-        if jsonRes == f"[[{KATCH_FALSE}]]":
+        if jsonRes == f'[["{KATCH_FALSE}"]]':
             return sym.ZERO, None
 
         return self.__processJSONPackets(f'{{"packets": {jsonRes}}}')

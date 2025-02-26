@@ -57,6 +57,7 @@ class Tracer:
         Tracer.maudeInitialized = True
 
     def run(self, model: DNKMaudeModel, depth: int, allTraces: bool) -> str:
+        """Returns a Maude term containing a trace tree"""
         self.reset()
         mod = self.__declareModelMaudeModule(model)
         term = self.__buildTracerMaudeEntryPoint(model, mod, depth, allTraces)
@@ -66,7 +67,7 @@ class Tracer:
         endTime = perf_counter()
         self.runExecTime = endTime - startTime
 
-        return self.__convertTraceToDOT(term)
+        return str(term.prettyPrint(maude.PRINT_FORMAT))
 
     def __declareModelMaudeModule(self, model: DNKMaudeModel) -> maude.Module:
         modContentStr = model.toMaudeModuleContent()
@@ -97,14 +98,19 @@ class Tracer:
             raise MaudeError("Failed to declare Tracer entry point.")
         return term
 
-    def __convertTraceToDOT(self, term: maude.Term) -> str:
+    def convertTraceToDOT(self, termContent: str) -> str:
+        """Takes a string containing a Maude trace tree and returns
+        its representation in DOT format"""
         modName = "TRACE_TREE_TO_DOT"
         mod = maude.getModule(modName)
         if mod is None:
             raise MaudeError(f"Failed to get module {modName}!")
 
-        term2 = "TraceToDOT(" + term.prettyPrint(maude.PRINT_FORMAT) + ")"
+        term2 = "TraceToDOT(" + termContent + ")"
         t2 = mod.parseTerm(term2)
+        if t2 is None:
+            raise MaudeError("Failed to parse given term!")
+
         t2.reduce()
         return str(t2)[1:-1].replace("\\n", "\n").replace('\\"', '"')
 

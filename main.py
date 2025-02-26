@@ -1,6 +1,5 @@
 import optparse
 import os
-import string
 import sys
 
 from pydantic import ValidationError
@@ -35,6 +34,13 @@ def main() -> None:
                 all traces that lead to concurrent behavior \
                 instead of only the first one (impacts performance)",
     )
+    parser.add_option(
+        "--to-dot",
+        dest="toDot",
+        default=False,
+        action="store_true",
+        help="Passing this option converts the traces into DOT format",
+    )
 
     (options, args) = parser.parse_args()
 
@@ -62,22 +68,28 @@ def main() -> None:
 
         tracer = Tracer(config)
 
-        dotTrace = tracer.run(
+        traceTreeStr = tracer.run(
             DNKMaudeModel().fromJson(jsonStr), options.depth, options.allTraces  # type: ignore
         )
         execStats = tracer.getExecTimeStats()
         for key in execStats:
             print(f"{key}: {execStats[key]}")
 
-        if dotTrace.translate(str.maketrans("", "", string.whitespace)) == "digraphG{}":
+        if traceTreeStr == "TEmpty":
             print(
-                "Could not find any concurrent behavior \
-                        for the given network and depth!"
+                "Could not find any concurrent behavior "
+                + "for the given network and depth!"
             )
             sys.exit()
 
-        exportFilePath = os.path.join(OUTPUT_DIR_PATH, f"{RESULT_FILE_NAME}.gv")
-        exportFile(exportFilePath, dotTrace)
+        fileExt = "maude"
+        outputContent = traceTreeStr
+        if options.toDot:  # type: ignore
+            fileExt = "gv"
+            outputContent = tracer.convertTraceToDOT(traceTreeStr)
+
+        exportFilePath = os.path.join(OUTPUT_DIR_PATH, f"{RESULT_FILE_NAME}.{fileExt}")
+        exportFile(exportFilePath, outputContent)
         print(f"Concurrent behavior detected! Trace(s) written to: {exportFilePath}.")
 
     except MaudeError as e:

@@ -171,3 +171,5 @@ output/
 bin/katch/results/*
 !bin/katch/results/.gitkeep
 .python-version
+test_runs/
+dump/

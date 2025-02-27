@@ -1,13 +1,11 @@
 # mypy: disable-error-code="import-untyped,no-any-unimported,misc"
 
 from time import perf_counter
-from typing import List, Tuple
+from typing import List
 
 import maude
 from src.KATch_comm import KATchComm
 
-CACHE_HIT = "KATch cache hits"
-KATCH_CALL = "KATch command calls"
 KATCH_HOOK_MAUDE_NAME = "NetKATToNF"
 
 
@@ -15,12 +13,18 @@ class KATchError(Exception):
     pass
 
 
+class KATchStats:
+    def __init__(self) -> None:
+        self.cacheHitTimes: List[float] = []
+        self.katchExecTimes: List[float] = []
+
+
 class KATchHook(maude.Hook):  # type: ignore
     def __init__(self, katchComm: KATchComm) -> None:
         super().__init__()
         self.katchComm = katchComm
         self.cache: dict[str, str] = {}
-        self.execStats: dict[str, List[float]] = {}
+        self.execStats: KATchStats = KATchStats()
 
     def run(self, term: maude.Term, data: maude.HookData) -> maude.Term:
         # Reduce arguments first
@@ -31,32 +35,26 @@ class KATchHook(maude.Hook):  # type: ignore
         netkatEncoding = str(term.arguments().argument())
 
         # process the netkat expression
-        startTime = perf_counter()
-        procType, result = self.__processNetKATExpr(netkatEncoding)
-        endTime = perf_counter()
-        self.__addExecStatsEntry(procType, endTime - startTime)
+        result = self.__processNetKATExpr(netkatEncoding)
 
         module = term.symbol().getModule()
         return module.parseTerm(result)
 
-    def __addExecStatsEntry(self, key: str, value: float) -> None:
-        if key in self.execStats:
-            self.execStats[key].append(value)
-        else:
-            self.execStats[key] = [value]
-
-    def __processNetKATExpr(self, expr: str) -> Tuple[str, str]:
+    def __processNetKATExpr(self, expr: str) -> str:
+        startTime = perf_counter()
         if expr in self.cache:
-            return CACHE_HIT, self.cache[expr]
+            self.execStats.cacheHitTimes.append(perf_counter() - startTime)
+            return self.cache[expr]
 
         output, error = self.katchComm.execute(expr)
         if error is not None:
             print(f"An error occured when running KATch:\n{error}")
             raise KATchError(error)
 
+        self.execStats.katchExecTimes.append(perf_counter() - startTime)
         self.cache[expr] = output
-        return KATCH_CALL, output
+        return output
 
     def reset(self) -> None:
         self.cache = {}
-        self.execStats = {}
+        self.execStats = KATchStats()

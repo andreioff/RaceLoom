@@ -78,3 +78,8 @@ def createDir(dirPath: str) -> None:
     if os.path.exists(dirPath):
         return
     os.mkdir(dirPath)
+
+
+def getFileName(filePath: str) -> str:
+    fileName = os.path.basename(filePath)
+    return fileName.split(".")[0]

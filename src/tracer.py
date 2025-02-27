@@ -1,11 +1,13 @@
 # mypy: disable-error-code="import-untyped,no-any-unimported,misc"
 
 import os
+from math import fsum
 from time import perf_counter
+from typing import Tuple
 
 import maude
 from src.KATch_comm import KATchComm
-from src.KATch_hook import KATCH_HOOK_MAUDE_NAME, KATchHook
+from src.KATch_hook import KATCH_HOOK_MAUDE_NAME, KATchHook, KATchStats
 from src.model.dnk_maude_model import DNKMaudeModel
 
 DNK_MODEL_MODULE_NAME = "DNK_MODEL"
@@ -13,6 +15,30 @@ DNK_MODEL_MODULE_NAME = "DNK_MODEL"
 
 class MaudeError(Exception):
     pass
+
+
+class TracerStats:
+    def __init__(self) -> None:
+        self.execTime = 0.0
+        self.katchCacheHits = 0
+        self.katchCacheQueryTime = 0.0
+        self.katchCalls = 0
+        self.katchExecTime = 0.0
+
+    def setKATchStats(self, katchStats: KATchStats) -> None:
+        self.katchCacheHits = len(katchStats.cacheHitTimes)
+        self.katchCacheQueryTime = fsum(katchStats.cacheHitTimes)
+        self.katchCalls = len(katchStats.katchExecTimes)
+        self.katchExecTime = fsum(katchStats.katchExecTimes)
+
+    def __repr__(self) -> str:
+        return (
+            f"Computing trace(s) time: {self.execTime} seconds\n"
+            + f"KATch cache hits: {self.katchCacheHits}\n"
+            + f"KATch cache query time: {self.katchCacheQueryTime}\n"
+            + f"KATch calls: {self.katchCalls}\n"
+            + f"KATch execution time: {self.katchExecTime}\n"
+        )
 
 
 class TracerConfig:
@@ -32,7 +58,7 @@ class Tracer:
 
     def __init__(self, config: TracerConfig) -> None:
         self.config = config
-        self.runExecTime = -1.0
+        self.stats = TracerStats()
 
         katchComm = KATchComm(self.config.katchPath, self.config.outputDirPath)
         self.katchHook = KATchHook(katchComm)
@@ -56,7 +82,9 @@ class Tracer:
             raise MaudeError(f"Failed to load Maude file: {filePath}.")
         Tracer.maudeInitialized = True
 
-    def run(self, model: DNKMaudeModel, depth: int, allTraces: bool) -> str:
+    def run(
+        self, model: DNKMaudeModel, depth: int, allTraces: bool
+    ) -> Tuple[str, bool]:
         """Returns a Maude term containing a trace tree"""
         self.reset()
         mod = self.__declareModelMaudeModule(model)
@@ -65,9 +93,10 @@ class Tracer:
         startTime = perf_counter()
         term.reduce()
         endTime = perf_counter()
-        self.runExecTime = endTime - startTime
+        self.stats.execTime = endTime - startTime
 
-        return str(term.prettyPrint(maude.PRINT_FORMAT))
+        prettyTerm = str(term.prettyPrint(maude.PRINT_FORMAT))
+        return prettyTerm, prettyTerm == "TEmpty"
 
     def __declareModelMaudeModule(self, model: DNKMaudeModel) -> maude.Module:
         modContentStr = model.toMaudeModuleContent()
@@ -114,16 +143,10 @@ class Tracer:
         t2.reduce()
         return str(t2)[1:-1].replace("\\n", "\n").replace('\\"', '"')
 
-    def getExecTimeStats(self) -> dict[str, str]:
-        hookStats = self.katchHook.execStats
-        stats: dict[str, str] = {
-            "Computing trace(s) time": f"{self.runExecTime} seconds",
-        }
-        for key, times in hookStats.items():
-            stats[key] = f"{len(times)}"
-            stats[key + " total processing time"] = f"{sum(times)} seconds"
-        return stats
+    def getExecTimeStats(self) -> TracerStats:
+        self.stats.setKATchStats(self.katchHook.execStats)
+        return self.stats
 
     def reset(self) -> None:
-        self.runExecTime = -1.0
+        self.stats = TracerStats()
         self.katchHook.reset()

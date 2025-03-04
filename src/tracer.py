@@ -82,13 +82,12 @@ class Tracer:
             raise MaudeError(f"Failed to load Maude file: {filePath}.")
         Tracer.maudeInitialized = True
 
-    def run(
-        self, model: DNKMaudeModel, depth: int, allTraces: bool
-    ) -> Tuple[str, bool]:
-        """Returns a Maude term containing a trace tree"""
+    def run(self, model: DNKMaudeModel, depth: int) -> Tuple[str, bool]:
+        """Returns a tuple containing a Maude trace tree and a boolean
+        flag that is set if the trace tree is empty"""
         self.reset()
         mod = self.__declareModelMaudeModule(model)
-        term = self.__buildTracerMaudeEntryPoint(model, mod, depth, allTraces)
+        term = self.__buildTracerMaudeEntryPoint(model, mod, depth)
 
         startTime = perf_counter()
         term.reduce()
@@ -115,13 +114,12 @@ class Tracer:
         return mod
 
     def __buildTracerMaudeEntryPoint(
-        self, model: DNKMaudeModel, mod: maude.Module, depth: int, allTraces: bool
+        self, model: DNKMaudeModel, mod: maude.Module, depth: int
     ) -> maude.Term:
         sws = model.getBigSwitchTerm()
         cs = model.getControllersMaudeMap()
-        allTracesFlag = "true" if allTraces else "false"
 
-        term = mod.parseTerm(f"tracer{{{depth}, {allTracesFlag}}}({sws}, {cs})")
+        term = mod.parseTerm(f"tracer{{{depth}}}({sws}, {cs})")
 
         if term is None:
             raise MaudeError("Failed to declare Tracer entry point.")

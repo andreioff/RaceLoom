@@ -33,16 +33,6 @@ def buildArgsParser() -> optparse.OptionParser:
         help="Depth of search (default is 5)",
     )
     parser.add_option(
-        "-a",
-        "--all-traces",
-        dest="allTraces",
-        default=False,
-        action="store_true",
-        help="Passing this option instructs the tool to extract \
-                all traces that lead to concurrent behavior \
-                instead of only the first one (impacts performance)",
-    )
-    parser.add_option(
         "--to-dot",
         dest="toDot",
         default=False,
@@ -111,7 +101,7 @@ def main() -> None:
         tracer = Tracer(config)
 
         traceTreeStr, isEmpty = tracer.run(
-            DNKMaudeModel().fromJson(jsonStr), options.depth, options.allTraces  # type: ignore
+            DNKMaudeModel().fromJson(jsonStr), options.depth  # type: ignore
         )
         execStats = tracer.getExecTimeStats()
         print(execStats)

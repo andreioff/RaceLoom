@@ -1,6 +1,7 @@
 # mypy: disable-error-code="import-untyped,no-any-unimported,misc"
 
 import os
+import string
 from math import fsum
 from time import perf_counter
 from typing import Tuple
@@ -43,14 +44,12 @@ class TracerStats:
 
 class TracerConfig:
     def __init__(
-        self,
-        outputDirPath: str,
-        katchPath: str,
-        maudeFilesDirPath: str,
+        self, outputDirPath: str, katchPath: str, maudeFilesDirPath: str, toDot: bool
     ) -> None:
         self.outputDirPath = outputDirPath
         self.katchPath = katchPath
         self.maudeFilesDirPath = maudeFilesDirPath
+        self.toDot = toDot
 
 
 class Tracer:
@@ -93,16 +92,20 @@ class Tracer:
         term.reduce()
         endTime = perf_counter()
         self.stats.execTime = endTime - startTime
-
-        prettyTerm = str(term.prettyPrint(maude.PRINT_FORMAT))
-        return prettyTerm, prettyTerm == "TEmpty"
+        return self.__processMaudeResult(term)
 
     def __declareModelMaudeModule(self, model: DNKMaudeModel) -> maude.Module:
         modContentStr = model.toMaudeModuleContent()
+
+        traceToDotModuleImport = ""
+        if self.config.toDot:
+            traceToDotModuleImport = "protecting TRACE_TREE_TO_DOT ."
+
         maude.input(
             f"""
             fmod {DNK_MODEL_MODULE_NAME} is
             protecting TRACER .
+            {traceToDotModuleImport}
 
             {modContentStr}
             endfm
@@ -119,27 +122,31 @@ class Tracer:
         sws = model.getBigSwitchTerm()
         cs = model.getControllersMaudeMap()
 
-        term = mod.parseTerm(f"tracer{{{depth}}}({sws}, {cs})")
+        entryPoint = f"tracer{{{depth}}}({sws}, {cs})"
+        if self.config.toDot:
+            entryPoint = f"TraceToDOT({entryPoint})"
+        term = mod.parseTerm(entryPoint)
 
         if term is None:
             raise MaudeError("Failed to declare Tracer entry point.")
         return term
 
-    def convertTraceToDOT(self, termContent: str) -> str:
-        """Takes a string containing a Maude trace tree and returns
-        its representation in DOT format"""
-        modName = "TRACE_TREE_TO_DOT"
-        mod = maude.getModule(modName)
-        if mod is None:
-            raise MaudeError(f"Failed to get module {modName}!")
+    def __processMaudeResult(self, term: maude.Term) -> Tuple[str, bool]:
+        """Takes a reduced Maude term of sort TraceNodes containing a trace tree or
+        of sort String containing a DOT directed graph (digraph) and
+        returns a string representation of the term and whether the trace tree or graph
+        is empty
+        """
+        if self.config.toDot:
+            prettyTerm = str(term)[1:-1].replace("\\n", "\n").replace('\\"', '"')
+            isEmpty = (
+                prettyTerm.translate(str.maketrans("", "", string.whitespace))
+                == "digraphG{}"
+            )
+            return prettyTerm, isEmpty
 
-        term2 = "TraceToDOT(" + termContent + ")"
-        t2 = mod.parseTerm(term2)
-        if t2 is None:
-            raise MaudeError("Failed to parse given term!")
-
-        t2.reduce()
-        return str(t2)[1:-1].replace("\\n", "\n").replace('\\"', '"')
+        prettyTerm = str(term.prettyPrint(maude.PRINT_FORMAT))
+        return prettyTerm, prettyTerm == "TEmpty"
 
     def getExecTimeStats(self) -> TracerStats:
         self.stats.setKATchStats(self.katchHook.execStats)

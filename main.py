@@ -68,7 +68,7 @@ def writeTracesToFile(
 
 
 def logRunStats(
-    currTime: time.struct_time, inputFileName: str, stats: TracerStats
+    currTime: time.struct_time, inputFileName: str, depth: int, stats: TracerStats
 ) -> None:
     logFilePath = os.path.join(OUTPUT_DIR_PATH, f"{EXEC_STATS_FILE_NAME}.csv")
 
@@ -76,12 +76,12 @@ def logRunStats(
     statsVarValues: List[str] = [str(v) for v in vars(stats).values()]  # type: ignore
     if not os.path.exists(logFilePath):
         with open(logFilePath, "w") as f:
-            f.write(",".join(["date", "input_file"] + statsVarNames))
+            f.write(",".join(["date", "input_file", "depth"] + statsVarNames))
             f.write(os.linesep)
 
     fmtTime = time.strftime("%Y-%m-%d;%H:%M:%S", currTime)
     with open(logFilePath, "a") as f:
-        f.write(",".join([fmtTime, inputFileName] + statsVarValues))
+        f.write(",".join([fmtTime, inputFileName, f"{depth}"] + statsVarValues))
         f.write(os.linesep)
 
 
@@ -94,6 +94,7 @@ def main() -> None:
         outputDirPath=OUTPUT_DIR_PATH,
         katchPath=katchPath,
         maudeFilesDirPath=MAUDE_FILES_DIR_PATH,
+        toDot=options.toDot,  # type: ignore
     )
 
     try:
@@ -108,7 +109,7 @@ def main() -> None:
 
         currTime = time.localtime()
         inputFileName = getFileName(inputFilePath)
-        logRunStats(currTime, inputFileName, execStats)
+        logRunStats(currTime, inputFileName, options.depth, execStats)  # type: ignore
 
         if isEmpty:
             printAndExit(
@@ -117,13 +118,11 @@ def main() -> None:
             )
 
         fileExt = "maude"
-        outputContent = traceTreeStr
         if options.toDot:  # type: ignore
             fileExt = "gv"
-            outputContent = tracer.convertTraceToDOT(traceTreeStr)
 
         print("Concurrent behavior detected!")
-        writeTracesToFile(currTime, outputContent, inputFileName, fileExt)
+        writeTracesToFile(currTime, traceTreeStr, inputFileName, fileExt)
 
     except MaudeError as e:
         print(f"Error encountered while executing Maude:\n\t{e}")

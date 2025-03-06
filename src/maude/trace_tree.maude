@@ -17,6 +17,7 @@ fmod TRACE_TREE is
   op TDR : -> TNType . ---- data race
   op TSTART : -> TNType . ---- start node 
   op TNORMAL : -> TNType . ---- normal node 
+  op TPRUNED : -> TNType . ---- normal node 
 
   var TN : TraceNode .
   var Nodes RemNodes : TraceNodes .
@@ -45,6 +46,7 @@ fmod TRACE_TREE_TO_DOT is
 
   ---- purple #9068be 
   eq getNodeColor(TSTART) = "#6ed37e" .
+  eq getNodeColor(TPRUNED) = "#9068be" .
   eq getNodeColor(TDR) = "#e62739" .
   eq getNodeColor(T) = "#e1e8f0" [owise] .
 

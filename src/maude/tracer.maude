@@ -41,8 +41,13 @@ fmod TRACER is
   protecting COMM_STRING_CONVERSION .
   protecting TRACER_UTIL .
 
-	op rd{_}(_,_) : Nat DNKComp VCMap -> TraceNodes .
-	op makeNode{_}(_,_,_) : Nat String DNKComp VCMap -> TraceNodes .
+  sorts STEPTYPE .
+  op CommStep : -> STEPTYPE [ctor] .
+  op ProcStep : -> STEPTYPE [ctor] .
+  op NoStep : -> STEPTYPE [ctor] .
+ 
+	op rd{_,_}(_,_) : Nat STEPTYPE DNKComp VCMap -> TraceNodes .
+	op makeNode{_,_}(_,_,_) : Nat STEPTYPE String DNKComp VCMap -> TraceNodes .
 
 	op tracer{_}(_,_) : Nat RDNK RDNKMap -> TraceNodes .
 	op tracerAux{_}(_,_) : Nat DNKComp VCMap -> TraceNodes .
@@ -53,22 +58,22 @@ fmod TRACER is
   var X : Channel .
   vars NewVCs VCs : VCMap .
   var BSw : RDNK .
-  vars I J D : Nat .
+  vars I J D K : Nat .
+  var SI : STEPTYPE .
 
-
-  eq makeNode{D}(N, P, VCs) = if hasIncmpVCs(VCs)
+  eq makeNode{D,SI}(N, P, VCs) = if hasIncmpVCs(VCs)
                               then TAppend(TNode(TDR, N, VCs, TEmpty), TEmpty)
-                              else TAppend(TNode(TNORMAL, N, VCs, rd{D}(P, VCs)), TEmpty)
+                              else TAppend(TNode(TNORMAL, N, VCs, rd{D,SI}(P, VCs)), TEmpty)
                               ---- else (if rd{D}(P, VCs) =/= TEmpty
                               ----   then TAppend(TNode(TNORMAL, N, VCs, rd{D}(P, VCs)), TEmpty) ---- TODO Re-enable this (impacts performance)
                               ----   else TEmpty
                               ----   fi)
                               fi .
 
-  eq rd{0}(P, VCs) = TEmpty .
-  eq rd{D}(c(bot, I), VCs) = TEmpty .
+  eq rd{0,SI}(P, VCs) = TEmpty .
+  eq rd{D,SI}(c(bot, I), VCs) = TEmpty .
 
-  eq rd{D}(P o+ Q, VCs) = TConcat(rd{D}(P, VCs), rd{D}(Q, VCs)) .
+  eq rd{D,SI}(P o+ Q, VCs) = TConcat(rd{D,SI}(P, VCs), rd{D,SI}(Q, VCs)) .
   ---- TODO: Concat only if it doesn't lead to TEmpty
   ---- HORRIFYINGLY SLOW ceq rd{D}(P o+ Q, VCs) = rd{D}(P, VCs) if (rd{D}(P, VCs) =/= TEmpty) .
   ----                   eq rd{D}(P o+ Q, VCs) = rd{D}(Q, VCs) [owise] .
@@ -76,21 +81,22 @@ fmod TRACER is
   ---- Sending or receiving alone does not count in the trace, which is similar to applying the delta operator.
   ---- The trace also stops here since the expected behavior of a component is to wait when executing a
   ---- communication instruction until it can synchronize with another component.
-  eq rd{s(D)}(c((X ! N), I) ; P, VCs) = TEmpty .
-  eq rd{s(D)}(c((X ? N), I) ; P, VCs) = TEmpty .
-  eq rd{s(D)}(rcfg(X, N, I, J) ; P, VCs) = makeNode{D}(compCommToStr(rcfg(X, N, I, J)), P, transferVC(VCs, I, J)) .
+  eq rd{s(D),SI}(c((X ! N), I) ; P, VCs) = TEmpty .
+  eq rd{s(D),SI}(c((X ? N), I) ; P, VCs) = TEmpty .
+  eq rd{s(D),SI}(rcfg(X, N, I, J) ; P, VCs) = makeNode{D,CommStep}(compCommToStr(rcfg(X, N, I, J)), P, transferVC(VCs, I, J)) .
 
-  eq rd{s(D)}(c(N, I) ; P, VCs) = makeNode{D}(N, P, inc(VCs, I)) .
+  eq rd{s(D),ProcStep}(c(N, I) ; P, VCs) = TAppend(TNode(TPRUNED, N, VCs, TEmpty), TEmpty) .
+  eq rd{s(D),SI}(c(N, I) ; P, VCs) = makeNode{D,ProcStep}(N, P, inc(VCs, I)) .
 
-	eq [rec-4] : rd{D}(P, VCs) = if notUnfolded(P)
-                                then rd{D}(unfold(P), VCs)
-                                else rd{D}(P, VCs)
-                                fi [owise] .
+	eq [rec-4] : rd{D,SI}(P, VCs) = if notUnfolded(P)
+                                  then rd{D,SI}(unfold(P), VCs)
+                                  else rd{D,SI}(P, VCs)
+                                  fi [owise] .
 
   --- Assumes that the Cs map mimics an array, i.e. its keys start from 0 and increase by 1 with every position.
   --- E.g. 0 |-> first_RDNK, 1 |-> second_RDNK, 2 |-> third_RDNK, etc.
   eq tracer{D}(BSw, Cs) = tracerAux{D}(parallelJoin(BSw, Cs, s(mapLength(Cs))),
                                        newVCMap(s(mapLength(Cs)))) .
-  ceq tracerAux{D}(P, VCs) = TAppend(TNode(TSTART, "", VCs, rd{D}(P, VCs)), TEmpty) if rd{D}(P, VCs) =/= TEmpty . ---- Add start node if trace is not empty
+  ceq tracerAux{D}(P, VCs) = TAppend(TNode(TSTART, "", VCs, rd{D,NoStep}(P, VCs)), TEmpty) if rd{D,NoStep}(P, VCs) =/= TEmpty . ---- Add start node if trace is not empty
   eq tracerAux{D}(P, VCs) = TEmpty [owise] .
 endfm

@@ -2,13 +2,14 @@ import optparse
 import os
 import sys
 import time
+from test.util import DNKTestModel
 from typing import List, Tuple
 
 from pydantic import ValidationError
 
 from src.model.dnk_maude_model import DNKMaudeModel
 from src.tracer import MaudeError, Tracer, TracerConfig, TracerStats
-from src.util import createDir, getFileName, isExe, isJson, readFile
+from src.util import createDir, getFileName, isExe, readFile
 
 PROJECT_DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 OUTPUT_DIR_PATH = os.path.join(PROJECT_DIR_PATH, "output")
@@ -32,10 +33,19 @@ def buildArgsParser() -> optparse.OptionParser:
         default=5,
         help="Depth of search (default is 5)",
     )
+    parser.add_option(
+        "-g",
+        "--debug",
+        dest="debug",
+        default=False,
+        action="store_true",
+        help="Passing this option enables the tool to accept specifically formated "
+        + ".maude files containing DNK network models for testing or debugging",
+    )
     return parser
 
 
-def validateArgs(args: List[str]) -> Tuple[str, str]:
+def validateArgs(args: List[str], debugMode: bool) -> Tuple[str, str]:
     """Validates the command line arguments and returns the paths to the KATch
     executable and the input JSON file."""
     if len(args) < 2:
@@ -44,7 +54,12 @@ def validateArgs(args: List[str]) -> Tuple[str, str]:
     if not os.path.exists(args[0]) or not isExe(args[0]):
         printAndExit("KATch tool could not be found in the given path!")
 
-    if not isJson(args[1]) or not os.path.isfile(args[1]):
+    fileExt = args[1].split(".")[-1]
+    if (
+        not os.path.isfile(args[1])
+        or fileExt not in ["json", "maude"]
+        or (fileExt == "maude" and not debugMode)
+    ):
         printAndExit("Please provide a .json input file!")
     return args[0], args[1]
 
@@ -74,9 +89,32 @@ def logRunStats(
         f.write(os.linesep)
 
 
+def readDNKModelFromFile(filePath: str) -> DNKMaudeModel:
+    fileExt = filePath.split(".")[-1]
+    if fileExt == "maude":
+        # Only for debugging purposes
+        jsonStr = readFile(filePath)
+        fileContent = readFile(filePath)
+        fileContentLines = fileContent.split("\n")
+        maudeStr = "\n".join(fileContentLines[:-3])
+        switchCall = fileContentLines[-3]
+        controllerMap = fileContentLines[-2]
+        return DNKTestModel(
+            maudeStr,
+            switchCall,
+            controllerMap,
+        )
+
+    if fileExt == "json":
+        jsonStr = readFile(filePath)
+        return DNKMaudeModel().fromJson(jsonStr)
+    printAndExit("Unknown input file extension: {fileExt}!")
+    return DNKMaudeModel()
+
+
 def main() -> None:
     (options, args) = buildArgsParser().parse_args()
-    katchPath, inputFilePath = validateArgs(args)
+    katchPath, inputFilePath = validateArgs(args, options.debug)  # type: ignore
 
     createDir(OUTPUT_DIR_PATH)
     config = TracerConfig(
@@ -86,7 +124,7 @@ def main() -> None:
     )
 
     try:
-        jsonStr = readFile(inputFilePath)
+        dnkModel = readDNKModelFromFile(inputFilePath)
 
         currTime = time.localtime()
         inputFileName = getFileName(inputFilePath)
@@ -94,7 +132,7 @@ def main() -> None:
 
         with open(tracesFilePath, "a") as file:
             tracer = Tracer(config, file)
-            tracer.run(DNKMaudeModel().fromJson(jsonStr), options.depth)  # type: ignore
+            tracer.run(dnkModel, options.depth)  # type: ignore
 
         execStats = tracer.getStats()
         print(execStats)

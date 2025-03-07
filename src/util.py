@@ -64,11 +64,6 @@ def readFile(filePath: str) -> str:
     return content
 
 
-def isJson(fpath: str) -> bool:
-    """Takes a file path and checks if the file is in .json format."""
-    return len(fpath) > 5 and fpath[-5:] == ".json"
-
-
 def isExe(fpath: str) -> bool:
     """Takes a file path and checks if the file is an executable."""
     return os.path.isfile(fpath) and os.access(fpath, os.X_OK)

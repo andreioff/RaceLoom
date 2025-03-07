@@ -18,7 +18,7 @@ fmod DNK is
 	op _|_ : DNKComp DNKComp -> DNKComp [ctor comm prec 42 gather (E e)] .
 	op _||<_ : DNKComp DNKComp -> DNKComp [ctor metadata "left merge" prec 42 gather (e E)] .
 
-	op rcfg(_,_,_,_) : Channel String Nat Nat -> CompComm .
+	op rcfg(_,_,_,_) : Channel String Nat Nat -> CompComm . ---- component communication
 
 
   var U V : RDNK .
@@ -104,6 +104,7 @@ fmod COMM_STRING_CONVERSION is
   protecting META-LEVEL .
   protecting META-TERM .
   protecting QID .
+  protecting CONVERSION .
 
   op compCommToStr(_) : CompComm -> String .
 
@@ -114,6 +115,6 @@ fmod COMM_STRING_CONVERSION is
 
   ---- Use meta programming to get the channel name: move the channel variable 1 reflexion level up,
   ---- then get its name as QID and convert it to string
-  eq compCommToStr(rcfg(X, S, I, J)) = "rcfg(" + string(getName(upTerm(X))) + ", '" + S + "')" .
+  eq compCommToStr(rcfg(X, S, I, J)) = "rcfg(" + string(getName(upTerm(X))) + ", '" + S + "', " + string(I, 10) + ", " + string(J, 10) + ")" .
   eq compCommToStr(C) = "" [owise] .
 endfm

@@ -1,15 +1,15 @@
 # mypy: disable-error-code="import-untyped,no-any-unimported,misc"
 
 import os
-import string
 from math import fsum
 from time import perf_counter
-from typing import Tuple
+from typing import IO
 
 import maude
 from src.KATch_comm import KATchComm
 from src.KATch_hook import KATCH_HOOK_MAUDE_NAME, KATchHook, KATchStats
 from src.model.dnk_maude_model import DNKMaudeModel
+from src.trace_collector_hook import TRACE_COLLECTOR_HOOK_MAUDE_NAME, TraceCollectorHook
 
 DNK_MODEL_MODULE_NAME = "DNK_MODEL"
 
@@ -25,6 +25,7 @@ class TracerStats:
         self.katchCacheQueryTime = 0.0
         self.katchCalls = 0
         self.katchExecTime = 0.0
+        self.collectedTraces = 0
 
     def setKATchStats(self, katchStats: KATchStats) -> None:
         self.katchCacheHits = len(katchStats.cacheHitTimes)
@@ -39,27 +40,28 @@ class TracerStats:
             + f"KATch cache query time: {self.katchCacheQueryTime}\n"
             + f"KATch calls: {self.katchCalls}\n"
             + f"KATch execution time: {self.katchExecTime}\n"
+            + f"No. of collected traces: {self.collectedTraces}\n"
         )
 
 
 class TracerConfig:
     def __init__(
-        self, outputDirPath: str, katchPath: str, maudeFilesDirPath: str, toDot: bool
+        self, outputDirPath: str, katchPath: str, maudeFilesDirPath: str
     ) -> None:
         self.outputDirPath = outputDirPath
         self.katchPath = katchPath
         self.maudeFilesDirPath = maudeFilesDirPath
-        self.toDot = toDot
 
 
 class Tracer:
     maudeInitialized: bool = False
 
-    def __init__(self, config: TracerConfig) -> None:
+    def __init__(self, config: TracerConfig, traceCollectFile: IO[str]) -> None:
         self.config = config
         self.stats = TracerStats()
 
         katchComm = KATchComm(self.config.katchPath, self.config.outputDirPath)
+        self.traceCollector = TraceCollectorHook(traceCollectFile)
         self.katchHook = KATchHook(katchComm)
         self.__initMaude()
 
@@ -74,6 +76,7 @@ class Tracer:
                 + "Initialization should happen once, maybe it is done multiple times?"
             )
         maude.connectEqHook(KATCH_HOOK_MAUDE_NAME, self.katchHook)
+        maude.connectEqHook(TRACE_COLLECTOR_HOOK_MAUDE_NAME, self.traceCollector)
 
         filePath = os.path.join(self.config.maudeFilesDirPath, "tracer.maude")
         success = maude.load(filePath)
@@ -81,9 +84,8 @@ class Tracer:
             raise MaudeError(f"Failed to load Maude file: {filePath}.")
         Tracer.maudeInitialized = True
 
-    def run(self, model: DNKMaudeModel, depth: int) -> Tuple[str, bool]:
-        """Returns a tuple containing a Maude trace tree and a boolean
-        flag that is set if the trace tree is empty"""
+    def run(self, model: DNKMaudeModel, depth: int) -> int:
+        """Returns the number of traces collected during the run"""
         self.reset()
         mod = self.__declareModelMaudeModule(model)
         term = self.__buildTracerMaudeEntryPoint(model, mod, depth)
@@ -92,20 +94,15 @@ class Tracer:
         term.reduce()
         endTime = perf_counter()
         self.stats.execTime = endTime - startTime
-        return self.__processMaudeResult(term)
+        return self.traceCollector.calls
 
     def __declareModelMaudeModule(self, model: DNKMaudeModel) -> maude.Module:
         modContentStr = model.toMaudeModuleContent()
-
-        traceToDotModuleImport = ""
-        if self.config.toDot:
-            traceToDotModuleImport = "protecting TRACE_TREE_TO_DOT ."
 
         maude.input(
             f"""
             fmod {DNK_MODEL_MODULE_NAME} is
             protecting TRACER .
-            {traceToDotModuleImport}
 
             {modContentStr}
             endfm
@@ -123,35 +120,18 @@ class Tracer:
         cs = model.getControllersMaudeMap()
 
         entryPoint = f"tracer{{{depth}}}({sws}, {cs})"
-        if self.config.toDot:
-            entryPoint = f"TraceToDOT({entryPoint})"
         term = mod.parseTerm(entryPoint)
 
         if term is None:
             raise MaudeError("Failed to declare Tracer entry point.")
         return term
 
-    def __processMaudeResult(self, term: maude.Term) -> Tuple[str, bool]:
-        """Takes a reduced Maude term of sort TraceNodes containing a trace tree or
-        of sort String containing a DOT directed graph (digraph) and
-        returns a string representation of the term and whether the trace tree or graph
-        is empty
-        """
-        if self.config.toDot:
-            prettyTerm = str(term)[1:-1].replace("\\n", "\n").replace('\\"', '"')
-            isEmpty = (
-                prettyTerm.translate(str.maketrans("", "", string.whitespace))
-                == "digraphG{}"
-            )
-            return prettyTerm, isEmpty
-
-        prettyTerm = str(term.prettyPrint(maude.PRINT_FORMAT))
-        return prettyTerm, prettyTerm == "TEmpty"
-
-    def getExecTimeStats(self) -> TracerStats:
+    def getStats(self) -> TracerStats:
         self.stats.setKATchStats(self.katchHook.execStats)
+        self.stats.collectedTraces = self.traceCollector.calls
         return self.stats
 
     def reset(self) -> None:
         self.stats = TracerStats()
         self.katchHook.reset()
+        self.traceCollector.reset()

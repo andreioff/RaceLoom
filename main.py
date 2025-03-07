@@ -8,12 +8,12 @@ from pydantic import ValidationError
 
 from src.model.dnk_maude_model import DNKMaudeModel
 from src.tracer import MaudeError, Tracer, TracerConfig, TracerStats
-from src.util import createDir, exportFile, getFileName, isExe, isJson, readFile
+from src.util import createDir, getFileName, isExe, isJson, readFile
 
 PROJECT_DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 OUTPUT_DIR_PATH = os.path.join(PROJECT_DIR_PATH, "output")
 MAUDE_FILES_DIR_PATH = os.path.join(PROJECT_DIR_PATH, "src", "maude")
-RESULT_FILE_NAME = "result"
+OUTPUT_FILE_NAME = "traces"
 EXEC_STATS_FILE_NAME = "execution_stats"
 
 
@@ -32,13 +32,6 @@ def buildArgsParser() -> optparse.OptionParser:
         default=5,
         help="Depth of search (default is 5)",
     )
-    parser.add_option(
-        "--to-dot",
-        dest="toDot",
-        default=False,
-        action="store_true",
-        help="Passing this option converts the traces into DOT format",
-    )
     return parser
 
 
@@ -56,15 +49,11 @@ def validateArgs(args: List[str]) -> Tuple[str, str]:
     return args[0], args[1]
 
 
-def writeTracesToFile(
-    currTime: time.struct_time, fileContent: str, inputFileName: str, fileExt: str
-) -> None:
+def getOutputFilePath(currTime: time.struct_time, inputFileName: str) -> str:
     currTimeStr = time.strftime("%Y_%m_%dT%H_%M_%S", currTime)
-    exportFilePath = os.path.join(
-        OUTPUT_DIR_PATH, f"{RESULT_FILE_NAME}_{currTimeStr}_{inputFileName}.{fileExt}"
+    return os.path.join(
+        OUTPUT_DIR_PATH, f"{OUTPUT_FILE_NAME}_{currTimeStr}_{inputFileName}.txt"
     )
-    exportFile(exportFilePath, fileContent)
-    print(f"Trace(s) written to: {exportFilePath}.")
 
 
 def logRunStats(
@@ -94,35 +83,32 @@ def main() -> None:
         outputDirPath=OUTPUT_DIR_PATH,
         katchPath=katchPath,
         maudeFilesDirPath=MAUDE_FILES_DIR_PATH,
-        toDot=options.toDot,  # type: ignore
     )
 
     try:
         jsonStr = readFile(inputFilePath)
-        tracer = Tracer(config)
-
-        traceTreeStr, isEmpty = tracer.run(
-            DNKMaudeModel().fromJson(jsonStr), options.depth  # type: ignore
-        )
-        execStats = tracer.getExecTimeStats()
-        print(execStats)
 
         currTime = time.localtime()
         inputFileName = getFileName(inputFilePath)
+        tracesFilePath = getOutputFilePath(currTime, inputFileName)
+
+        with open(tracesFilePath, "a") as file:
+            tracer = Tracer(config, file)
+            tracer.run(DNKMaudeModel().fromJson(jsonStr), options.depth)  # type: ignore
+
+        execStats = tracer.getStats()
+        print(execStats)
         logRunStats(currTime, inputFileName, options.depth, execStats)  # type: ignore
 
-        if isEmpty:
+        if execStats.collectedTraces == 0:
+            if os.path.exists(tracesFilePath):
+                os.remove(tracesFilePath)
             printAndExit(
-                "Could not find any concurrent behavior "
-                + "for the given network and depth!"
+                "Could not collect any traces for the given network and depth!"
             )
 
-        fileExt = "maude"
-        if options.toDot:  # type: ignore
-            fileExt = "gv"
-
         print("Concurrent behavior detected!")
-        writeTracesToFile(currTime, traceTreeStr, inputFileName, fileExt)
+        print(f"Trace(s) written to: {tracesFilePath}.")
 
     except MaudeError as e:
         print(f"Error encountered while executing Maude:\n\t{e}")

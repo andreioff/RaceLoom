@@ -33,7 +33,6 @@ endv
 fmod RESTRICTED_DNK is
 	protecting COMM .
 	protecting TRUTH-VALUE .
-	protecting SET {Comm} * (sort Set {Comm} to TermSet) .
 
 	sorts RDNK Recursive .
   subsort Recursive < RDNK .
@@ -46,7 +45,6 @@ fmod RESTRICTED_DNK is
 
 	op bot : -> RDNK .
 
-	var H : TermSet . 
 	var M : Nat .
 	var X : Channel .
 	vars P Q R : RDNK .

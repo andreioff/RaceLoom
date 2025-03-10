@@ -1,8 +1,7 @@
 # mypy: disable-error-code="import-untyped,no-any-unimported,misc"
 
 from os import linesep
-from time import perf_counter
-from typing import IO, List
+from typing import IO
 
 import maude
 
@@ -22,7 +21,8 @@ class TraceCollectorHook(maude.Hook):  # type: ignore
             arg.reduce()
 
         # assumes the first arg is the extracted trace string
-        self.file.write(str(term.arguments().argument()))
+        content = str(term.arguments().argument()).strip('"')
+        self.file.write(content)
         self.file.write(linesep)
 
         # assuming that all traces are stored as strings in Maude,

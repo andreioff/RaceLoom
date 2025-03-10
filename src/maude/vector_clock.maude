@@ -115,6 +115,6 @@ fmod VECTOR_CLOCK_MAP is
     fi .
 
   eq VCMapToString(empty) = "" .
-  eq VCMapToString(I |-> VC1, empty) = "<" + VCToString(VC1) + ">" .
-  eq VCMapToString(I |-> VC1, VCs) = "<" + VCToString(VC1) + "> || " + VCMapToString(VCs) .
+  eq VCMapToString(I |-> VC1, empty) = "[" + VCToString(VC1) + "]" .
+  eq VCMapToString(I |-> VC1, VCs) = "[" + VCToString(VC1) + "]," + VCMapToString(VCs) .
 endfm

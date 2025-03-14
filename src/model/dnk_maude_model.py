@@ -3,7 +3,6 @@ from typing import List
 from typing_extensions import Self
 
 import src.model.json_model as jm
-from src.KATch_hook import KATCH_HOOK_MAUDE_NAME as KATCH_OP
 from src.maude_encoder import MaudeEncoder
 from src.maude_encoder import MaudeOps as mo
 from src.maude_encoder import MaudeSorts as ms
@@ -123,7 +122,9 @@ class DNKMaudeModel:
         # and to re-write everything into head normal form
         # using the KATch hook
         exprs: List[str] = [
-            f"{KATCH_OP}({mo.BIG_SWITCH_OP} {SW_MAP_VAR_NAME} {LINK_VAR_NAME}) "
+            # TODO Re-enable me
+            # f"{KATCH_OP}({mo.BIG_SWITCH_OP} {SW_MAP_VAR_NAME} {LINK_VAR_NAME}) "
+            f"({mo.BIG_SWITCH_OP} {SW_MAP_VAR_NAME} {LINK_VAR_NAME}) "
             + f"{sym.SEQ} ({BIG_SW_VAR_NAME} {SW_MAP_VAR_NAME})",
         ]
 
@@ -171,7 +172,9 @@ class DNKMaudeModel:
         # and to re-write everything into head normal form
         # using the KATch hook
         exprs: List[str] = [
-            f"{KATCH_OP}({mo.BIG_SWITCH_OP} {SW_MAP_VAR_NAME} {LINK_VAR_NAME}) "
+            # TODO Re-enable me
+            # f"{KATCH_OP}({mo.BIG_SWITCH_OP} {SW_MAP_VAR_NAME} {LINK_VAR_NAME}) "
+            f"({mo.BIG_SWITCH_OP} {SW_MAP_VAR_NAME} {LINK_VAR_NAME}) "
             + f"{sym.SEQ} ({termName(SW_MAP_VAR_NAME)})",
         ]
 

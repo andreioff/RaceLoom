@@ -30,7 +30,7 @@ view Comm from TRIV to COMM is
 	sort Elt to Comm .
 endv
 
-fmod RESTRICTED_DNK is
+fmod RESTRICTED-DNK is
 	protecting COMM .
 	protecting TRUTH-VALUE .
 
@@ -64,6 +64,6 @@ fmod RESTRICTED_DNK is
 endfm
 
 
-view RDNK from TRIV to RESTRICTED_DNK is
+view RDNK from TRIV to RESTRICTED-DNK is
   sort Elt to RDNK .
 endv

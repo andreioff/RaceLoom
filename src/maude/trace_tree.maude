@@ -1,7 +1,7 @@
 load vector_clock.maude
 
-fmod TRACE_TREE is
-  protecting VECTOR_CLOCK_MAP .
+fmod TRACE-TREE is
+  protecting VECTOR-CLOCK-MAP .
 
   sorts TraceNode TraceNodes TNType .
 
@@ -26,8 +26,8 @@ fmod TRACE_TREE is
   eq TConcat(TAppend(TN, RemNodes), Nodes) = TConcat(RemNodes, TAppend(TN, Nodes)) .
 endfm
 
-fmod TRACE_TREE_TO_DOT is
-  protecting TRACE_TREE .
+fmod TRACE-TREE-TO-DOT is
+  protecting TRACE-TREE .
   protecting CONVERSION .
   protecting EXT-BOOL .
 

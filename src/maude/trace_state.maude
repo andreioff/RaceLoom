@@ -15,16 +15,16 @@ view NodeList from TRIV to NODE-LIST-SORT is
 endv
 
 fmod NODE-LIST-MAP-SORT is
-  protecting MAP_UTIL {Nat, NodeList} * (sort Map {Nat, NodeList} to NodeListMap) .
+  protecting MAP-UTIL {Nat, NodeList} * (sort Map {Nat, NodeList} to NodeListMap) .
 endfm
 
 view NodeListMap from TRIV to NODE-LIST-MAP-SORT is
   sort Elt to NodeListMap .
 endv
 
-fmod TRACE_STATE is
+fmod TRACE-STATE is
   protecting STRING .
-  protecting VECTOR_CLOCK_MAP .
+  protecting VECTOR-CLOCK-MAP .
 	protecting RECURSIVE-DNK .
   protecting NODE-SORT .
   protecting NODE-LIST-SORT .
@@ -61,11 +61,11 @@ fmod TRACE_STATE is
   eq filter((snode(ID, P, VCs) RemNodes)) = if hasIncmpVCs(VCs) then filter(RemNodes) else (snode(ID, P, VCs) filter(RemNodes)) fi .
 endfm
 
-mod HEAD_NORMAL_FORM is
+mod HEAD-NORMAL-FORM is
 	protecting RECURSIVE-DNK .
-  protecting COMM_STRING_CONVERSION .
+  protecting COMM-STRING-CONVERSION .
   protecting CONVERSION .
-  protecting TRACE_STATE .
+  protecting TRACE-STATE .
 
   ---- args: DNK exprs to reduce, vector clocks, parent node id
   op hnf(_,_,_) : DNKComp VCMap Nat -> NodeList .
@@ -99,9 +99,9 @@ mod DNK-MODEL is
   ---- of the parallel computation.
 endm
 
-mod COMPUTE_NEXT_LAYER is
-  protecting TRACE_STATE .
-  protecting HEAD_NORMAL_FORM .
+mod COMPUTE-NEXT-LAYER is
+  protecting TRACE-STATE .
+  protecting HEAD-NORMAL-FORM .
   protecting CONVERSION .
   protecting DNK-MODEL .
 

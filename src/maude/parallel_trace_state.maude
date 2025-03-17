@@ -65,7 +65,7 @@ createdInterpreter(X, Y, WID)
 => < X : User | 
   state: PInit,
     AS >
-    insertModule(WID, X, upModule('COMPUTE_NEXT_LAYER, true)) .
+    insertModule(WID, X, upModule('COMPUTE-NEXT-LAYER, true)) .
 
 rl < X : User | 
   state: PInit,

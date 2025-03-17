@@ -1,7 +1,7 @@
 load restricted_dnk.maude
 
 fmod DNK is
-  protecting RESTRICTED_DNK .
+  protecting RESTRICTED-DNK .
 
   sorts CompComm RecursiveComp UnguardedTerm DNKComp .
 	subsort RecursiveComp < UnguardedTerm < DNKComp .
@@ -99,7 +99,7 @@ fmod RECURSIVE-DNK is
 endfm
 
 
-fmod COMM_STRING_CONVERSION is
+fmod COMM-STRING-CONVERSION is
   protecting DNK .
   protecting META-LEVEL .
   protecting META-TERM .

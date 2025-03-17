@@ -1,6 +1,6 @@
-mod TRACES_COLLECTOR is
+mod TRACES-COLLECTOR is
   protecting STRING .
-  protecting TRACE_STATE .
+  protecting TRACE-STATE .
 
   --- Operator with special hook. Works only with the Python package Maude.
   --- More details here: https://github.com/fadoss/maude-bindings

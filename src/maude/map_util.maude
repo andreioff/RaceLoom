@@ -1,4 +1,4 @@
-fmod MAP_UTIL{X :: TRIV, Y :: TRIV} is
+fmod MAP-UTIL{X :: TRIV, Y :: TRIV} is
   protecting NAT .
   protecting MAP {X, Y} .
 

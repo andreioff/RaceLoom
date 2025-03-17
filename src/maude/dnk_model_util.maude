@@ -1,6 +1,6 @@
 fmod DNK-MODEL-UTIL is
   protecting RECURSIVE-DNK .
-	protecting MAP_UTIL {Nat, String} * (sort Map {Nat, String} to StrMap) .
+	protecting MAP-UTIL {Nat, String} * (sort Map {Nat, String} to StrMap) .
 
   op concatSws_ : StrMap -> String .
   op network__ : StrMap String -> String [gather (E e)].

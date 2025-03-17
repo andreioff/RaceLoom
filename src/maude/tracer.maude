@@ -7,10 +7,10 @@ load metaInterpreter.maude
 load parallel_trace_state.maude
 load traces_collector.maude
 
-mod TRACER_UTIL is 
+mod TRACER-UTIL is 
   protecting STRING .
 	protecting RECURSIVE-DNK .
-  protecting MAP_UTIL {Nat, RDNK} * (sort Map {Nat, RDNK} to RDNKMap) .
+  protecting MAP-UTIL {Nat, RDNK} * (sort Map {Nat, RDNK} to RDNKMap) .
 
   --- Operator with special hook. Works only with the Python package Maude.
   --- More details here: https://github.com/fadoss/maude-bindings
@@ -29,10 +29,10 @@ mod TRACER_UTIL is
 endm
 
 mod TRACER is
-  protecting TRACES_COLLECTOR .
+  protecting TRACES-COLLECTOR .
   protecting PARALLEL-COMPUTE-NEXT-LAYER .
-  protecting COMM_STRING_CONVERSION .
-  protecting TRACER_UTIL .
+  protecting COMM-STRING-CONVERSION .
+  protecting TRACER-UTIL .
   protecting CONVERSION .
 
 	op rd{_}{_}(_,_) : Configuration Nat NodeList Nat -> NodeListMap .

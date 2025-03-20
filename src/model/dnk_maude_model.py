@@ -27,6 +27,7 @@ class DNKMaudeModel:
         self.me = MaudeEncoder()
         self.bigSwitchTerm: str = ""
         self.controllersMaudeMap: str = self.me.convertIntoMap([])
+        self.branchCounts: dict[str, int] = {}
 
     def fromJson(self, jsonStr: str) -> Self:
         """
@@ -76,6 +77,7 @@ class DNKMaudeModel:
         for name, expr in model.Controllers.items():
             self.me.addOp(name, ms.RECURSIVE_SORT, [])
             self.me.addEq(self.me.recPolTerm(name), expr)
+            self.__addBranchCount(name, expr.count(sym.OPLUS))
 
     def __declareLink(self, model: jm.DNKNetwork) -> None:
         """
@@ -158,6 +160,7 @@ class DNKMaudeModel:
             for ru in switch.RequestedUpdates:
                 exprs.append(sendAndEnterRecvMode(ru, i))
 
+        self.__addBranchCount("BSw", len(exprs))
         return f" {sym.OPLUS} ".join(exprs)
 
     def __buildBigSwRecvExpr(self, model: jm.DNKNetwork) -> str:
@@ -219,6 +222,17 @@ class DNKMaudeModel:
             recursiveControllers.append(self.me.recPolTerm(name))
 
         self.controllersMaudeMap = self.me.convertIntoMap(recursiveControllers)
+
+    def __addBranchCount(self, key: str, count: int) -> None:
+        while key in self.branchCounts:
+            key = key + "*"
+        self.branchCounts[key] = count
+
+    def getBranchCounts(self) -> str:
+        bStrs: List[str] = [
+            f"{key}:{count}" for (key, count) in self.branchCounts.items()
+        ]
+        return ";".join(bStrs)
 
     def getBigSwitchTerm(self) -> str:
         return self.bigSwitchTerm

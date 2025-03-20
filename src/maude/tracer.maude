@@ -5,7 +5,67 @@ load dnk_model_util.maude
 load trace_state.maude
 load metaInterpreter.maude
 load parallel_trace_state.maude
-load traces_collector.maude
+load trace_tree.maude
+
+fmod TRACE-STATES-TO-TRACE-TREE is
+  protecting RECURSIVE-DNK .
+  protecting TRACE-STATE .
+  protecting TRACE-TREE .
+	protecting MAP-UTIL {Nat, TraceNodes} * (sort Map {Nat, TraceNodes} to TraceNodesMap) .
+  protecting EXT-BOOL . 
+
+  var N : String .
+  var VCs : VCMap .
+  var P : DNKComp .
+  vars L ID PID : Nat .
+  var T : TNType .
+  var TN : TraceNode .
+  var TNs : TraceNodes .
+  vars Nodes RemNodes : NodeList .
+  var M ChildrenM : TraceNodesMap .
+  var NLM : NodeListMap .
+
+  op $insertTN(_,_,_) : Nat TraceNode TraceNodesMap -> TraceNodesMap .
+  op $$insertTN(_,_,_) : Nat TraceNode TraceNodesMap -> TraceNodesMap .
+  eq $insertTN(ID, TNode(T, N, VCs, TNs), M) =
+    ---- if the node does not have children, it means it is the end node of a trace, 
+    ---- so we keep only the ones with incomparable vector clocks
+    if (TNs =/= TEmpty or-else hasIncmpVCs(VCs)) then
+      $$insertTN(ID, TNode(T, N, VCs, TNs), M)
+    else M fi .
+
+  eq $$insertTN(ID, TN, (M, ID |-> TNs)) = (M, ID |-> TAppend(TN, TNs)) .
+  eq $$insertTN(ID, TN, M) = (M, ID |-> TAppend(TN, TEmpty)) .
+
+  op $getChildren(_,_) : Nat TraceNodesMap -> TraceNodes .
+  eq $getChildren(ID, empty) = TEmpty .
+  eq $getChildren(ID, (ChildrenM, ID |-> TNs)) = TNs .
+  eq $getChildren(ID, (ChildrenM, L |-> TNs)) = TEmpty .
+
+  op TNMapPrepend(_,_) : NodeList TraceNodesMap -> TraceNodesMap .
+  ---- These 2 equations have to explicitly match the second argument
+  ---- as a map constructor because unreduced terms that return a map could also
+  ---- be matched, preventing Maude from reducing them before applying these equations.
+  eq TNMapPrepend(Nodes, empty) = $TNMapPrepend(Nodes, empty, empty) .
+  eq TNMapPrepend(Nodes, (ID |-> TNs, ChildrenM)) = $TNMapPrepend(Nodes, (ID |-> TNs, ChildrenM), empty) .
+
+  op $TNMapPrepend(_,_,_) : NodeList TraceNodesMap TraceNodesMap -> TraceNodesMap .
+  eq $TNMapPrepend(nil, ChildrenM, M) = M .
+  eq $TNMapPrepend((snode(ID, P, VCs) RemNodes), ChildrenM, M) = $TNMapPrepend(
+    RemNodes,
+    ChildrenM,
+    $insertTN(ID, TNode(TSTART, "", VCs, $getChildren(ID, ChildrenM)), M)
+  ) .
+  eq $TNMapPrepend((node(ID, PID, P, N, VCs) RemNodes), ChildrenM, M) = $TNMapPrepend(
+    RemNodes,
+    ChildrenM,
+    $insertTN(PID, TNode(TNORMAL, N, VCs, $getChildren(ID, ChildrenM)), M)
+  ) .
+
+  op flattenTNMap(_) : TraceNodesMap -> TraceNodes .
+  eq flattenTNMap(empty) = TEmpty .
+  eq flattenTNMap((M, ID |-> TNs)) = TConcat(TNs, flattenTNMap(M)) .
+endfm
 
 mod TRACER-UTIL is 
   protecting STRING .
@@ -29,16 +89,17 @@ mod TRACER-UTIL is
 endm
 
 mod TRACER is
-  protecting TRACES-COLLECTOR .
+  protecting TRACE-COLLECTOR .
   protecting PARALLEL-COMPUTE-NEXT-LAYER .
   protecting COMM-STRING-CONVERSION .
   protecting TRACER-UTIL .
   protecting CONVERSION .
+  protecting TRACE-STATES-TO-TRACE-TREE .
 
-	op rd{_}{_}(_,_) : Configuration Nat NodeList Nat -> NodeListMap .
-	op $rd{_}{_}(_) : Configuration Nat AssignIdsResult -> NodeListMap .
+	op rd{_}{_}(_,_) : Configuration Nat NodeList Nat -> TraceNodesMap .
+	op $rd{_}{_}(_) : Configuration Nat AssignIdsResult -> TraceNodesMap .
 
-	op tracer{_}{_}(_,_) : Configuration Nat RDNK RDNKMap -> NodeListMap .
+	op tracer{_}{_}(_,_) : Configuration Nat RDNK RDNKMap -> String .
 
   var Cs : RDNKMap . 
   vars P Q : DNKComp .
@@ -52,13 +113,14 @@ mod TRACER is
   var WorkersConfig : Configuration .
   var M : Oid .
   var AS : AttributeSet .
+ 
 
-  eq rd{WorkersConfig}{0}(Nodes, NID) = (0 |-> Nodes, empty) .
+  eq rd{WorkersConfig}{0}(Nodes, NID) = TNMapPrepend(Nodes, empty) .
   eq rd{WorkersConfig}{D}(nil, NID) = empty .
-  eq rd{WorkersConfig}{s(D)}(Nodes, NID) = insert(s(D), Nodes, 
+  eq rd{WorkersConfig}{s(D)}(Nodes, NID) = TNMapPrepend(Nodes, 
     $rd{WorkersConfig}{D}(
       assignIds(
-        cnlParallel(WorkersConfig, filter(Nodes)),
+        cnlParallel(WorkersConfig, cnlFilter(Nodes)),
         NID
       )
     )) .
@@ -66,9 +128,11 @@ mod TRACER is
 
   --- Assumes that the Cs map mimics an array, i.e. its keys start from 0 and increase by 1 with every position.
   --- E.g. 0 |-> first_RDNK, 1 |-> second_RDNK, 2 |-> third_RDNK, etc.
-  eq tracer{WorkersConfig}{0}(BSw, Cs) = empty .
-  eq tracer{<> < M : User | state: PReady, AS >}{D}(BSw, Cs) = rd{< M : User | state: PReady, AS >}{D}(
+  eq tracer{WorkersConfig}{0}(BSw, Cs) = "" .
+  eq tracer{<> < M : User | state: PReady, AS >}{D}(BSw, Cs) = collectTraces(flattenTNMap(
+    rd{< M : User | state: PReady, AS >}{D}(
         snode(0, parallelJoin(BSw, Cs, s(mapLength(Cs))), newVCMap(s(mapLength(Cs)))),
         1
-      ) .
+      )
+  )).
 endm

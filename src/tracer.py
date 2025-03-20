@@ -8,10 +8,13 @@ from typing import IO
 import maude
 from src.KATch_comm import KATchComm
 from src.KATch_hook import KATCH_HOOK_MAUDE_NAME, KATchHook, KATchStats
+from src.maude_encoder import MaudeEncoder
+from src.maude_encoder import MaudeModules as mm
+from src.maude_encoder import MaudeSorts as ms
 from src.model.dnk_maude_model import DNKMaudeModel
 from src.trace_collector_hook import TRACE_COLLECTOR_HOOK_MAUDE_NAME, TraceCollectorHook
 
-DNK_MODEL_MODULE_NAME = "DNK_MODEL"
+ENTRY_POINT_NAME = "init"
 
 
 class MaudeError(Exception):
@@ -46,11 +49,12 @@ class TracerStats:
 
 class TracerConfig:
     def __init__(
-        self, outputDirPath: str, katchPath: str, maudeFilesDirPath: str
+        self, outputDirPath: str, katchPath: str, maudeFilesDirPath: str, threads: int
     ) -> None:
         self.outputDirPath = outputDirPath
         self.katchPath = katchPath
         self.maudeFilesDirPath = maudeFilesDirPath
+        self.threads = threads
 
 
 class Tracer:
@@ -69,7 +73,8 @@ class Tracer:
         if Tracer.maudeInitialized:
             return
 
-        success = maude.init(advise=False)
+        # TODO Change this back to False
+        success = maude.init(advise=True)
         if not success:
             raise MaudeError(
                 "Failed to initialize Maude library! "
@@ -87,44 +92,45 @@ class Tracer:
     def run(self, model: DNKMaudeModel, depth: int) -> int:
         """Returns the number of traces collected during the run"""
         self.reset()
-        mod = self.__declareModelMaudeModule(model)
-        term = self.__buildTracerMaudeEntryPoint(model, mod, depth)
+        self.__declareModelMaudeModule(model)
+        mod = self.__declareEntryMaudeModule(model, depth)
+        term = mod.parseTerm(f"{ENTRY_POINT_NAME}")
+
+        if term is None:
+            raise MaudeError("Failed to declare Tracer entry point.")
 
         startTime = perf_counter()
-        term.reduce()
+        term.erewrite()
         endTime = perf_counter()
         self.stats.execTime = endTime - startTime
         return self.traceCollector.calls
 
-    def __declareModelMaudeModule(self, model: DNKMaudeModel) -> maude.Module:
-        modContentStr = model.toMaudeModuleContent()
-
-        maude.input(
-            f"""
-            fmod {DNK_MODEL_MODULE_NAME} is
-            protecting TRACER .
-
-            {modContentStr}
-            endfm
-            """
-        )
-        mod = maude.getModule(DNK_MODEL_MODULE_NAME)
+    def __declareModelMaudeModule(self, model: DNKMaudeModel) -> None:
+        maude.input(model.toMaudeModule())
+        mod = maude.getModule(model.getMaudeModuleName())
         if mod is None:
             raise MaudeError("Failed to declare module for given DyNetKAT model!")
-        return mod
 
-    def __buildTracerMaudeEntryPoint(
-        self, model: DNKMaudeModel, mod: maude.Module, depth: int
-    ) -> maude.Term:
+    def __declareEntryMaudeModule(
+        self, model: DNKMaudeModel, depth: int
+    ) -> maude.Module:
+        me = MaudeEncoder()
+        me.addProtImport(mm.TRACER)
+        me.addProtImport(mm.DNK_MODEL)
+        me.addOp(ENTRY_POINT_NAME, ms.STRING_SORT, [])
+
         sws = model.getBigSwitchTerm()
         cs = model.getControllersMaudeMap()
+        me.addEq(
+            ENTRY_POINT_NAME,
+            f"tracer{{<> p-init({self.config.threads})}}{{{depth}}}({sws}, {cs})",
+        )
 
-        entryPoint = f"tracer{{{depth}}}({sws}, {cs})"
-        term = mod.parseTerm(entryPoint)
-
-        if term is None:
-            raise MaudeError("Failed to declare Tracer entry point.")
-        return term
+        maude.input(me.buildAsModule(mm.ENTRY))
+        mod = maude.getModule(mm.ENTRY)
+        if mod is None:
+            raise MaudeError("Failed to declare entry module!")
+        return mod
 
     def getStats(self) -> TracerStats:
         self.stats.setKATchStats(self.katchHook.execStats)

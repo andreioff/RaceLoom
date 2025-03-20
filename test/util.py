@@ -8,6 +8,7 @@ import networkx.algorithms as ga
 from networkx.classes.coreviews import AdjacencyView, AtlasView
 
 import src
+from src.maude_encoder import MaudeModules as mm
 from src.model.dnk_maude_model import DNKMaudeModel
 
 PROJECT_DIR = os.path.dirname(inspect.getabsfile(src))
@@ -23,8 +24,13 @@ class DNKTestModel(DNKMaudeModel):
         self.bigSwitch = bigSwitch
         self.controllersMaudeMap = controllersMaudeMap
 
-    def toMaudeModuleContent(self) -> str:
-        return self.maudeModuleContent
+    def toMaudeModule(self) -> str:
+        return f"""
+            mod {mm.DNK_MODEL} is
+            protecting {mm.DNK_MODEL_UTIL} .
+            {self.maudeModuleContent}
+            endm
+        """
 
     def getBigSwitchTerm(self) -> str:
         return self.bigSwitch

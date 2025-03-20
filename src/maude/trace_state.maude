@@ -18,11 +18,7 @@ fmod NODE-LIST-MAP-SORT is
   protecting MAP-UTIL {Nat, NodeList} * (sort Map {Nat, NodeList} to NodeListMap) .
 endfm
 
-view NodeListMap from TRIV to NODE-LIST-MAP-SORT is
-  sort Elt to NodeListMap .
-endv
-
-fmod TRACE-STATE is
+fmod TRACE-STATE is ---- TODO: Rename this or TRACE-TREE to avoid name clashing and cofusion (maybe name these sstate and state, and keep node for TRACE-TREE)
   protecting STRING .
   protecting VECTOR-CLOCK-MAP .
 	protecting RECURSIVE-DNK .
@@ -55,10 +51,10 @@ fmod TRACE-STATE is
   eq $assignIds((node(ID, PID, P, N, VCs) RemNodes), Nodes, NID) = $assignIds(RemNodes, append(node(NID, PID, P, N, VCs), Nodes), s(NID)) .
 
 
-  op filter(_) : NodeList -> NodeList .
-  eq filter(nil) = nil . ---- TODO Add heuristic
-  eq filter((node(ID, PID, P, N, VCs) RemNodes)) = if hasIncmpVCs(VCs) then filter(RemNodes) else (node(ID, PID, P, N, VCs) filter(RemNodes)) fi .
-  eq filter((snode(ID, P, VCs) RemNodes)) = if hasIncmpVCs(VCs) then filter(RemNodes) else (snode(ID, P, VCs) filter(RemNodes)) fi .
+  op cnlFilter(_) : NodeList -> NodeList .
+  eq cnlFilter(nil) = nil . ---- TODO Add heuristic
+  eq cnlFilter((node(ID, PID, P, N, VCs) RemNodes)) = if hasIncmpVCs(VCs) then cnlFilter(RemNodes) else (node(ID, PID, P, N, VCs) cnlFilter(RemNodes)) fi .
+  eq cnlFilter((snode(ID, P, VCs) RemNodes)) = if hasIncmpVCs(VCs) then cnlFilter(RemNodes) else (snode(ID, P, VCs) cnlFilter(RemNodes)) fi .
 endfm
 
 mod HEAD-NORMAL-FORM is

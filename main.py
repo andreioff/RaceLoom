@@ -121,6 +121,7 @@ def main() -> None:
         outputDirPath=OUTPUT_DIR_PATH,
         katchPath=katchPath,
         maudeFilesDirPath=MAUDE_FILES_DIR_PATH,
+        threads=5,  # TODO: make this an option for the CLI
     )
 
     try:

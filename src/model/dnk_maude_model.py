@@ -4,6 +4,7 @@ from typing_extensions import Self
 
 import src.model.json_model as jm
 from src.maude_encoder import MaudeEncoder
+from src.maude_encoder import MaudeModules as mm
 from src.maude_encoder import MaudeOps as mo
 from src.maude_encoder import MaudeSorts as ms
 from src.util import DyNetKATSymbols as sym
@@ -25,7 +26,7 @@ class DNKMaudeModel:
     def __init__(self) -> None:
         self.me = MaudeEncoder()
         self.bigSwitchTerm: str = ""
-        self.controllersMaudeMap: str = self.me.toMaudeMap([])
+        self.controllersMaudeMap: str = self.me.convertIntoMap([])
 
     def fromJson(self, jsonStr: str) -> Self:
         """
@@ -42,8 +43,9 @@ class DNKMaudeModel:
 
         return self
 
-    def toMaudeModuleContent(self) -> str:
-        return self.me.build()
+    def toMaudeModule(self) -> str:
+        self.me.addProtImport(mm.DNK_MODEL_UTIL)
+        return self.me.buildAsModule(mm.DNK_MODEL)
 
     def __declareChannels(self, model: jm.DNKNetwork) -> None:
         channels: dict[str, bool] = {}
@@ -122,8 +124,6 @@ class DNKMaudeModel:
         # and to re-write everything into head normal form
         # using the KATch hook
         exprs: List[str] = [
-            # TODO Re-enable me
-            # f"{KATCH_OP}({mo.BIG_SWITCH_OP} {SW_MAP_VAR_NAME} {LINK_VAR_NAME}) "
             f"({mo.BIG_SWITCH_OP} {SW_MAP_VAR_NAME} {LINK_VAR_NAME}) "
             + f"{sym.SEQ} ({BIG_SW_VAR_NAME} {SW_MAP_VAR_NAME})",
         ]
@@ -172,8 +172,6 @@ class DNKMaudeModel:
         # and to re-write everything into head normal form
         # using the KATch hook
         exprs: List[str] = [
-            # TODO Re-enable me
-            # f"{KATCH_OP}({mo.BIG_SWITCH_OP} {SW_MAP_VAR_NAME} {LINK_VAR_NAME}) "
             f"({mo.BIG_SWITCH_OP} {SW_MAP_VAR_NAME} {LINK_VAR_NAME}) "
             + f"{sym.SEQ} ({termName(SW_MAP_VAR_NAME)})",
         ]
@@ -212,7 +210,7 @@ class DNKMaudeModel:
         for name in model.Switches.keys():
             sws.append(name)
         self.bigSwitchTerm = self.me.recPolTerm(
-            f"{BIG_SW_VAR_NAME} {self.me.toMaudeMap(sws)}"
+            f"{BIG_SW_VAR_NAME} {self.me.convertIntoMap(sws)}"
         )
 
     def __buildControllersMapTerm(self, model: jm.DNKNetwork) -> None:
@@ -220,10 +218,13 @@ class DNKMaudeModel:
         for name in model.Controllers.keys():
             recursiveControllers.append(self.me.recPolTerm(name))
 
-        self.controllersMaudeMap = self.me.toMaudeMap(recursiveControllers)
+        self.controllersMaudeMap = self.me.convertIntoMap(recursiveControllers)
 
     def getBigSwitchTerm(self) -> str:
         return self.bigSwitchTerm
 
     def getControllersMaudeMap(self) -> str:
         return self.controllersMaudeMap
+
+    def getMaudeModuleName(self) -> str:
+        return mm.DNK_MODEL

@@ -34,7 +34,7 @@ var ResType : Type .
 var W : List{Worker} .
 var C : Configuration .
 
-eq p-init(0) = <> .
+eq p-init(0) = < manager : User | none > .
 eq p-init(N) = < manager : User | none > init(manager, N) .
 
 eq p-run(< manager : User | #workers: 0, AS >, IL) = < manager : User | state: PReady, resultList: (empty, 0) > .
@@ -114,7 +114,7 @@ rl < X : User |
   inputList: TL,
   workers: W,
   AS >
-  reduceTerm(WID, X, 'COMPUTE_NEXT_LAYER, T) .
+  reduceTerm(WID, X, 'COMPUTE-NEXT-LAYER, T) .
 
 rl < X : User |
   state: PWorking,
@@ -164,7 +164,7 @@ mod PARALLEL-COMPUTE-NEXT-LAYER is
   op extractError : -> [NodeList] .
   eq extractRes(<> < W : User | state: PReady, inputList: empty, resultList: (empty, I), AS >) = nil .
   eq extractRes(<> < W : User | state: PReady, inputList: empty, resultList: ((T, TL), I), AS >) = downTerm(T, extractError) 
-     extractRes(<> < W : User | state: PReady, inputList: empty, resultList: (TL, I), AS >) .
+     extractRes(<> < W : User | state: PReady, inputList: empty, resultList: (TL, I), AS >) . ---- TODO Could use some error handling
 
   op topNRes(_,_) : NodeList NodeList -> TopNRes .
   op takeN(_,_) : Nat NodeList -> TopNRes .

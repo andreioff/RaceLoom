@@ -23,7 +23,7 @@ fmod TRACE-STATES-TO-TRACE-TREE is
   var TN : TraceNode .
   var TNs : TraceNodes .
   vars Nodes RemNodes : NodeList .
-  var M ChildrenM : TraceNodesMap .
+  vars M ChildrenM : TraceNodesMap .
   var NLM : NodeListMap .
 
   op $insertTN(_,_,_) : Nat TraceNode TraceNodesMap -> TraceNodesMap .
@@ -114,7 +114,7 @@ mod TRACER is
   eq rd{WorkersConfig}{s(D)}(Nodes, NID) = TNMapPrepend(Nodes, 
     $rd{WorkersConfig}{D}(
       assignIds(
-        cnlParallel(WorkersConfig, cnlFilter(Nodes)),
+        cnlParallel(WorkersConfig, Nodes),
         NID
       )
     )) .

@@ -17,7 +17,7 @@ fmod TRACE-TREE is
   op TPRUNED : -> TNType . ---- normal node 
 
   var TN : TraceNode .
-  var Nodes RemNodes : TraceNodes .
+  vars Nodes RemNodes : TraceNodes .
 
   eq TConcat(TEmpty, Nodes) = Nodes .
   eq TConcat(TAppend(TN, RemNodes), Nodes) = TConcat(RemNodes, TAppend(TN, Nodes)) .
@@ -41,9 +41,9 @@ fmod TRACE-TREE-TO-DOT is
 
   var T : TNType .
   var N : Nat .
-  var S PID From To : String .
+  vars S PID From To : String .
   var VCs : VCMap .
-  var Nodes RemNodes : TraceNodes .
+  vars Nodes RemNodes : TraceNodes .
 
   ---- purple #9068be 
   eq getNodeColor(TSTART) = "#6ed37e" .

@@ -21,7 +21,7 @@ fmod DNK is
 	op rcfg(_,_,_,_) : Channel String Nat Nat -> CompComm . ---- component communication
 
 
-  var U V : RDNK .
+  vars U V : RDNK .
   var Z : Comm .
   var X : Channel .
   vars P Q R : DNKComp .

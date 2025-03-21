@@ -8,7 +8,7 @@ fmod DNK-MODEL-UTIL is
 
   var Sws : StrMap .
   vars L X : String .
-  vars I : Nat .
+  var I : Nat .
 
   eq concatSws empty = "" .
   eq concatSws (I |-> X , empty) = X .

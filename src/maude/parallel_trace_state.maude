@@ -29,7 +29,7 @@ vars X Y WID : Oid .
 var AS : AttributeSet .
 vars K N R R2 : Nat .
 vars T T2 T3 : Term .
-var IL TL : TermList .
+vars IL TL : TermList .
 var ResType : Type .
 var W : List{Worker} .
 var C : Configuration .

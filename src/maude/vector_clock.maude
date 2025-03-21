@@ -80,7 +80,7 @@ fmod VECTOR-CLOCK-MAP is
   op VCMapToString(_) : VCMap -> String .
 
   var VCs : VCMap .
-  var VC1 VC2 : VClock .
+  vars VC1 VC2 : VClock .
   vars I J VCSize : Nat .
 
   eq inc(VCs, I) =

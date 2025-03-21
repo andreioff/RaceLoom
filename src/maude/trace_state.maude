@@ -28,7 +28,7 @@ fmod TRACE-STATE is ---- TODO: Rename this or TRACE-TREE to avoid name clashing 
 
   sort AssignIdsResult NData NType .
 
-  ops NTProc NTComm : -> NType .
+  ops NTNone NTProc NTComm : -> NType [ctor] .
 
   op nd(_,_) : NType String -> NData [ctor] .
   ---- args: id, starting DNK expression, starting vector clocks
@@ -38,6 +38,7 @@ fmod TRACE-STATE is ---- TODO: Rename this or TRACE-TREE to avoid name clashing 
 
   var P : DNKComp .
   var ND : NData .
+  var N : Node .
   var VCs : VCMap .
   vars ID PID NID : Nat .
   vars Nodes RemNodes : NodeList .
@@ -52,10 +53,6 @@ fmod TRACE-STATE is ---- TODO: Rename this or TRACE-TREE to avoid name clashing 
     RemNodes,
     append(snode(NID, P, VCs), Nodes), s(NID)) .
   eq $assignIds((node(ID, PID, P, ND, VCs) RemNodes), Nodes, NID) = $assignIds(RemNodes, append(node(NID, PID, P, ND, VCs), Nodes), s(NID)) .
-
-
-  op cnlFilter(_) : NodeList -> NodeList .
-  eq cnlFilter(Nodes) = Nodes .
 endfm
 
 mod HEAD-NORMAL-FORM is
@@ -65,28 +62,30 @@ mod HEAD-NORMAL-FORM is
   protecting TRACE-STATE .
 
   ---- args: DNK exprs to reduce, vector clocks, parent node id
-  op hnf(_,_,_) : DNKComp VCMap Nat -> NodeList .
+  op hnf(_,_,_,_) : NType DNKComp VCMap Nat -> NodeList .
 
-  var P Q : DNKComp .
+  var PrevNT : NType .
+  vars P Q : DNKComp .
   var N : String .
   var X : Channel .
   var VCs : VCMap .
   vars I J PID : Nat .
 
-  eq hnf(c(bot, I), VCs, PID) = nil .
+  eq hnf(PrevNT, c(bot, I), VCs, PID) = nil .
 
-  eq hnf(P o+ Q, VCs, PID) = append(hnf(P, VCs, PID), hnf(Q, VCs, PID)) .
+  eq hnf(PrevNT, P o+ Q, VCs, PID) = append(hnf(PrevNT, P, VCs, PID), hnf(PrevNT, Q, VCs, PID)) .
 
   ---- Sending or receiving alone does not count in the trace, which is similar to applying the delta operator.
   ---- The trace also stops here since the expected behavior of a component is to wait when executing a
   ---- communication instruction until it can synchronize with another component.
-  eq hnf(c((X ! N), I) ; P, VCs, PID) = nil .
-  eq hnf(c((X ? N), I) ; P, VCs, PID) = nil .
-  eq hnf(rcfg(X, N, I, J) ; P, VCs, PID) = (node(0, PID, P, nd(NTComm, compCommToStr(rcfg(X, N, I, J))), transferVC(VCs, I, J)) nil) .
+  eq hnf(PrevNT, c((X ! N), I) ; P, VCs, PID) = nil .
+  eq hnf(PrevNT, c((X ? N), I) ; P, VCs, PID) = nil .
+  eq hnf(PrevNT, rcfg(X, N, I, J) ; P, VCs, PID) = (node(0, PID, P, nd(NTComm, compCommToStr(rcfg(X, N, I, J))), transferVC(VCs, I, J)) nil) .
 
-  eq hnf(c(N, I) ; P, VCs, PID) = (node(0, PID, P, nd(NTProc, "proc(\"" + N + "\"," + string(I, 10) + ")"), inc(VCs, I)) nil) .
+  eq hnf(NTProc, c(N, I) ; P, VCs, PID) = nil . ---- Heuristic 1: prune trace if it contains two consecutive packet processing transitions
+  eq hnf(PrevNT, c(N, I) ; P, VCs, PID) = (node(0, PID, P, nd(NTProc, "proc(\"" + N + "\"," + string(I, 10) + ")"), inc(VCs, I)) nil) .
 
-  ceq [rec-4] : hnf(P, VCs, PID) = hnf(unfold(P), VCs, PID) if notUnfolded(P) [owise] .
+  ceq [rec-4] : hnf(PrevNT, P, VCs, PID) = hnf(PrevNT, unfold(P), VCs, PID) if notUnfolded(P) [owise] .
 endm
 
 mod DNK-MODEL is
@@ -105,14 +104,15 @@ mod COMPUTE-NEXT-LAYER is
   op computeNextLayer : NodeList -> NodeList .
 
   var P : DNKComp .
+  var NTy : NType .
   var N : String .
   var ND : NData .
-  vars VCs : VCMap .
+  var VCs : VCMap .
   vars ID PID : Nat .
   vars Nodes RemNodes : NodeList .
 
   eq computeNextLayer(nil) = nil .
-  eq computeNextLayer(snode(ID, P, VCs) RemNodes) = (hnf(P, VCs, ID) computeNextLayer(RemNodes)) .
-  eq computeNextLayer(node(ID, PID, P, ND, VCs) RemNodes) = (hnf(P, VCs, ID) computeNextLayer(RemNodes)) .
+  eq computeNextLayer(snode(ID, P, VCs) RemNodes) = (hnf(NTNone, P, VCs, ID) computeNextLayer(RemNodes)) .
+  eq computeNextLayer(node(ID, PID, P, nd(NTy, N), VCs) RemNodes) = (hnf(NTy, P, VCs, ID) computeNextLayer(RemNodes)) .
 endm
 

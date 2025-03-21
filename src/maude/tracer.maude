@@ -27,16 +27,9 @@ fmod TRACE-STATES-TO-TRACE-TREE is
   var NLM : NodeListMap .
 
   op $insertTN(_,_,_) : Nat TraceNode TraceNodesMap -> TraceNodesMap .
-  op $$insertTN(_,_,_) : Nat TraceNode TraceNodesMap -> TraceNodesMap .
-  eq $insertTN(ID, TNode(T, N, VCs, TNs), M) =
-    ---- if the node does not have children, it means it is the end node of a trace, 
-    ---- so we keep only the ones with incomparable vector clocks
-    if (TNs =/= TEmpty or-else hasIncmpVCs(VCs)) then
-      $$insertTN(ID, TNode(T, N, VCs, TNs), M) ---- TODO Check the impact of this check on bigger examples
-    else M fi .
-
-  eq $$insertTN(ID, TN, (M, ID |-> TNs)) = (M, ID |-> TAppend(TN, TNs)) .
-  eq $$insertTN(ID, TN, M) = (M, ID |-> TAppend(TN, TEmpty)) .
+  eq $insertTN(ID, TN, empty) = (ID |-> TAppend(TN, TEmpty)) .
+  eq $insertTN(ID, TN, (M, ID |-> TNs)) = (M, ID |-> TAppend(TN, TNs)) .
+  eq $insertTN(ID, TN, M) = (M, ID |-> TAppend(TN, TEmpty)) .
 
   op $getChildren(_,_) : Nat TraceNodesMap -> TraceNodes .
   eq $getChildren(ID, empty) = TEmpty .

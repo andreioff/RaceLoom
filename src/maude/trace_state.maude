@@ -55,9 +55,7 @@ fmod TRACE-STATE is ---- TODO: Rename this or TRACE-TREE to avoid name clashing 
 
 
   op cnlFilter(_) : NodeList -> NodeList .
-  eq cnlFilter(nil) = nil .
-  eq cnlFilter((node(ID, PID, P, ND, VCs) RemNodes)) = if hasIncmpVCs(VCs) then cnlFilter(RemNodes) else (node(ID, PID, P, ND, VCs) cnlFilter(RemNodes)) fi .
-  eq cnlFilter((snode(ID, P, VCs) RemNodes)) = if hasIncmpVCs(VCs) then cnlFilter(RemNodes) else (snode(ID, P, VCs) cnlFilter(RemNodes)) fi .
+  eq cnlFilter(Nodes) = Nodes .
 endfm
 
 mod HEAD-NORMAL-FORM is

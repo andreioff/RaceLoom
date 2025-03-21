@@ -15,6 +15,7 @@ fmod TRACE-STATES-TO-TRACE-TREE is
   protecting EXT-BOOL . 
 
   var N : String .
+  var NTy : NType .
   var VCs : VCMap .
   var P : DNKComp .
   vars L ID PID : Nat .
@@ -56,7 +57,7 @@ fmod TRACE-STATES-TO-TRACE-TREE is
     ChildrenM,
     $insertTN(ID, TNode(TSTART, "", VCs, $getChildren(ID, ChildrenM)), M)
   ) .
-  eq $TNMapPrepend((node(ID, PID, P, N, VCs) RemNodes), ChildrenM, M) = $TNMapPrepend(
+  eq $TNMapPrepend((node(ID, PID, P, nd(NTy, N), VCs) RemNodes), ChildrenM, M) = $TNMapPrepend(
     RemNodes,
     ChildrenM,
     $insertTN(PID, TNode(TNORMAL, N, VCs, $getChildren(ID, ChildrenM)), M)

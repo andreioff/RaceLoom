@@ -83,7 +83,7 @@ mod HEAD-NORMAL-FORM is
   eq hnf(PrevNT, rcfg(X, N, I, J) ; P, VCs, PID) = (node(0, PID, P, nd(NTComm, compCommToStr(rcfg(X, N, I, J))), transferVC(VCs, I, J)) nil) .
 
   eq hnf(NTProc, c(N, I) ; P, VCs, PID) = nil . ---- Heuristic 1: prune trace if it contains two consecutive packet processing transitions
-  eq hnf(PrevNT, c(N, I) ; P, VCs, PID) = (node(0, PID, P, nd(NTProc, "proc(\"" + N + "\"," + string(I, 10) + ")"), inc(VCs, I)) nil) .
+  eq hnf(PrevNT, c(N, I) ; P, VCs, PID) = (node(0, PID, P, nd(NTProc, "proc('" + N + "'," + string(I, 10) + ")"), inc(VCs, I)) nil) .
 
   ceq [rec-4] : hnf(PrevNT, P, VCs, PID) = hnf(PrevNT, unfold(P), VCs, PID) if notUnfolded(P) [owise] .
 endm

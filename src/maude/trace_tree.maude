@@ -90,12 +90,13 @@ fmod TRACE-COLLECTOR is
 
   ---- the shape of the appended terms should match Python objects of type Tuple[str, List[List[int]]]
   op traceAppend(_,_,_) : String String VCMap -> String .
+  eq traceAppend("", N, VCs) = "(\"" + N + "\",[" + VCMapToString(VCs) + "])" .
   eq traceAppend(TR, N, VCs) = TR + ",(\"" + N + "\",[" + VCMapToString(VCs) + "])" .
 
   op collectTraces(_) : TraceNodes -> String .
   op $collectTraces(_,_) : TraceNodes String -> String .
   eq collectTraces(TNs) = $collectTraces(TNs, "") .
-  eq $collectTraces(TEmpty, TR) = CollectTrace(TR) .
+  eq $collectTraces(TEmpty, TR) = CollectTrace("[" + TR + "]") .
   ---- separate case to prevent collecting incomplete traces 
   eq $collectTraces(TAppend(TNode(T, N, VCs, ChildNodes), TEmpty), TR) = $collectTraces(ChildNodes, traceAppend(TR, N, VCs)) .
   eq $collectTraces(TAppend(TNode(T, N, VCs, ChildNodes), TNs), TR) = $collectTraces(ChildNodes, traceAppend(TR, N, VCs)) + $collectTraces(TNs, TR) .

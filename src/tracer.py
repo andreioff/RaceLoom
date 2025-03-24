@@ -49,12 +49,18 @@ class TracerStats:
 
 class TracerConfig:
     def __init__(
-        self, outputDirPath: str, katchPath: str, maudeFilesDirPath: str, threads: int
+        self,
+        outputDirPath: str,
+        katchPath: str,
+        maudeFilesDirPath: str,
+        threads: int,
+        verbose: bool,
     ) -> None:
         self.outputDirPath = outputDirPath
         self.katchPath = katchPath
         self.maudeFilesDirPath = maudeFilesDirPath
         self.threads = threads
+        self.verbose = verbose
 
 
 class Tracer:
@@ -73,8 +79,7 @@ class Tracer:
         if Tracer.maudeInitialized:
             return
 
-        # TODO Change this back to False
-        success = maude.init(advise=True)
+        success = maude.init(advise=False)
         if not success:
             raise MaudeError(
                 "Failed to initialize Maude library! "
@@ -87,6 +92,8 @@ class Tracer:
         success = maude.load(filePath)
         if not success:
             raise MaudeError(f"Failed to load Maude file: {filePath}.")
+        if self.config.verbose:
+            maude.input("set print attribute on .")
         Tracer.maudeInitialized = True
 
     def run(self, model: DNKMaudeModel, depth: int) -> int:
@@ -94,8 +101,8 @@ class Tracer:
         self.reset()
         self.__declareModelMaudeModule(model)
         mod = self.__declareEntryMaudeModule(model, depth)
-        term = mod.parseTerm(f"{ENTRY_POINT_NAME}")
 
+        term = mod.parseTerm(f"{ENTRY_POINT_NAME}")
         if term is None:
             raise MaudeError("Failed to declare Tracer entry point.")
 

@@ -183,14 +183,14 @@ mod PARALLEL-COMPUTE-NEXT-LAYER is
   op splitNodesList(_,_) : Nat NodeList -> TermList .
   op $splitNodesList(_,_) : Nat TopNRes -> TermList .
   eq splitNodesList(0, Nodes) = empty .
-  eq splitNodesList(K, nil) = empty .
+  eq splitNodesList(K, nil) = empty [print "Nodes per thread: " K] .
   eq splitNodesList(K, Nodes) = $splitNodesList(K, takeN(K, Nodes)) .
   eq $splitNodesList(K, topNRes(Nodes, RemNodes)) = ('computeNextLayer[upTerm(Nodes)], splitNodesList(K, RemNodes)) .
 
   ---- first arg: nr of sublists, second arg: total size 
   op calcSubListSize(_,_) : Nat Nat -> Nat .
   eq calcSubListSize(0, K) = K .
-  eq calcSubListSize(I, K) = if (K quo I) == 0 then 1 else (K quo I) fi .
+  eq calcSubListSize(I, K) = if (K quo I) == 0 then 1 else (K quo I) fi [print "Processing " K " nodes"] .
 
   op cnlParallel : Configuration NodeList -> NodeList .
   op $cnlParallel : Configuration TermList -> NodeList .

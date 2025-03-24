@@ -42,6 +42,14 @@ def buildArgsParser() -> optparse.OptionParser:
         help="Passing this option enables the tool to accept specifically formated "
         + ".maude files containing DNK network models for testing or debugging",
     )
+    parser.add_option(
+        "-v",
+        "--verbose",
+        dest="verbose",
+        default=False,
+        action="store_true",
+        help="Print log messages during execution",
+    )
     return parser
 
 
@@ -134,6 +142,7 @@ def main() -> None:
         katchPath=katchPath,
         maudeFilesDirPath=MAUDE_FILES_DIR_PATH,
         threads=10,  # TODO: make this an option for the CLI
+        verbose=options.verbose,  # type: ignore
     )
 
     try:

@@ -1,4 +1,4 @@
-import optparse
+import argparse
 import os
 import sys
 import time
@@ -23,17 +23,27 @@ def printAndExit(msg: str) -> None:
     sys.exit()
 
 
-def buildArgsParser() -> optparse.OptionParser:
-    parser = optparse.OptionParser()
-    parser.add_option(
+def buildArgsParser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("katchPath")
+    parser.add_argument("inputFilePath")
+    parser.add_argument(
         "-d",
         "--depth",
-        type="int",
+        type=int,
         dest="depth",
         default=5,
         help="Depth of search (default is 5)",
     )
-    parser.add_option(
+    parser.add_argument(
+        "-t",
+        "--threads",
+        type=int,
+        dest="threads",
+        default=1,
+        help="Number of threads to use when generating traces",
+    )
+    parser.add_argument(
         "-g",
         "--debug",
         dest="debug",
@@ -42,7 +52,7 @@ def buildArgsParser() -> optparse.OptionParser:
         help="Passing this option enables the tool to accept specifically formated "
         + ".maude files containing DNK network models for testing or debugging",
     )
-    parser.add_option(
+    parser.add_argument(
         "-v",
         "--verbose",
         dest="verbose",
@@ -53,23 +63,26 @@ def buildArgsParser() -> optparse.OptionParser:
     return parser
 
 
-def validateArgs(args: List[str], debugMode: bool) -> Tuple[str, str]:
+def validateArgs(args: argparse.Namespace):
     """Validates the command line arguments and returns the paths to the KATch
     executable and the input JSON file."""
-    if len(args) < 2:
+    if not args.katchPath or not args.inputFilePath:
         printAndExit("Error: provide the arguments <path_to_katch> <input_file>.")
 
-    if not os.path.exists(args[0]) or not isExe(args[0]):
+    if not os.path.exists(args.katchPath) or not isExe(args.katchPath):
         printAndExit("KATch tool could not be found in the given path!")
 
-    fileExt = args[1].split(".")[-1]
+    fileExt = args.inputFilePath.split(".")[-1]
     if (
-        not os.path.isfile(args[1])
+        not os.path.isfile(args.inputFilePath)
         or fileExt not in ["json", "maude"]
-        or (fileExt == "maude" and not debugMode)
+        or (fileExt == "maude" and not args.debug)
     ):
         printAndExit("Please provide a .json input file!")
-    return args[0], args[1]
+    if args.depth < 0:
+        printAndExit("Depth cannot be negative")
+    if args.threads < 1:
+        printAndExit("Number of threads must be a positive integer")
 
 
 def getOutputFilePath(currTime: time.struct_time, inputFileName: str) -> str:
@@ -133,32 +146,32 @@ def readDNKModelFromFile(filePath: str) -> DNKMaudeModel:
 
 
 def main() -> None:
-    (options, args) = buildArgsParser().parse_args()
-    katchPath, inputFilePath = validateArgs(args, options.debug)  # type: ignore
+    args = buildArgsParser().parse_args()
+    validateArgs(args)  # type: ignore
 
     createDir(OUTPUT_DIR_PATH)
     config = TracerConfig(
         outputDirPath=OUTPUT_DIR_PATH,
-        katchPath=katchPath,
+        katchPath=args.katchPath,
         maudeFilesDirPath=MAUDE_FILES_DIR_PATH,
-        threads=10,  # TODO: make this an option for the CLI
-        verbose=options.verbose,  # type: ignore
+        threads=args.threads,
+        verbose=args.verbose,  # type: ignore
     )
 
     try:
-        dnkModel = readDNKModelFromFile(inputFilePath)
+        dnkModel = readDNKModelFromFile(args.inputFilePath)
 
         currTime = time.localtime()
-        inputFileName = getFileName(inputFilePath)
+        inputFileName = getFileName(args.inputFilePath)
         tracesFilePath = getOutputFilePath(currTime, inputFileName)
 
         with open(tracesFilePath, "a") as file:
             tracer = Tracer(config, file)
-            tracer.run(dnkModel, options.depth)  # type: ignore
+            tracer.run(dnkModel, args.depth)  # type: ignore
 
         execStats = tracer.getStats()
         print(execStats)
-        logRunStats(currTime, inputFileName, options.depth, execStats, dnkModel.getBranchCounts())  # type: ignore
+        logRunStats(currTime, inputFileName, args.depth, execStats, dnkModel.getBranchCounts())  # type: ignore
 
         if execStats.collectedTraces == 0:
             if os.path.exists(tracesFilePath):

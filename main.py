@@ -2,8 +2,9 @@ import argparse
 import os
 import sys
 import time
+from dataclasses import dataclass
 from test.util import DNKTestModel
-from typing import List, Tuple
+from typing import List
 
 from pydantic import ValidationError
 
@@ -21,6 +22,16 @@ EXEC_STATS_FILE_NAME = "execution_stats"
 def printAndExit(msg: str) -> None:
     print(msg)
     sys.exit()
+
+
+@dataclass
+class CLIArguments:
+    katchPath: str
+    inputFilePath: str
+    depth: int
+    threads: int
+    debug: bool
+    verbose: bool
 
 
 def buildArgsParser() -> argparse.ArgumentParser:
@@ -63,7 +74,7 @@ def buildArgsParser() -> argparse.ArgumentParser:
     return parser
 
 
-def validateArgs(args: argparse.Namespace):
+def validateArgs(args: CLIArguments) -> None:
     """Validates the command line arguments and returns the paths to the KATch
     executable and the input JSON file."""
     if not args.katchPath or not args.inputFilePath:
@@ -146,8 +157,8 @@ def readDNKModelFromFile(filePath: str) -> DNKMaudeModel:
 
 
 def main() -> None:
-    args = buildArgsParser().parse_args()
-    validateArgs(args)  # type: ignore
+    args = CLIArguments(**vars(buildArgsParser().parse_args()))  # type: ignore
+    validateArgs(args)
 
     createDir(OUTPUT_DIR_PATH)
     config = TracerConfig(
@@ -155,7 +166,7 @@ def main() -> None:
         katchPath=args.katchPath,
         maudeFilesDirPath=MAUDE_FILES_DIR_PATH,
         threads=args.threads,
-        verbose=args.verbose,  # type: ignore
+        verbose=args.verbose,
     )
 
     try:
@@ -167,11 +178,13 @@ def main() -> None:
 
         with open(tracesFilePath, "a") as file:
             tracer = Tracer(config, file)
-            tracer.run(dnkModel, args.depth)  # type: ignore
+            tracer.run(dnkModel, args.depth)
 
         execStats = tracer.getStats()
         print(execStats)
-        logRunStats(currTime, inputFileName, args.depth, execStats, dnkModel.getBranchCounts())  # type: ignore
+        logRunStats(
+            currTime, inputFileName, args.depth, execStats, dnkModel.getBranchCounts()
+        )
 
         if execStats.collectedTraces == 0:
             if os.path.exists(tracesFilePath):

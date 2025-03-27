@@ -66,18 +66,14 @@ mod TRACER-UTIL is
 	protecting RECURSIVE-DNK .
   protecting MAP-UTIL {Nat, RDNK} * (sort Map {Nat, RDNK} to RDNKMap) .
 
-  --- Operator with special hook. Works only with the Python package Maude.
-  --- More details here: https://github.com/fadoss/maude-bindings
-  op NetKATToNF : String -> String [special (
-      id-hook SpecialHubSymbol
-  )] .
-
   op parallelJoin(_,_,_) : RDNK RDNKMap Nat -> DNKComp .
 
   var Cs : RDNKMap . 
   vars BSw C : RDNK .
   vars I VCSize : Nat .
 
+  ---- TODO This should not consider the switch separate, but just as another component with a
+  ---- key in the map, just like the controllers
   eq parallelJoin(BSw, empty, VCSize) = c(BSw, 0) .
   eq parallelJoin(BSw, (I |-> C , Cs), VCSize) = (parallelJoin(BSw, Cs, VCSize) || c(C, s(I))) .
 endm

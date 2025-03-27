@@ -7,7 +7,6 @@ from typing import IO
 
 import maude
 from src.KATch_comm import KATchComm
-from src.KATch_hook import KATCH_HOOK_MAUDE_NAME, KATchHook, KATchStats
 from src.maude_encoder import MaudeEncoder
 from src.maude_encoder import MaudeModules as mm
 from src.maude_encoder import MaudeSorts as ms
@@ -30,11 +29,11 @@ class TracerStats:
         self.katchExecTime = 0.0
         self.collectedTraces = 0
 
-    def setKATchStats(self, katchStats: KATchStats) -> None:
-        self.katchCacheHits = len(katchStats.cacheHitTimes)
-        self.katchCacheQueryTime = fsum(katchStats.cacheHitTimes)
-        self.katchCalls = len(katchStats.katchExecTimes)
-        self.katchExecTime = fsum(katchStats.katchExecTimes)
+    # def setKATchStats(self, katchStats: KATchStats) -> None:
+    #     self.katchCacheHits = len(katchStats.cacheHitTimes)
+    #     self.katchCacheQueryTime = fsum(katchStats.cacheHitTimes)
+    #     self.katchCalls = len(katchStats.katchExecTimes)
+    #     self.katchExecTime = fsum(katchStats.katchExecTimes)
 
     def __repr__(self) -> str:
         return (
@@ -70,9 +69,7 @@ class Tracer:
         self.config = config
         self.stats = TracerStats()
 
-        katchComm = KATchComm(self.config.katchPath, self.config.outputDirPath)
         self.traceCollector = TraceCollectorHook(traceCollectFile)
-        self.katchHook = KATchHook(katchComm)
         self.__initMaude()
 
     def __initMaude(self) -> None:
@@ -85,7 +82,6 @@ class Tracer:
                 "Failed to initialize Maude library! "
                 + "Initialization should happen once, maybe it is done multiple times?"
             )
-        maude.connectEqHook(KATCH_HOOK_MAUDE_NAME, self.katchHook)
         maude.connectEqHook(TRACE_COLLECTOR_HOOK_MAUDE_NAME, self.traceCollector)
 
         filePath = os.path.join(self.config.maudeFilesDirPath, "tracer.maude")
@@ -140,11 +136,9 @@ class Tracer:
         return mod
 
     def getStats(self) -> TracerStats:
-        self.stats.setKATchStats(self.katchHook.execStats)
         self.stats.collectedTraces = self.traceCollector.calls
         return self.stats
 
     def reset(self) -> None:
         self.stats = TracerStats()
-        self.katchHook.reset()
         self.traceCollector.reset()

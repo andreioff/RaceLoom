@@ -46,7 +46,7 @@ class KATchHook(maude.Hook):  # type: ignore
             self.execStats.cacheHitTimes.append(perf_counter() - startTime)
             return self.cache[expr]
 
-        output, error = self.katchComm.execute(expr)
+        output, error = self.katchComm.getPktInPktOutMapping(expr)
         if error is not None:
             print(f"An error occured when running KATch:\n{error}")
             raise KATchError(error)

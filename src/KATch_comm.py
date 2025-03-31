@@ -1,9 +1,12 @@
 import os
 import re
-from typing import Tuple
+from typing import Tuple, Hashable
 
+from src.stats.exec_time_wrapper import with_time_execution
 from src.util import DyNetKATSymbols as sym
 from src.util import executeCmd, exportFile, getTempFilePath
+from src.stats.cache_wrapper import CacheStats, with_bool_cache, PBoolCache
+from math import fsum
 
 KATCH_FILE_EXT = "nkpl"
 NKPL_LARROW = b"\xe2\x86\x90".decode("utf-8")  # ←
@@ -13,19 +16,28 @@ NKPL_TRUE = b"\xe2\x8a\xa4".decode("utf-8")  # ⊤
 NKPL_AND = b"\xe2\x8b\x85".decode("utf-8")  # ⋅
 NKPL_EQUIV = b"\xe2\x89\xa1".decode("utf-8")  # ≡
 NKPL_NOT_EQUIV = b"\xe2\x89\xa2".decode("utf-8")  # ≢
-NKPL_DIFF = b"\xe2\x88\x96".decode("utf-8")  # ∖ (this is not a normal backslash char)
+# the following character is not a regular backslash
+NKPL_DIFF = b"\xe2\x88\x96".decode("utf-8")  # ∖
 NKPL_CHECK = "check"
 NKPL_INOUTMAP = "inoutmap"
 KATCH_TRUE = "True"
 KATCH_FALSE = "False"
 
 
-class KATchComm:
+class KATchError(Exception):
+    pass
+
+
+class KATchComm(PBoolCache):
     """Class for running KATch as an OS command."""
 
     def __init__(self, tool_path: str, output_dir: str) -> None:
+        super()
         self.tool_path: str = tool_path
         self.output_dir: str = output_dir
+        self.execTimes: dict[str, float] = {}
+        self.cache: dict[str, dict[Tuple[Hashable, ...], bool]] = {}
+        self.cacheStats: dict[str, CacheStats] = {}
 
     def tool_format(self, netkatEncoding: str) -> str:
         """Converts the given NetKAT encoding into
@@ -65,7 +77,9 @@ class KATchComm:
 
         return output, error
 
-    def isNonEmptyDifference(self, nkEnc1: str, nkEnc2: str) -> Tuple[bool, str | None]:
+    @with_time_execution
+    @with_bool_cache
+    def isNonEmptyDifference(self, nkEnc1: str, nkEnc2: str) -> bool:
         fmtNKEnc1 = self.tool_format(nkEnc1)
         fmtNKEnc2 = self.tool_format(nkEnc2)
         npklProgram = (
@@ -77,19 +91,23 @@ class KATchComm:
 
         return self.__processCheckOpResult(output, error)
 
-    def areNotEquiv(self, nkEnc1: str, nkEnc2: str) -> Tuple[bool, str | None]:
+    @with_time_execution
+    @with_bool_cache
+    def areNotEquiv(self, nkEnc1: str, nkEnc2: str) -> bool:
         fmtNKEnc1 = self.tool_format(nkEnc1)
         fmtNKEnc2 = self.tool_format(nkEnc2)
         npklProgram = f"{NKPL_CHECK} {fmtNKEnc1} {NKPL_NOT_EQUIV} {fmtNKEnc2}"
 
         output, error = self.__runNPKLProgram(npklProgram)
+
         return self.__processCheckOpResult(output, error)
 
-    def __processCheckOpResult(
-        self, output: str, error: str | None
-    ) -> Tuple[bool, str | None]:
+    def __processCheckOpResult(self, output: str, error: str | None) -> bool:
         if output.find("Check passed") > -1:
-            return True, None
+            return True
         if error is not None and error.find("Check failed") > -1:
-            return False, None
-        return False, error
+            return False
+        raise KATchError(error)
+
+    def getTotalExecTime(self) -> float:
+        return fsum(self.execTimes.values())

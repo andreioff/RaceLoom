@@ -4,13 +4,13 @@ import sys
 import time
 from dataclasses import dataclass
 from test.util import DNKTestModel
-from typing import List
 
 from pydantic import ValidationError
 
 from src.model.dnk_maude_model import DNKMaudeModel
-from src.tracer import MaudeError, Tracer, TracerConfig, TracerStats
-from src.util import createDir, getFileName, isExe, readFile
+from src.tracer import MaudeError, Tracer, TracerConfig
+from src.util import createDir, getFileName, isExe, readFile, removeFile
+from src.stats import StatsCollector, StatsEntry
 
 PROJECT_DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 OUTPUT_DIR_PATH = os.path.join(PROJECT_DIR_PATH, "output")
@@ -78,7 +78,8 @@ def validateArgs(args: CLIArguments) -> None:
     """Validates the command line arguments and returns the paths to the KATch
     executable and the input JSON file."""
     if not args.katchPath or not args.inputFilePath:
-        printAndExit("Error: provide the arguments <path_to_katch> <input_file>.")
+        printAndExit(
+            "Error: provide the arguments <path_to_katch> <input_file>.")
 
     if not os.path.exists(args.katchPath) or not isExe(args.katchPath):
         printAndExit("KATch tool could not be found in the given path!")
@@ -99,37 +100,21 @@ def validateArgs(args: CLIArguments) -> None:
 def getOutputFilePath(currTime: time.struct_time, inputFileName: str) -> str:
     currTimeStr = time.strftime("%Y_%m_%dT%H_%M_%S", currTime)
     return os.path.join(
-        OUTPUT_DIR_PATH, f"{OUTPUT_FILE_NAME}_{currTimeStr}_{inputFileName}.txt"
+        OUTPUT_DIR_PATH, f"{OUTPUT_FILE_NAME}_{
+            currTimeStr}_{inputFileName}.txt"
     )
 
 
-def logRunStats(
-    currTime: time.struct_time,
-    inputFileName: str,
-    depth: int,
-    stats: TracerStats,
-    branchCountsStr: str,
-) -> None:
+def logRunStats(stats: StatsCollector) -> None:
     logFilePath = os.path.join(OUTPUT_DIR_PATH, f"{EXEC_STATS_FILE_NAME}.csv")
-
-    statsVarNames: List[str] = [str(k) for k in vars(stats).keys()]  # type: ignore
-    statsVarValues: List[str] = [str(v) for v in vars(stats).values()]  # type: ignore
+    sep = ","
     if not os.path.exists(logFilePath):
         with open(logFilePath, "w") as f:
-            f.write(
-                ",".join(
-                    ["date", "input_file", "depth", "branchCounts"] + statsVarNames
-                )
-            )
+            f.write(stats.keys(sep))
             f.write(os.linesep)
 
-    fmtTime = time.strftime("%Y-%m-%d;%H:%M:%S", currTime)
     with open(logFilePath, "a") as f:
-        f.write(
-            ",".join(
-                [fmtTime, inputFileName, f"{depth}", branchCountsStr] + statsVarValues
-            )
-        )
+        f.write(stats.values(sep))
         f.write(os.linesep)
 
 
@@ -173,22 +158,32 @@ def main() -> None:
         dnkModel = readDNKModelFromFile(args.inputFilePath)
 
         currTime = time.localtime()
+        fmtTime = time.strftime("%Y-%m-%d;%H:%M:%S", currTime)
         inputFileName = getFileName(args.inputFilePath)
         tracesFilePath = getOutputFilePath(currTime, inputFileName)
 
         with open(tracesFilePath, "a") as file:
             tracer = Tracer(config, file)
-            tracer.run(dnkModel, args.depth)
+            collectedTraces = tracer.run(dnkModel, args.depth)
 
-        execStats = tracer.getStats()
-        print(execStats)
-        logRunStats(
-            currTime, inputFileName, args.depth, execStats, dnkModel.getBranchCounts()
-        )
+        stats = StatsCollector()
+        stats.addEntries([
+            StatsEntry("date", "Date", fmtTime),
+            StatsEntry("inputFile", "Input file",
+                       os.path.basename(args.inputFilePath)),
+            StatsEntry("depth", "Depth", args.depth),
+            StatsEntry("modelBranchCounts",
+                       "Network model branches", dnkModel.getBranchCounts()),
+        ])
+        stats.addEntries(tracer.getStats())
 
-        if execStats.collectedTraces == 0:
-            if os.path.exists(tracesFilePath):
-                os.remove(tracesFilePath)
+        print()
+        print(stats.toPrettyStr())
+        print()
+        logRunStats(stats)
+
+        if collectedTraces == 0:
+            removeFile(tracesFilePath)
             printAndExit(
                 "Could not collect any traces for the given network and depth!"
             )

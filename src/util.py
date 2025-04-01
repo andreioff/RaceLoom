@@ -47,6 +47,12 @@ def executeCmd(cmd: list[str]) -> Tuple[str, str | None]:
     return proc.stdout.decode("utf-8"), error if error != "" else None
 
 
+def removeFile(filePath: str) -> None:
+    """Removes the file at the given path if it exists."""
+    if os.path.exists(filePath):
+        os.remove(filePath)
+
+
 def exportFile(filePath: str, contents: str) -> None:
     """Exports a file with the given name and contents."""
     with open(filePath, "w") as f:

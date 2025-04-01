@@ -153,6 +153,10 @@ class MaudeEncoder:
         return f"{mapVar}[{key}]"
 
     def convertIntoMap(self, strs: List[str]) -> str:
+        """Converts the given list into a Maude map sending consecutive
+        integer keys starting from 0 to elements of the list,
+        in the same order they appear.
+        """
         if not strs:
             return "empty"
 

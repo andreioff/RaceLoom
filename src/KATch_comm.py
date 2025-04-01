@@ -1,12 +1,12 @@
 import os
 import re
-from typing import Tuple, Hashable
+from typing import Tuple, List, Hashable
 
-from src.stats.exec_time_wrapper import with_time_execution
+from src.decorators.exec_time import with_time_execution, PExecTimes
+from src.decorators.bool_cache import CacheStats, with_bool_cache, PBoolCache
 from src.util import DyNetKATSymbols as sym
 from src.util import executeCmd, exportFile, getTempFilePath
-from src.stats.cache_wrapper import CacheStats, with_bool_cache, PBoolCache
-from math import fsum
+from src.stats import StatsGenerator, StatsEntry
 
 KATCH_FILE_EXT = "nkpl"
 NKPL_LARROW = b"\xe2\x86\x90".decode("utf-8")  # ←
@@ -28,7 +28,7 @@ class KATchError(Exception):
     pass
 
 
-class KATchComm(PBoolCache):
+class KATchComm(PBoolCache, PExecTimes, StatsGenerator):
     """Class for running KATch as an OS command."""
 
     def __init__(self, tool_path: str, output_dir: str) -> None:
@@ -109,5 +109,12 @@ class KATchComm(PBoolCache):
             return False
         raise KATchError(error)
 
-    def getTotalExecTime(self) -> float:
-        return fsum(self.execTimes.values())
+    def getStats(self) -> List[StatsEntry]:
+        return [
+            StatsEntry("katchExecTime", "KATch total execution time",
+                       self.getTotalExecTime()),
+            StatsEntry("katchCacheHits", "KATch total cache hits",
+                       self.getTotalCacheHits()),
+            StatsEntry("katchCacheMisses", "KATch total cache misses",
+                       self.getTotalCacheMisses())
+        ]

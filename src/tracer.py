@@ -1,49 +1,22 @@
 # mypy: disable-error-code="import-untyped,no-any-unimported,misc"
 
 import os
-from math import fsum
-from time import perf_counter
-from typing import IO
+from typing import IO, List
 
 import maude
-from src.KATch_comm import KATchComm
 from src.maude_encoder import MaudeEncoder
 from src.maude_encoder import MaudeModules as mm
 from src.maude_encoder import MaudeSorts as ms
 from src.model.dnk_maude_model import DNKMaudeModel
 from src.trace_collector_hook import TRACE_COLLECTOR_HOOK_MAUDE_NAME, TraceCollectorHook
+from src.decorators.exec_time import PExecTimes, with_time_execution
+from src.stats import StatsEntry, StatsGenerator
 
 ENTRY_POINT_NAME = "init"
 
 
 class MaudeError(Exception):
     pass
-
-
-class TracerStats:
-    def __init__(self) -> None:
-        self.execTime = 0.0
-        self.katchCacheHits = 0
-        self.katchCacheQueryTime = 0.0
-        self.katchCalls = 0
-        self.katchExecTime = 0.0
-        self.collectedTraces = 0
-
-    # def setKATchStats(self, katchStats: KATchStats) -> None:
-    #     self.katchCacheHits = len(katchStats.cacheHitTimes)
-    #     self.katchCacheQueryTime = fsum(katchStats.cacheHitTimes)
-    #     self.katchCalls = len(katchStats.katchExecTimes)
-    #     self.katchExecTime = fsum(katchStats.katchExecTimes)
-
-    def __repr__(self) -> str:
-        return (
-            f"Computing trace(s) time: {self.execTime} seconds\n"
-            + f"KATch cache hits: {self.katchCacheHits}\n"
-            + f"KATch cache query time: {self.katchCacheQueryTime}\n"
-            + f"KATch calls: {self.katchCalls}\n"
-            + f"KATch execution time: {self.katchExecTime}\n"
-            + f"No. of collected traces: {self.collectedTraces}\n"
-        )
 
 
 class TracerConfig:
@@ -62,13 +35,12 @@ class TracerConfig:
         self.verbose = verbose
 
 
-class Tracer:
+class Tracer(PExecTimes, StatsGenerator):
     maudeInitialized: bool = False
 
     def __init__(self, config: TracerConfig, traceCollectFile: IO[str]) -> None:
         self.config = config
-        self.stats = TracerStats()
-
+        self.execTimes: dict[str, float] = {}
         self.traceCollector = TraceCollectorHook(traceCollectFile)
         self.__initMaude()
 
@@ -82,7 +54,8 @@ class Tracer:
                 "Failed to initialize Maude library! "
                 + "Initialization should happen once, maybe it is done multiple times?"
             )
-        maude.connectEqHook(TRACE_COLLECTOR_HOOK_MAUDE_NAME, self.traceCollector)
+        maude.connectEqHook(TRACE_COLLECTOR_HOOK_MAUDE_NAME,
+                            self.traceCollector)
 
         filePath = os.path.join(self.config.maudeFilesDirPath, "tracer.maude")
         success = maude.load(filePath)
@@ -92,6 +65,7 @@ class Tracer:
             maude.input("set print attribute on .")
         Tracer.maudeInitialized = True
 
+    @with_time_execution
     def run(self, model: DNKMaudeModel, depth: int) -> int:
         """Returns the number of traces collected during the run"""
         self.reset()
@@ -102,17 +76,15 @@ class Tracer:
         if term is None:
             raise MaudeError("Failed to declare Tracer entry point.")
 
-        startTime = perf_counter()
         term.erewrite()
-        endTime = perf_counter()
-        self.stats.execTime = endTime - startTime
         return self.traceCollector.calls
 
     def __declareModelMaudeModule(self, model: DNKMaudeModel) -> None:
         maude.input(model.toMaudeModule())
         mod = maude.getModule(model.getMaudeModuleName())
         if mod is None:
-            raise MaudeError("Failed to declare module for given DyNetKAT model!")
+            raise MaudeError(
+                "Failed to declare module for given DyNetKAT model!")
 
     def __declareEntryMaudeModule(
         self, model: DNKMaudeModel, depth: int
@@ -135,10 +107,14 @@ class Tracer:
             raise MaudeError("Failed to declare entry module!")
         return mod
 
-    def getStats(self) -> TracerStats:
-        self.stats.collectedTraces = self.traceCollector.calls
-        return self.stats
-
     def reset(self) -> None:
-        self.stats = TracerStats()
+        self.execTimes = {}
         self.traceCollector.reset()
+
+    def getStats(self) -> List[StatsEntry]:
+        return [
+            StatsEntry("tracesComputationTime",
+                       "Trace(s) computation time", self.getTotalExecTime()),
+            StatsEntry("collectedTraces", "Collected traces",
+                       self.traceCollector.calls)
+        ]

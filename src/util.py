@@ -92,4 +92,4 @@ def splitIntoLines(s: str, lineSize: int, charMargin: int = 0) -> str:
     is <= lineSize + charMargin."""
     if lineSize < 1 or lineSize + charMargin > len(s):
         return s
-    return os.linesep.join([s[i: i + lineSize] for i in range(0, len(s), lineSize)])
+    return os.linesep.join([s[i : i + lineSize] for i in range(0, len(s), lineSize)])

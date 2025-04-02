@@ -11,13 +11,15 @@ class RaceType(StrEnum):
 
 
 class HarmfulTrace:
-    def __init__(self,
-                 nodes: List[TraceNode],
-                 elDict: dict[int, ElementType],
-                 srcNode: int,
-                 racingTrans: Tuple[int, int],
-                 racingElements: Tuple[int, int],
-                 raceType: RaceType) -> None:
+    def __init__(
+        self,
+        nodes: List[TraceNode],
+        elDict: dict[int, ElementType],
+        srcNode: int,
+        racingTrans: Tuple[int, int],
+        racingElements: Tuple[int, int],
+        raceType: RaceType,
+    ) -> None:
         self.nodes = nodes
         self.elDict = elDict
         self.srcNode = srcNode

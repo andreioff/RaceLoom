@@ -1,7 +1,11 @@
 import os
 from typing import Tuple, List
 
-from src.analyzer.trace_analyzer import TraceAnalyzer, TraceAnalyzerError, TransitionsChecker
+from src.analyzer.trace_analyzer import (
+    TraceAnalyzer,
+    TraceAnalyzerError,
+    TransitionsChecker,
+)
 from src.analyzer.trace_parser import ParseError, TraceParser
 from src.analyzer.harmful_trace import HarmfulTrace, RaceType
 from src.KATch_comm import KATchComm
@@ -17,7 +21,9 @@ HARMFUL_TRACE_FILE_NAME = "harmful_trace"
 class TraceFileAnalyzer(PExecTimes, StatsGenerator):
     """Class for reading and analyzing trace files."""
 
-    def __init__(self, katchComm: KATchComm, outputDirRaw: str, outputDirDOT: str) -> None:
+    def __init__(
+        self, katchComm: KATchComm, outputDirRaw: str, outputDirDOT: str
+    ) -> None:
         self.katchComm = katchComm
         self.outputDirRaw = outputDirRaw
         self.outputDirDOT = outputDirDOT
@@ -37,12 +43,15 @@ class TraceFileAnalyzer(PExecTimes, StatsGenerator):
             if htrace is not None:
                 self.harmfulRacesCount += 1
                 self.__writeRawTraceToFile(
-                    traceStr, htrace.racingTrans, htrace.raceType)
+                    traceStr, htrace.racingTrans, htrace.raceType
+                )
                 self.__writeDOTTraceToFile(htrace.toDOT())
             lineCount += 1
         traceFile.close()
 
-    def __analyzeTrace(self, lineNr: int, traceStr: str, elDict: dict[int, ElementType]) -> HarmfulTrace | None:
+    def __analyzeTrace(
+        self, lineNr: int, traceStr: str, elDict: dict[int, ElementType]
+    ) -> HarmfulTrace | None:
         try:
             trace = TraceParser.parse(traceStr)
             ta = TraceAnalyzer(
@@ -52,8 +61,10 @@ class TraceFileAnalyzer(PExecTimes, StatsGenerator):
             )
             return ta.analyze()
         except SyntaxError:
-            print(f"On line {
-                  lineNr}: Argument 'traceStr' does not contain valid Python3 syntax.")
+            print(
+                f"On line {
+                  lineNr}: Argument 'traceStr' does not contain valid Python3 syntax."
+            )
         except ParseError as e:
             print(f"On line {lineNr}: {e}")
         except TraceAnalyzerError as e:
@@ -75,8 +86,10 @@ class TraceFileAnalyzer(PExecTimes, StatsGenerator):
 
     def getStats(self) -> List[StatsEntry]:
         return [
+            StatsEntry("harmfulRaces", "Harmful races found", self.harmfulRacesCount),
             StatsEntry(
-                "harmfulRaces", "Harmful races found", self.harmfulRacesCount),
-            StatsEntry("traceAnalyzerExecTime",
-                       "Trace Analyzer execution time", self.getTotalExecTime())
+                "traceAnalyzerExecTime",
+                "Trace Analyzer execution time",
+                self.getTotalExecTime(),
+            ),
         ]

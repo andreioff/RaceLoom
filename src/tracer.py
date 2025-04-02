@@ -54,8 +54,7 @@ class Tracer(PExecTimes, StatsGenerator):
                 "Failed to initialize Maude library! "
                 + "Initialization should happen once, maybe it is done multiple times?"
             )
-        maude.connectEqHook(TRACE_COLLECTOR_HOOK_MAUDE_NAME,
-                            self.traceCollector)
+        maude.connectEqHook(TRACE_COLLECTOR_HOOK_MAUDE_NAME, self.traceCollector)
 
         filePath = os.path.join(self.config.maudeFilesDirPath, "tracer.maude")
         success = maude.load(filePath)
@@ -83,8 +82,7 @@ class Tracer(PExecTimes, StatsGenerator):
         maude.input(model.toMaudeModule())
         mod = maude.getModule(model.getMaudeModuleName())
         if mod is None:
-            raise MaudeError(
-                "Failed to declare module for given DyNetKAT model!")
+            raise MaudeError("Failed to declare module for given DyNetKAT model!")
 
     def __declareEntryMaudeModule(
         self, model: DNKMaudeModel, depth: int
@@ -113,8 +111,12 @@ class Tracer(PExecTimes, StatsGenerator):
 
     def getStats(self) -> List[StatsEntry]:
         return [
-            StatsEntry("tracesGenerationTime",
-                       "Trace(s) generation time", self.getTotalExecTime()),
-            StatsEntry("generatedTraces", "Generated traces",
-                       self.traceCollector.calls)
+            StatsEntry(
+                "tracesGenerationTime",
+                "Trace(s) generation time",
+                self.getTotalExecTime(),
+            ),
+            StatsEntry(
+                "generatedTraces", "Generated traces", self.traceCollector.calls
+            ),
         ]

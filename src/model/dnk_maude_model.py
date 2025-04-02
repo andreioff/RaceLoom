@@ -159,8 +159,7 @@ class DNKMaudeModel:
                 self.me.mapAccess(f"{i}", SW_MAP_VAR_NAME),
                 self.me.concatStr(f' " {sym.OR} " ', fr),
             )
-            insExpr = self.me.mapInsert(
-                f"{i}", f"({appExpr})", SW_MAP_VAR_NAME)
+            insExpr = self.me.mapInsert(f"{i}", f"({appExpr})", SW_MAP_VAR_NAME)
             return f"({ch} {sym.RECV} {fr}) {sym.SEQ} ({BIG_SW_VAR_NAME} {insExpr})"
 
         def sendAndEnterRecvMode(ru: jm.DNKRequestedUpdate, i: int) -> str:
@@ -209,8 +208,7 @@ class DNKMaudeModel:
                 self.me.mapAccess(f"{i}", SW_MAP_VAR_NAME),
                 self.me.concatStr(f' " {sym.OR} " ', fr),
             )
-            insExpr = self.me.mapInsert(
-                f"{i}", f"({appExpr})", SW_MAP_VAR_NAME)
+            insExpr = self.me.mapInsert(f"{i}", f"({appExpr})", SW_MAP_VAR_NAME)
             return f"({ch} {sym.RECV} {fr}) {sym.SEQ} ({termName(insExpr)})"
 
         for i, (_name, switch) in enumerate(model.Switches.items()):
@@ -222,8 +220,7 @@ class DNKMaudeModel:
             self.me.mapAccess(f"{INDX_VAR_NAME}", SW_MAP_VAR_NAME),
             self.me.concatStr(f' " {sym.OR} " ', FR_VAR_NAME),
         )
-        insExpr = self.me.mapInsert(
-            f"{INDX_VAR_NAME}", f"({appExpr})", SW_MAP_VAR_NAME)
+        insExpr = self.me.mapInsert(f"{INDX_VAR_NAME}", f"({appExpr})", SW_MAP_VAR_NAME)
         bigSwTerm = f"{BIG_SW_VAR_NAME} {insExpr}"
         exprs.append(
             f"({CH_VAR_NAME} {sym.RECV} {FR_VAR_NAME}) {sym.SEQ} ({bigSwTerm})"
@@ -267,5 +264,8 @@ class DNKMaudeModel:
         return mm.DNK_MODEL
 
     def getStats(self) -> List[StatsEntry]:
-        return [StatsEntry("modelBranchCounts",
-                           "Network model branches", self.getBranchCounts())]
+        return [
+            StatsEntry(
+                "modelBranchCounts", "Network model branches", self.getBranchCounts()
+            )
+        ]

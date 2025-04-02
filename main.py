@@ -32,8 +32,10 @@ def printAndExit(msg: str) -> None:
 def createRunOutputDir(currTime: time.struct_time) -> str:
     createDir(OUTPUT_DIR_PATH)
     currTimeStr = time.strftime("%Y_%m_%dT%H_%M_%S", currTime)
-    dirPath = os.path.join(OUTPUT_DIR_PATH, f"{RUN_DIR_NAME}_{
-                           currTimeStr}")
+    dirPath = os.path.join(
+        OUTPUT_DIR_PATH,
+        f"{RUN_DIR_NAME}_{currTimeStr}",
+    )
     createDir(dirPath)
     return dirPath
 
@@ -81,19 +83,23 @@ def main() -> None:
 
         inputFileName = getFileName(args.inputFilePath)
         tracesFilePath = os.path.join(
-            runOutputDir, f"{TRACES_FILE_NAME}_{inputFileName}.txt")
+            runOutputDir, f"{TRACES_FILE_NAME}_{inputFileName}.txt"
+        )
         with open(tracesFilePath, "a") as file:
             tracer = Tracer(config, file)
             print("Generating traces...")
             collectedTraces = tracer.run(dnkModel, args.depth)
 
         stats = StatsCollector()
-        stats.addEntries([
-            StatsEntry("date", "Date", fmtTime),
-            StatsEntry("inputFile", "Input file",
-                       os.path.basename(args.inputFilePath)),
-            StatsEntry("depth", "Depth", args.depth),
-        ])
+        stats.addEntries(
+            [
+                StatsEntry("date", "Date", fmtTime),
+                StatsEntry(
+                    "inputFile", "Input file", os.path.basename(args.inputFilePath)
+                ),
+                StatsEntry("depth", "Depth", args.depth),
+            ]
+        )
         stats.addEntries(dnkModel.getStats())
         stats.addEntries(tracer.getStats())
 
@@ -120,8 +126,15 @@ def main() -> None:
 
         stats.addEntries(katchComm.getStats())
         stats.addEntries(pta.getStats())
-        stats.addEntries([StatsEntry("totalExecTime", "Total execution time",
-                         tracer.getTotalExecTime() + pta.getTotalExecTime())])
+        stats.addEntries(
+            [
+                StatsEntry(
+                    "totalExecTime",
+                    "Total execution time",
+                    tracer.getTotalExecTime() + pta.getTotalExecTime(),
+                )
+            ]
+        )
 
         print()
         print("========== Final Stats ==========")

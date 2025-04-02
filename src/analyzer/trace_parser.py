@@ -31,8 +31,7 @@ class PktProcTrans(TraceTransition):
     def fromStr(cls, s: str) -> Self:
         res = re.search(r"proc\('([^']*)',([0-9]+)\)", s)
         if res is None:
-            raise ParseError(
-                f"'{s}' is not a valid packet processing transition")
+            raise ParseError(f"'{s}' is not a valid packet processing transition")
 
         t = cls(str(res.group(1)), int(res.group(2)))
         return t
@@ -56,8 +55,7 @@ class RcfgTrans(TraceTransition):
     def fromStr(cls, s: str) -> Self:
         res = re.search(r"rcfg\(([^,]*), '([^']*)', ([0-9]+), ([0-9]+)\)", s)
         if res is None:
-            raise ParseError(
-                f"'{s}' is not a valid reconfiguration transition")
+            raise ParseError(f"'{s}' is not a valid reconfiguration transition")
 
         t = cls(
             str(res.group(2)),
@@ -89,10 +87,10 @@ class TraceNode:
 
         return self
 
-    def __validateTupleType(self, t: Tuple  # type: ignore
-                            ) -> Tuple[str, List[List[int]]]:
-        err = ParseError(
-            "Trace element must be of type Tuple[str, List[List[int]]]")
+    def __validateTupleType(
+        self, t: Tuple  # type: ignore
+    ) -> Tuple[str, List[List[int]]]:
+        err = ParseError("Trace element must be of type Tuple[str, List[List[int]]]")
         if not isinstance(t[0], str) or not isinstance(t[1], list):  # type: ignore
             raise err
         for vc in t[1]:  # type: ignore

@@ -25,7 +25,9 @@ class _TransitionCheckers(Protocol):
     ) -> Callable[[_T1, _T2], RaceType | None]: ...
 
     def __setitem__(
-        self, key: tuple[type[_T1], type[_T2]], value: Callable[[_T1, _T2], RaceType | None]
+        self,
+        key: tuple[type[_T1], type[_T2]],
+        value: Callable[[_T1, _T2], RaceType | None],
     ) -> None: ...
 
     def __contains__(self, key: tuple[type[_T1], type[_T2]]) -> bool: ...
@@ -85,14 +87,16 @@ class TraceAnalyzer:
         self.__validateTrace()
 
     def analyze(self) -> HarmfulTrace | None:
-        """ Does not account for policies/flow rules that are appended to a flow table.
+        """Does not account for policies/flow rules that are appended to a flow table.
         Raises TraceAnalyzerError if something goes wrong during the analysis."""
         for i, node in enumerate(self.trace):
             posPairs = node.getIncmpPosPairs()
             for el1, el2 in posPairs:
                 res = self.__checkRace(i, el1, el2)
                 if res is not None:
-                    return HarmfulTrace(self.trace, self.elDict, i, res[0], (el1, el2), res[1])
+                    return HarmfulTrace(
+                        self.trace, self.elDict, i, res[0], (el1, el2), res[1]
+                    )
         return None
 
     def __validateTrace(self) -> None:
@@ -131,8 +135,10 @@ class TraceAnalyzer:
         self, startNodePos: int, el1: int, el2: int
     ) -> Tuple[Tuple[int, int], RaceType] | None:
         if el1 not in self.elDict or el2 not in self.elDict:
-            print(f"Warning: unknown type for element at position {
-                  el1} or {el2}")
+            print(
+                f"Warning: unknown type for element at position {
+                  el1} or {el2}"
+            )
             return None
         if self.elDict[el1] == ElementType.SW and self.elDict[el2] == ElementType.SW:
             print("Skipping SW-SW race...")

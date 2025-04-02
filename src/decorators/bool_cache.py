@@ -21,8 +21,11 @@ class PBoolCache(Protocol):
         return sum([stats.misses for stats in self.cacheStats.values()])
 
 
-def with_bool_cache[M: PBoolCache, **P](method: Callable[Concatenate[M, P], bool]) -> Callable[Concatenate[M, P], bool]:
+def with_bool_cache[M: PBoolCache, **P](
+    method: Callable[Concatenate[M, P], bool],
+) -> Callable[Concatenate[M, P], bool]:
     """Decorator to cache method results and store them in an instance attribute of the method's class."""
+
     @wraps(method)
     def wrapper(self: M, /, *args: P.args, **kwargs: P.kwargs) -> bool:
         c = self.cache.setdefault(method.__name__, {})
@@ -37,4 +40,5 @@ def with_bool_cache[M: PBoolCache, **P](method: Callable[Concatenate[M, P], bool
         c[key] = result
         cs.misses += 1
         return result
+
     return wrapper

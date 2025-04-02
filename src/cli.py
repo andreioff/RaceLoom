@@ -62,8 +62,7 @@ def validateArgs(args: CLIArguments) -> None:
     """Validates the command line arguments and returns the paths to the KATch
     executable and the input JSON file."""
     if not args.katchPath or not args.inputFilePath:
-        raise CLIError(
-            "Error: provide the arguments <path_to_katch> <input_file>.")
+        raise CLIError("Error: provide the arguments <path_to_katch> <input_file>.")
 
     if not os.path.exists(args.katchPath) or not isExe(args.katchPath):
         raise CLIError("KATch tool could not be found in the given path!")

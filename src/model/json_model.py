@@ -5,8 +5,7 @@ from pydantic.types import StringConstraints
 from typing_extensions import Annotated
 
 NonEmptyString = Annotated[str, StringConstraints(min_length=1)]
-VarNameString = Annotated[str, StringConstraints(
-    pattern=r"^[A-Za-z][A-Za-z0-9]*$")]
+VarNameString = Annotated[str, StringConstraints(pattern=r"^[A-Za-z][A-Za-z0-9]*$")]
 
 
 class DNKDirectUpdate(BaseModel):  # type: ignore

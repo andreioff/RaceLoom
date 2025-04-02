@@ -110,10 +110,15 @@ class KATchComm(PBoolCache, PExecTimes, StatsGenerator):
 
     def getStats(self) -> List[StatsEntry]:
         return [
-            StatsEntry("katchExecTime", "KATch total execution time",
-                       self.getTotalExecTime()),
-            StatsEntry("katchCacheHits", "KATch total cache hits",
-                       self.getTotalCacheHits()),
-            StatsEntry("katchCacheMisses", "KATch total cache misses",
-                       self.getTotalCacheMisses())
+            StatsEntry(
+                "katchExecTime", "KATch total execution time", self.getTotalExecTime()
+            ),
+            StatsEntry(
+                "katchCacheHits", "KATch total cache hits", self.getTotalCacheHits()
+            ),
+            StatsEntry(
+                "katchCacheMisses",
+                "KATch total cache misses",
+                self.getTotalCacheMisses(),
+            ),
         ]

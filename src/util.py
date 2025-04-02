@@ -84,3 +84,12 @@ def createDir(dirPath: str) -> None:
 def getFileName(filePath: str) -> str:
     fileName = os.path.basename(filePath)
     return fileName.split(".")[0]
+
+
+def splitIntoLines(s: str, lineSize: int, charMargin: int = 0) -> str:
+    """Inserts new line characters in the given string every 'lineSize' chars.
+    If a character margin is given, the string remains unchanged if its length
+    is <= lineSize + charMargin."""
+    if lineSize < 1 or lineSize + charMargin > len(s):
+        return s
+    return os.linesep.join([s[i: i + lineSize] for i in range(0, len(s), lineSize)])

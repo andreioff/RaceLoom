@@ -1,3 +1,4 @@
+from enum import StrEnum
 from typing import List
 
 from typing_extensions import Self
@@ -8,6 +9,7 @@ from src.maude_encoder import MaudeModules as mm
 from src.maude_encoder import MaudeOps as mo
 from src.maude_encoder import MaudeSorts as ms
 from src.util import DyNetKATSymbols as sym
+from src.stats import StatsGenerator, StatsEntry
 
 LINK_VAR_NAME = "Link"
 BIG_SW_VAR_NAME = "BSWMain"
@@ -18,7 +20,12 @@ INDX_VAR_NAME = "I"
 FR_VAR_NAME = "FR"
 
 
-class DNKModelError(Exception):
+class ElementType(StrEnum):
+    CT = "CT"
+    SW = "SW"
+
+
+class DNKModelError(Exception, StatsGenerator):
     pass
 
 
@@ -27,22 +34,35 @@ class DNKMaudeModel:
         self.me = MaudeEncoder()
         self.bigSwitchTerm: str = ""
         self.controllersMaudeMap: str = self.me.convertIntoMap([])
+        self.elTypeDict: dict[int, ElementType] = {}
         self.branchCounts: dict[str, int] = {}
 
-    def fromJson(self, jsonStr: str) -> Self:
+    @classmethod
+    def fromJson(cls, jsonStr: str) -> Self:
         """
         Raises: ValidationError if `jsonStr` does not correspond to the expected model
         """
         jsonModel = jm.DNKNetwork.model_validate_json(jsonStr)
-        self.__declareLink(jsonModel)
-        self.__declareChannels(jsonModel)
-        self.__declareInitialSwitches(jsonModel)
-        self.__declareControllers(jsonModel)
-        self.__declareBigSwitch(jsonModel)
-        self.__buildBigSwitchTerm(jsonModel)
-        self.__buildControllersMapTerm(jsonModel)
 
-        return self
+        m = cls()
+        m.__declareLink(jsonModel)
+        m.__declareChannels(jsonModel)
+        m.__declareInitialSwitches(jsonModel)
+        m.__declareControllers(jsonModel)
+        m.__declareBigSwitch(jsonModel)
+        m.__buildBigSwitchTerm(jsonModel)
+        m.__buildControllersMapTerm(jsonModel)
+        m.__buildElementsTypeDict(len(jsonModel.Controllers))
+
+        return m
+
+    def __buildElementsTypeDict(self, ctsNr: int) -> None:
+        # TODO Find a better way to do this
+        self.elTypeDict = {
+            0: ElementType.SW,
+        }
+        for i in range(ctsNr):
+            self.elTypeDict[i + 1] = ElementType.CT
 
     def toMaudeModule(self) -> str:
         self.me.addProtImport(mm.DNK_MODEL_UTIL)
@@ -139,7 +159,8 @@ class DNKMaudeModel:
                 self.me.mapAccess(f"{i}", SW_MAP_VAR_NAME),
                 self.me.concatStr(f' " {sym.OR} " ', fr),
             )
-            insExpr = self.me.mapInsert(f"{i}", f"({appExpr})", SW_MAP_VAR_NAME)
+            insExpr = self.me.mapInsert(
+                f"{i}", f"({appExpr})", SW_MAP_VAR_NAME)
             return f"({ch} {sym.RECV} {fr}) {sym.SEQ} ({BIG_SW_VAR_NAME} {insExpr})"
 
         def sendAndEnterRecvMode(ru: jm.DNKRequestedUpdate, i: int) -> str:
@@ -188,7 +209,8 @@ class DNKMaudeModel:
                 self.me.mapAccess(f"{i}", SW_MAP_VAR_NAME),
                 self.me.concatStr(f' " {sym.OR} " ', fr),
             )
-            insExpr = self.me.mapInsert(f"{i}", f"({appExpr})", SW_MAP_VAR_NAME)
+            insExpr = self.me.mapInsert(
+                f"{i}", f"({appExpr})", SW_MAP_VAR_NAME)
             return f"({ch} {sym.RECV} {fr}) {sym.SEQ} ({termName(insExpr)})"
 
         for i, (_name, switch) in enumerate(model.Switches.items()):
@@ -200,7 +222,8 @@ class DNKMaudeModel:
             self.me.mapAccess(f"{INDX_VAR_NAME}", SW_MAP_VAR_NAME),
             self.me.concatStr(f' " {sym.OR} " ', FR_VAR_NAME),
         )
-        insExpr = self.me.mapInsert(f"{INDX_VAR_NAME}", f"({appExpr})", SW_MAP_VAR_NAME)
+        insExpr = self.me.mapInsert(
+            f"{INDX_VAR_NAME}", f"({appExpr})", SW_MAP_VAR_NAME)
         bigSwTerm = f"{BIG_SW_VAR_NAME} {insExpr}"
         exprs.append(
             f"({CH_VAR_NAME} {sym.RECV} {FR_VAR_NAME}) {sym.SEQ} ({bigSwTerm})"
@@ -242,3 +265,7 @@ class DNKMaudeModel:
 
     def getMaudeModuleName(self) -> str:
         return mm.DNK_MODEL
+
+    def getStats(self) -> List[StatsEntry]:
+        return [StatsEntry("modelBranchCounts",
+                           "Network model branches", self.getBranchCounts())]

@@ -113,8 +113,8 @@ class Tracer(PExecTimes, StatsGenerator):
 
     def getStats(self) -> List[StatsEntry]:
         return [
-            StatsEntry("tracesComputationTime",
-                       "Trace(s) computation time", self.getTotalExecTime()),
-            StatsEntry("collectedTraces", "Collected traces",
+            StatsEntry("tracesGenerationTime",
+                       "Trace(s) generation time", self.getTotalExecTime()),
+            StatsEntry("generatedTraces", "Generated traces",
                        self.traceCollector.calls)
         ]

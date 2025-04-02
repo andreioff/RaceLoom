@@ -10,12 +10,18 @@ from src.tracer import MaudeError, Tracer, TracerConfig
 from src.util import createDir, getFileName, readFile, removeFile
 from src.stats import StatsCollector, StatsEntry
 from src.cli import getCLIArgs, CLIError
+from src.analyzer.trace_file_analyzer import TraceFileAnalyzer
+from src.KATch_comm import KATchComm
 
 PROJECT_DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 OUTPUT_DIR_PATH = os.path.join(PROJECT_DIR_PATH, "output")
 MAUDE_FILES_DIR_PATH = os.path.join(PROJECT_DIR_PATH, "src", "maude")
-OUTPUT_FILE_NAME = "traces"
-EXEC_STATS_FILE_NAME = "execution_stats"
+RUN_DIR_NAME = "run"
+TRACES_FILE_NAME = "traces"
+HARMFUL_TRACES_DIR_NAME = "harmful_traces"
+HARMFUL_TRACES_RAW_DIR_NAME = "harmful_traces_raw"
+TRACES_GEN_STATS_FILE_NAME = "trace_generation_stats"
+STATS_FILE_NAME = "final_stats"
 
 
 def printAndExit(msg: str) -> None:
@@ -23,16 +29,17 @@ def printAndExit(msg: str) -> None:
     sys.exit()
 
 
-def getOutputFilePath(currTime: time.struct_time, inputFileName: str) -> str:
+def createRunOutputDir(currTime: time.struct_time) -> str:
+    createDir(OUTPUT_DIR_PATH)
     currTimeStr = time.strftime("%Y_%m_%dT%H_%M_%S", currTime)
-    return os.path.join(
-        OUTPUT_DIR_PATH, f"{OUTPUT_FILE_NAME}_{
-            currTimeStr}_{inputFileName}.txt"
-    )
+    dirPath = os.path.join(OUTPUT_DIR_PATH, f"{RUN_DIR_NAME}_{
+                           currTimeStr}")
+    createDir(dirPath)
+    return dirPath
 
 
-def logRunStats(stats: StatsCollector) -> None:
-    logFilePath = os.path.join(OUTPUT_DIR_PATH, f"{EXEC_STATS_FILE_NAME}.csv")
+def logRunStats(stats: StatsCollector, fileName: str) -> None:
+    logFilePath = os.path.join(OUTPUT_DIR_PATH, f"{fileName}.csv")
     sep = ","
     if not os.path.exists(logFilePath):
         with open(logFilePath, "w") as f:
@@ -50,7 +57,7 @@ def readDNKModelFromFile(filePath: str) -> DNKMaudeModel:
     if fileExt == "maude":
         return DNKTestModel.fromDebugMaudeFile(fileContent)
     if fileExt == "json":
-        return DNKMaudeModel().fromJson(fileContent)
+        return DNKMaudeModel.fromJson(fileContent)
     printAndExit(f"Unknown input file extension: '{fileExt}'!")
     return DNKMaudeModel()
 
@@ -58,25 +65,26 @@ def readDNKModelFromFile(filePath: str) -> DNKMaudeModel:
 def main() -> None:
     try:
         args = getCLIArgs()
+        dnkModel = readDNKModelFromFile(args.inputFilePath)
 
-        createDir(OUTPUT_DIR_PATH)
+        currTime = time.localtime()
+        fmtTime = time.strftime("%Y-%m-%d;%H:%M:%S", currTime)
+        runOutputDir = createRunOutputDir(currTime)
+
         config = TracerConfig(
-            outputDirPath=OUTPUT_DIR_PATH,
+            outputDirPath=runOutputDir,
             katchPath=args.katchPath,
             maudeFilesDirPath=MAUDE_FILES_DIR_PATH,
             threads=args.threads,
             verbose=args.verbose,
         )
 
-        dnkModel = readDNKModelFromFile(args.inputFilePath)
-
-        currTime = time.localtime()
-        fmtTime = time.strftime("%Y-%m-%d;%H:%M:%S", currTime)
         inputFileName = getFileName(args.inputFilePath)
-        tracesFilePath = getOutputFilePath(currTime, inputFileName)
-
+        tracesFilePath = os.path.join(
+            runOutputDir, f"{TRACES_FILE_NAME}_{inputFileName}.txt")
         with open(tracesFilePath, "a") as file:
             tracer = Tracer(config, file)
+            print("Generating traces...")
             collectedTraces = tracer.run(dnkModel, args.depth)
 
         stats = StatsCollector()
@@ -85,24 +93,42 @@ def main() -> None:
             StatsEntry("inputFile", "Input file",
                        os.path.basename(args.inputFilePath)),
             StatsEntry("depth", "Depth", args.depth),
-            StatsEntry("modelBranchCounts",
-                       "Network model branches", dnkModel.getBranchCounts()),
         ])
+        stats.addEntries(dnkModel.getStats())
         stats.addEntries(tracer.getStats())
 
         print()
         print(stats.toPrettyStr())
         print()
-        logRunStats(stats)
+        logRunStats(stats, TRACES_GEN_STATS_FILE_NAME)
 
         if collectedTraces == 0:
             removeFile(tracesFilePath)
             printAndExit(
-                "Could not collect any traces for the given network and depth!"
+                "Could not generate any traces for the given network and depth!"
             )
 
-        print("Concurrent behavior detected!")
-        print(f"Trace(s) written to: {tracesFilePath}.")
+        print("Analyzing traces...")
+        outputDirRaw = os.path.join(runOutputDir, HARMFUL_TRACES_RAW_DIR_NAME)
+        outputDirDOT = os.path.join(runOutputDir, HARMFUL_TRACES_DIR_NAME)
+        createDir(outputDirRaw)
+        createDir(outputDirDOT)
+
+        katchComm = KATchComm(args.katchPath, runOutputDir)
+        pta = TraceFileAnalyzer(katchComm, outputDirRaw, outputDirDOT)
+        pta.analyzeFile(tracesFilePath, dnkModel.elTypeDict)
+
+        stats.addEntries(katchComm.getStats())
+        stats.addEntries(pta.getStats())
+        stats.addEntries([StatsEntry("totalExecTime", "Total execution time",
+                         tracer.getTotalExecTime() + pta.getTotalExecTime())])
+
+        print()
+        print("========== Final Stats ==========")
+        print(stats.toPrettyStr())
+        print("=================================")
+        logRunStats(stats, STATS_FILE_NAME)
+        print(f"Output written to: {runOutputDir}")
 
     except CLIError as e:
         printAndExit(e.__str__())

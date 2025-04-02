@@ -32,7 +32,6 @@ class KATchComm(PBoolCache, PExecTimes, StatsGenerator):
     """Class for running KATch as an OS command."""
 
     def __init__(self, tool_path: str, output_dir: str) -> None:
-        super()
         self.tool_path: str = tool_path
         self.output_dir: str = output_dir
         self.execTimes: dict[str, float] = {}

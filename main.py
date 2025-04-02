@@ -1,16 +1,15 @@
-import argparse
 import os
 import sys
 import time
-from dataclasses import dataclass
 from test.util import DNKTestModel
 
 from pydantic import ValidationError
 
 from src.model.dnk_maude_model import DNKMaudeModel
 from src.tracer import MaudeError, Tracer, TracerConfig
-from src.util import createDir, getFileName, isExe, readFile, removeFile
+from src.util import createDir, getFileName, readFile, removeFile
 from src.stats import StatsCollector, StatsEntry
+from src.cli import getCLIArgs, CLIError
 
 PROJECT_DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 OUTPUT_DIR_PATH = os.path.join(PROJECT_DIR_PATH, "output")
@@ -22,79 +21,6 @@ EXEC_STATS_FILE_NAME = "execution_stats"
 def printAndExit(msg: str) -> None:
     print(msg)
     sys.exit()
-
-
-@dataclass
-class CLIArguments:
-    katchPath: str
-    inputFilePath: str
-    depth: int
-    threads: int
-    debug: bool
-    verbose: bool
-
-
-def buildArgsParser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("katchPath")
-    parser.add_argument("inputFilePath")
-    parser.add_argument(
-        "-d",
-        "--depth",
-        type=int,
-        dest="depth",
-        default=5,
-        help="Depth of search (default is 5)",
-    )
-    parser.add_argument(
-        "-t",
-        "--threads",
-        type=int,
-        dest="threads",
-        default=1,
-        help="Number of threads to use when generating traces",
-    )
-    parser.add_argument(
-        "-g",
-        "--debug",
-        dest="debug",
-        default=False,
-        action="store_true",
-        help="Passing this option enables the tool to accept specifically formated "
-        + ".maude files containing DNK network models for testing or debugging",
-    )
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        dest="verbose",
-        default=False,
-        action="store_true",
-        help="Print log messages during execution",
-    )
-    return parser
-
-
-def validateArgs(args: CLIArguments) -> None:
-    """Validates the command line arguments and returns the paths to the KATch
-    executable and the input JSON file."""
-    if not args.katchPath or not args.inputFilePath:
-        printAndExit(
-            "Error: provide the arguments <path_to_katch> <input_file>.")
-
-    if not os.path.exists(args.katchPath) or not isExe(args.katchPath):
-        printAndExit("KATch tool could not be found in the given path!")
-
-    fileExt = args.inputFilePath.split(".")[-1]
-    if (
-        not os.path.isfile(args.inputFilePath)
-        or fileExt not in ["json", "maude"]
-        or (fileExt == "maude" and not args.debug)
-    ):
-        printAndExit("Please provide a .json input file!")
-    if args.depth < 0:
-        printAndExit("Depth cannot be negative")
-    if args.threads < 1:
-        printAndExit("Number of threads must be a positive integer")
 
 
 def getOutputFilePath(currTime: time.struct_time, inputFileName: str) -> str:
@@ -120,41 +46,28 @@ def logRunStats(stats: StatsCollector) -> None:
 
 def readDNKModelFromFile(filePath: str) -> DNKMaudeModel:
     fileExt = filePath.split(".")[-1]
+    fileContent = readFile(filePath)
     if fileExt == "maude":
-        # Only for debugging purposes
-        jsonStr = readFile(filePath)
-        fileContent = readFile(filePath)
-        fileContentLines = fileContent.split("\n")
-        maudeStr = "\n".join(fileContentLines[:-3])
-        switchCall = fileContentLines[-3]
-        controllerMap = fileContentLines[-2]
-        return DNKTestModel(
-            maudeStr,
-            switchCall,
-            controllerMap,
-        )
-
+        return DNKTestModel.fromDebugMaudeFile(fileContent)
     if fileExt == "json":
-        jsonStr = readFile(filePath)
-        return DNKMaudeModel().fromJson(jsonStr)
-    printAndExit("Unknown input file extension: {fileExt}!")
+        return DNKMaudeModel().fromJson(fileContent)
+    printAndExit(f"Unknown input file extension: '{fileExt}'!")
     return DNKMaudeModel()
 
 
 def main() -> None:
-    args = CLIArguments(**vars(buildArgsParser().parse_args()))  # type: ignore
-    validateArgs(args)
-
-    createDir(OUTPUT_DIR_PATH)
-    config = TracerConfig(
-        outputDirPath=OUTPUT_DIR_PATH,
-        katchPath=args.katchPath,
-        maudeFilesDirPath=MAUDE_FILES_DIR_PATH,
-        threads=args.threads,
-        verbose=args.verbose,
-    )
-
     try:
+        args = getCLIArgs()
+
+        createDir(OUTPUT_DIR_PATH)
+        config = TracerConfig(
+            outputDirPath=OUTPUT_DIR_PATH,
+            katchPath=args.katchPath,
+            maudeFilesDirPath=MAUDE_FILES_DIR_PATH,
+            threads=args.threads,
+            verbose=args.verbose,
+        )
+
         dnkModel = readDNKModelFromFile(args.inputFilePath)
 
         currTime = time.localtime()
@@ -191,6 +104,8 @@ def main() -> None:
         print("Concurrent behavior detected!")
         print(f"Trace(s) written to: {tracesFilePath}.")
 
+    except CLIError as e:
+        printAndExit(e.__str__())
     except MaudeError as e:
         print(f"Error encountered while executing Maude:\n\t{e}")
     except ValidationError as e:

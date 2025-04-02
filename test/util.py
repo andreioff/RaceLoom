@@ -38,6 +38,19 @@ class DNKTestModel(DNKMaudeModel):
     def getControllersMaudeMap(self) -> str:
         return self.controllersMaudeMap
 
+    @classmethod
+    def fromDebugMaudeFile(cls, fileContent: str) -> DNKMaudeModel:
+        # Only for debugging purposes
+        fileContentLines = fileContent.split("\n")
+        maudeStr = "\n".join(fileContentLines[:-3])
+        switchCall = fileContentLines[-3]
+        controllerMap = fileContentLines[-2]
+        return cls(
+            maudeStr,
+            switchCall,
+            controllerMap,
+        )
+
 
 def assertEqualTrees(t1: networkx.MultiGraph, t2: networkx.MultiGraph) -> None:
     assert ga.is_tree(t1)
@@ -51,7 +64,8 @@ def assertEqualTrees(t1: networkx.MultiGraph, t2: networkx.MultiGraph) -> None:
     centersT2 = ga.center(t2)
     visitedNodes1: dict[str, bool] = {}
     visitedNodes2: dict[str, bool] = {}
-    assert areEqualTrees(t1, t2, centersT1, centersT2, visitedNodes1, visitedNodes2)
+    assert areEqualTrees(t1, t2, centersT1, centersT2,
+                         visitedNodes1, visitedNodes2)
     assert (
         len(visitedNodes1) == t1.number_of_nodes()
     ), f"Not all nodes were visited! Expected: {t1.number_of_nodes()}, actual: {len(visitedNodes1)}."

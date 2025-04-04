@@ -36,10 +36,11 @@ class TraceFileAnalyzer(PExecTimes, StatsGenerator):
         trace posing a harmful race in 2 ways: once as a file containing the raw trace and the information about
         the harmful race, and once as a DOT file."""
         traceFile = open(traceFilePath, "r", newline="\n")
+        transChecker = TransitionsChecker(self.katchComm, elDict)
         lineCount = 0
         for line in traceFile:
             traceStr = line.strip().replace("\\", "")
-            htrace = self.__analyzeTrace(lineCount, traceStr, elDict)
+            htrace = self.__analyzeTrace(lineCount, traceStr, transChecker, elDict)
             if htrace is not None:
                 self.harmfulRacesCount += 1
                 self.__writeRawTraceToFile(
@@ -48,14 +49,19 @@ class TraceFileAnalyzer(PExecTimes, StatsGenerator):
                 self.__writeDOTTraceToFile(htrace.toDOT())
             lineCount += 1
         traceFile.close()
+        self.__printUnexpTransMsg(transChecker)
 
     def __analyzeTrace(
-        self, lineNr: int, traceStr: str, elDict: dict[int, ElementType]
+        self,
+        lineNr: int,
+        traceStr: str,
+        transChecker: TransitionsChecker,
+        elDict: dict[int, ElementType],
     ) -> HarmfulTrace | None:
         try:
             trace = TraceParser.parse(traceStr)
             ta = TraceAnalyzer(
-                TransitionsChecker(self.katchComm, elDict),
+                transChecker,
                 elDict,
                 trace,
             )
@@ -63,7 +69,7 @@ class TraceFileAnalyzer(PExecTimes, StatsGenerator):
         except SyntaxError:
             print(
                 f"On line {
-                  lineNr}: Argument 'traceStr' does not contain valid Python3 syntax."
+                    lineNr}: Argument 'traceStr' does not contain valid Python3 syntax."
             )
         except ParseError as e:
             print(f"On line {lineNr}: {e}")
@@ -83,6 +89,21 @@ class TraceFileAnalyzer(PExecTimes, StatsGenerator):
     def __writeDOTTraceToFile(self, traceDOT: str) -> None:
         fileName = f"{HARMFUL_TRACE_FILE_NAME}_{self.harmfulRacesCount}.gv"
         exportFile(os.path.join(self.outputDirDOT, fileName), traceDOT)
+
+    def __printUnexpTransMsg(self, transChecker: TransitionsChecker) -> None:
+        unexpTransPairs = transChecker.getUnexpectedTransPairs("\t")
+        if not unexpTransPairs:
+            return
+        print(
+            "WARNING! Pairs of unexpected transition "
+            + "types were found during analysis:"
+        )
+        print(unexpTransPairs)
+        print(
+            "This means a race occured between 2 transition types for which "
+            + "no analysis behavior was programed."
+        )
+        print("Note: the order of the transitions matters!")
 
     def getStats(self) -> List[StatsEntry]:
         return [

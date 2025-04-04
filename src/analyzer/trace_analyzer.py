@@ -1,3 +1,4 @@
+from os import linesep
 from typing import Callable, List, Protocol, Tuple, TypeVar, cast
 from src.analyzer.harmful_trace import HarmfulTrace, RaceType
 
@@ -37,6 +38,7 @@ class TransitionsChecker:
     def __init__(self, katchComm: KATchComm, elDict: dict[int, ElementType]) -> None:
         self.elDict = elDict
         self.katchComm = katchComm
+        self.__unexpected: dict[str, int] = {}
         self.__checks: _TransitionCheckers = cast(_TransitionCheckers, {})
         self.__checks[(PktProcTrans, RcfgTrans)] = self.checkProcRcfg
         self.__checks[(RcfgTrans, RcfgTrans)] = self.checkRcfgRcfg
@@ -67,11 +69,19 @@ class TransitionsChecker:
         return RaceType.SWCT if res else None
 
     def checkDefault(self, t1: TraceTransition, t2: TraceTransition) -> RaceType | None:
-        print(
-            "Found race between unexpected transitions:\n"
-            + f"\t type t1 is: '{type(t1)}', and type t2 is: '{type(t2)}'"
-        )
+        key = f"({type(t1).__name__}, {type(t2).__name__})"
+        if key in self.__unexpected:
+            self.__unexpected[key] += 1
+            return None
+
+        self.__unexpected[key] = 1
         return None
+
+    def getUnexpectedTransPairs(self, prefix: str = "") -> str:
+        sb: List[str] = []
+        for key, value in self.__unexpected.items():
+            sb.append(f"{prefix}{key}: {value} occurrences")
+        return linesep.join(sb)
 
 
 class TraceAnalyzer:
@@ -137,7 +147,7 @@ class TraceAnalyzer:
         if el1 not in self.elDict or el2 not in self.elDict:
             print(
                 f"Warning: unknown type for element at position {
-                  el1} or {el2}"
+                    el1} or {el2}"
             )
             return None
         if self.elDict[el1] == ElementType.SW and self.elDict[el2] == ElementType.SW:

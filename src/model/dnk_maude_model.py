@@ -32,9 +32,8 @@ class DNKModelError(Exception, StatsGenerator):
 class DNKMaudeModel:
     def __init__(self) -> None:
         self.me = MaudeEncoder()
-        self.bigSwitchTerm: str = ""
-        self.controllersMaudeMap: str = self.me.convertIntoMap([])
         self.elTypeDict: dict[int, ElementType] = {}
+        self.elementTerms: List[str] = []
         self.branchCounts: dict[str, int] = {}
 
     @classmethod
@@ -50,19 +49,9 @@ class DNKMaudeModel:
         m.__declareInitialSwitches(jsonModel)
         m.__declareControllers(jsonModel)
         m.__declareBigSwitch(jsonModel)
-        m.__buildBigSwitchTerm(jsonModel)
-        m.__buildControllersMapTerm(jsonModel)
-        m.__buildElementsTypeDict(len(jsonModel.Controllers))
+        m.__buildElementTerms(jsonModel)
 
         return m
-
-    def __buildElementsTypeDict(self, ctsNr: int) -> None:
-        # TODO Find a better way to do this
-        self.elTypeDict = {
-            0: ElementType.SW,
-        }
-        for i in range(ctsNr):
-            self.elTypeDict[i + 1] = ElementType.CT
 
     def toMaudeModule(self) -> str:
         self.me.addProtImport(mm.DNK_MODEL_UTIL)
@@ -228,20 +217,19 @@ class DNKMaudeModel:
 
         return f" {sym.OPLUS} ".join(exprs)
 
-    def __buildBigSwitchTerm(self, model: jm.DNKNetwork) -> None:
+    def __buildBigSwitchTerm(self, model: jm.DNKNetwork) -> str:
         sws: List[str] = []
         for name in model.Switches.keys():
             sws.append(name)
-        self.bigSwitchTerm = self.me.recPolTerm(
-            f"{BIG_SW_VAR_NAME} {self.me.convertIntoMap(sws)}"
-        )
+        return self.me.recPolTerm(f"{BIG_SW_VAR_NAME} {self.me.convertIntoMap(sws)}")
 
-    def __buildControllersMapTerm(self, model: jm.DNKNetwork) -> None:
-        recursiveControllers: List[str] = []
-        for name in model.Controllers.keys():
-            recursiveControllers.append(self.me.recPolTerm(name))
-
-        self.controllersMaudeMap = self.me.convertIntoMap(recursiveControllers)
+    def __buildElementTerms(self, model: jm.DNKNetwork) -> None:
+        elTerms: List[str] = [self.__buildBigSwitchTerm(model)]
+        self.elTypeDict = {0: ElementType.SW}
+        for i, name in enumerate(model.Controllers.keys()):
+            elTerms.append(self.me.recPolTerm(name))
+            self.elTypeDict[i + 1] = ElementType.CT
+        self.elementTerms = elTerms
 
     def __addBranchCount(self, key: str, count: int) -> None:
         while key in self.branchCounts:
@@ -254,11 +242,8 @@ class DNKMaudeModel:
         ]
         return ";".join(bStrs)
 
-    def getBigSwitchTerm(self) -> str:
-        return self.bigSwitchTerm
-
-    def getControllersMaudeMap(self) -> str:
-        return self.controllersMaudeMap
+    def getElementTerms(self) -> List[str]:
+        return self.elementTerms
 
     def getMaudeModuleName(self) -> str:
         return mm.DNK_MODEL

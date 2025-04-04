@@ -61,42 +61,21 @@ fmod TRACE-STATES-TO-TRACE-TREE is
   eq flattenTNMap((M, ID |-> TNs)) = TConcat(TNs, flattenTNMap(M)) .
 endfm
 
-mod TRACER-UTIL is 
+mod TRACER is
   protecting STRING .
 	protecting RECURSIVE-DNK .
   protecting MAP-UTIL {Nat, RDNK} * (sort Map {Nat, RDNK} to RDNKMap) .
-
-  op parallelJoin(_,_,_) : RDNK RDNKMap Nat -> DNKComp .
-
-  var Cs : RDNKMap . 
-  vars BSw C : RDNK .
-  vars I VCSize : Nat .
-
-  ---- TODO This should not consider the switch separate, but just as another component with a
-  ---- key in the map, just like the controllers
-  eq parallelJoin(BSw, empty, VCSize) = c(BSw, 0) .
-  eq parallelJoin(BSw, (I |-> C , Cs), VCSize) = (parallelJoin(BSw, Cs, VCSize) || c(C, s(I))) .
-endm
-
-mod TRACER is
   protecting TRACE-COLLECTOR .
   protecting PARALLEL-COMPUTE-NEXT-LAYER .
   protecting COMM-STRING-CONVERSION .
-  protecting TRACER-UTIL .
   protecting CONVERSION .
   protecting TRACE-STATES-TO-TRACE-TREE .
 
-	op rd{_}{_}(_,_) : Configuration Nat NodeList Nat -> TraceNodesMap .
-	op $rd{_}{_}(_) : Configuration Nat AssignIdsResult -> TraceNodesMap .
-
-	op tracer{_}{_}(_,_) : Configuration Nat RDNK RDNKMap -> String .
-
-  var Cs : RDNKMap . 
+  var Els : RDNKMap . 
   vars P Q : DNKComp .
   vars N TR : String .
   var X : Channel .
   vars NewVCs VCs : VCMap .
-  var BSw : RDNK .
   vars I J D K ID PID NID : Nat .
   vars Nodes RemNodes : NodeList .
   var TN : Node .
@@ -105,6 +84,8 @@ mod TRACER is
   var AS : AttributeSet .
  
 
+	op rd{_}{_}(_,_) : Configuration Nat NodeList Nat -> TraceNodesMap .
+	op $rd{_}{_}(_) : Configuration Nat AssignIdsResult -> TraceNodesMap .
   eq rd{WorkersConfig}{0}(Nodes, NID) = TNMapPrepend(Nodes, empty) .
   eq rd{WorkersConfig}{D}(nil, NID) = empty .
   eq rd{WorkersConfig}{s(D)}(Nodes, NID) = TNMapPrepend(Nodes, 
@@ -116,13 +97,8 @@ mod TRACER is
     )) .
   eq $rd{WorkersConfig}{D}(assignIdsResult(Nodes, NID)) = rd{WorkersConfig}{D}(Nodes, NID) .
 
-  --- Assumes that the Cs map mimics an array, i.e. its keys start from 0 and increase by 1 with every position.
-  --- E.g. 0 |-> first_RDNK, 1 |-> second_RDNK, 2 |-> third_RDNK, etc.
-  eq tracer{WorkersConfig}{0}(BSw, Cs) = "" .
-  eq tracer{<> < M : User | state: PReady, AS >}{D}(BSw, Cs) = collectTraces(flattenTNMap(
-    rd{< M : User | state: PReady, AS >}{D}(
-        snode(0, parallelJoin(BSw, Cs, s(mapLength(Cs))), newVCMap(s(mapLength(Cs)))),
-        1
-      )
-  )).
+	op tracer{_}{_}(_,_) : Configuration Nat DNKComp VCMap -> String .
+  eq tracer{WorkersConfig}{0}(P, VCs) = "" .
+  eq tracer{<> < M : User | state: PReady, AS >}{D}(P, VCs) = collectTraces(flattenTNMap(
+    rd{< M : User | state: PReady, AS >}{D}(snode(0, P, VCs), 1))).
 endm

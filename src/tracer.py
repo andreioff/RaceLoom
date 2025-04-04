@@ -92,13 +92,8 @@ class Tracer(PExecTimes, StatsGenerator):
         me.addProtImport(mm.DNK_MODEL)
         me.addOp(ENTRY_POINT_NAME, ms.STRING_SORT, [])
 
-        sws = model.getBigSwitchTerm()
-        cs = model.getControllersMaudeMap()
-        me.addEq(
-            ENTRY_POINT_NAME,
-            f"tracer{{<> p-init({self.config.threads})}}{{{depth}}}({sws}, {cs})",
-        )
-
+        elTerms = model.getElementTerms()
+        me.addEq(ENTRY_POINT_NAME, me.tracerCall(self.config.threads, depth, elTerms))
         maude.input(me.buildAsModule(mm.ENTRY))
         mod = maude.getModule(mm.ENTRY)
         if mod is None:

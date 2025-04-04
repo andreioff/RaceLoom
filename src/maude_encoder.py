@@ -9,6 +9,8 @@ class MaudeEncodingError(Exception):
 class MaudeOps(StrEnum):
     BIG_SWITCH_OP = "bigSwitch"
     GET_REC_POL = "getRecPol"
+    PARALLEL = "||"
+    BOT = "bot"
 
 
 class MaudeSorts(StrEnum):
@@ -170,3 +172,21 @@ class MaudeEncoder:
 
     def concatStr(self, s1: str, s2: str) -> str:
         return f"{s1} + {s2}"
+
+    def newVCMap(self, size: int) -> str:
+        if size <= 0:
+            return "empty"
+        vc = self.convertIntoMap(["0" for _i in range(size)])
+        return self.convertIntoMap([vc for _i in range(size)])
+
+    def tracerCall(self, threads: int, depth: int, terms: List[str]) -> str:
+        dnkComps: List[str] = []
+        for i, term in enumerate(terms):
+            dnkComps.append(f"c({term}, {i})")
+        dnkExpr = f" {MaudeOps.PARALLEL} ".join(dnkComps)
+        if not dnkExpr:
+            dnkExpr = f"c({MaudeOps.BOT}, 0)"
+        vcSize = len(terms) if len(terms) > 0 else 1
+        vcMap = self.newVCMap(vcSize)
+
+        return f"tracer{{<> p-init({threads})}}{{{depth}}}(({dnkExpr}), {vcMap})"

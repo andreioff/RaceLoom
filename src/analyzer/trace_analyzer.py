@@ -86,19 +86,18 @@ class TransitionsChecker:
 
 class TraceAnalyzer:
     def __init__(
-        self,
-        transChecker: TransitionsChecker,
-        elDict: dict[int, ElementType],
-        trace: List[TraceNode],
+        self, transChecker: TransitionsChecker, elDict: dict[int, ElementType]
     ) -> None:
-        self.elDict: dict[int, ElementType] = elDict
-        self.trace: List[TraceNode] = trace
         self.transChecker = transChecker
-        self.__validateTrace()
+        self.elDict = elDict
+        self.trace: List[TraceNode] = []
 
-    def analyze(self) -> HarmfulTrace | None:
+    def analyze(self, trace: List[TraceNode]) -> HarmfulTrace | None:
         """Does not account for policies/flow rules that are appended to a flow table.
         Raises TraceAnalyzerError if something goes wrong during the analysis."""
+        self.trace = trace
+        self.__validateTrace()
+
         for i, node in enumerate(self.trace):
             posPairs = node.getIncmpPosPairs()
             for el1, el2 in posPairs:

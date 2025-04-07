@@ -35,12 +35,13 @@ class TraceFileAnalyzer(PExecTimes, StatsGenerator):
         """Parses and analyzes each trace in the given file (1 trace per line), and outputs every
         trace posing a harmful race in 2 ways: once as a file containing the raw trace and the information about
         the harmful race, and once as a DOT file."""
-        traceFile = open(traceFilePath, "r", newline="\n")
         transChecker = TransitionsChecker(self.katchComm, elDict)
+        ta = TraceAnalyzer(transChecker, elDict)
         lineCount = 0
+        traceFile = open(traceFilePath, "r", newline="\n")
         for line in traceFile:
             traceStr = line.strip().replace("\\", "")
-            htrace = self.__analyzeTrace(lineCount, traceStr, transChecker, elDict)
+            htrace = self.__analyzeTrace(lineCount, traceStr, ta)
             if htrace is not None:
                 self.harmfulRacesCount += 1
                 self.__writeRawTraceToFile(
@@ -55,17 +56,11 @@ class TraceFileAnalyzer(PExecTimes, StatsGenerator):
         self,
         lineNr: int,
         traceStr: str,
-        transChecker: TransitionsChecker,
-        elDict: dict[int, ElementType],
+        ta: TraceAnalyzer,
     ) -> HarmfulTrace | None:
         try:
             trace = TraceParser.parse(traceStr)
-            ta = TraceAnalyzer(
-                transChecker,
-                elDict,
-                trace,
-            )
-            return ta.analyze()
+            return ta.analyze(trace)
         except SyntaxError:
             print(
                 f"On line {

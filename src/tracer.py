@@ -4,13 +4,14 @@ import os
 from typing import IO, List
 
 import maude
+from src.decorators.exec_time import PExecTimes, with_time_execution
 from src.maude_encoder import MaudeEncoder
 from src.maude_encoder import MaudeModules as mm
 from src.maude_encoder import MaudeSorts as ms
 from src.model.dnk_maude_model import DNKMaudeModel
-from src.trace_collector_hook import TRACE_COLLECTOR_HOOK_MAUDE_NAME, TraceCollectorHook
-from src.decorators.exec_time import PExecTimes, with_time_execution
 from src.stats import StatsEntry, StatsGenerator
+from src.trace_collector_hook import (TRACE_COLLECTOR_HOOK_MAUDE_NAME,
+                                      TraceCollectorHook)
 
 ENTRY_POINT_NAME = "init"
 
@@ -90,7 +91,7 @@ class Tracer(PExecTimes, StatsGenerator):
         me = MaudeEncoder()
         me.addProtImport(mm.TRACER)
         me.addProtImport(mm.DNK_MODEL)
-        me.addOp(ENTRY_POINT_NAME, ms.STRING_SORT, [])
+        me.addOp(ENTRY_POINT_NAME, ms.STRING, [])
 
         elTerms = model.getElementTerms()
         me.addEq(ENTRY_POINT_NAME, me.tracerCall(self.config.threads, depth, elTerms))

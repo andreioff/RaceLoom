@@ -8,8 +8,8 @@ from src.maude_encoder import MaudeEncoder
 from src.maude_encoder import MaudeModules as mm
 from src.maude_encoder import MaudeOps as mo
 from src.maude_encoder import MaudeSorts as ms
+from src.stats import StatsEntry, StatsGenerator
 from src.util import DyNetKATSymbols as sym
-from src.stats import StatsGenerator, StatsEntry
 
 LINK_VAR_NAME = "Link"
 BIG_SW_VAR_NAME = "BSWMain"
@@ -72,11 +72,11 @@ class DNKMaudeModel:
                 channels[ru.ResponseChannel] = True
 
         for ch in channels.keys():
-            self.me.addOp(ch, ms.CHANNEL_SORT, [])
+            self.me.addOp(ch, ms.CHANNEL, [])
 
     def __declareInitialSwitches(self, model: jm.DNKNetwork) -> None:
         for name, switch in model.Switches.items():
-            self.me.addOp(name, ms.STRING_SORT, [])
+            self.me.addOp(name, ms.STRING, [])
             initialValue = f"{sym.ZERO}"
             if switch.InitialFlowTable is not None:
                 initialValue = switch.InitialFlowTable
@@ -84,7 +84,7 @@ class DNKMaudeModel:
 
     def __declareControllers(self, model: jm.DNKNetwork) -> None:
         for name, expr in model.Controllers.items():
-            self.me.addOp(name, ms.RECURSIVE_SORT, [])
+            self.me.addOp(name, ms.RECURSIVE, [])
             self.me.addEq(self.me.recPolTerm(name), expr)
             self.__addBranchCount(name, expr.count(sym.OPLUS))
 
@@ -98,23 +98,23 @@ class DNKMaudeModel:
         linksValue = sym.ONE.value
         if model.Links is not None:
             linksValue = model.Links
-        self.me.addOp(LINK_VAR_NAME, ms.STRING_SORT, [])
+        self.me.addOp(LINK_VAR_NAME, ms.STRING, [])
         self.me.addEq(LINK_VAR_NAME, f'"{linksValue}"')
 
     def __declareBigSwitch(self, model: jm.DNKNetwork) -> None:
         # declare variable for the map of switches
-        self.me.addVar(SW_MAP_VAR_NAME, ms.STR_MAP_SORT)
-        self.me.addVar(CH_VAR_NAME, ms.CHANNEL_SORT)
-        self.me.addVar(FR_VAR_NAME, ms.STRING_SORT)
-        self.me.addVar(INDX_VAR_NAME, ms.NAT_SORT)
+        self.me.addVar(SW_MAP_VAR_NAME, ms.STR_MAP)
+        self.me.addVar(CH_VAR_NAME, ms.CHANNEL)
+        self.me.addVar(FR_VAR_NAME, ms.STRING)
+        self.me.addVar(INDX_VAR_NAME, ms.NAT)
         # Declare the actual operators for the big switch
         # Main part that sends packet in
-        self.me.addOp(BIG_SW_VAR_NAME, ms.RECURSIVE_SORT, [ms.STR_MAP_SORT])
+        self.me.addOp(BIG_SW_VAR_NAME, ms.RECURSIVE, [ms.STR_MAP])
         # Second part that waits for the corresponding packet out
         self.me.addOp(
             BIG_SW_RECV_VAR_NAME,
-            ms.RECURSIVE_SORT,
-            [ms.STR_MAP_SORT, ms.CHANNEL_SORT, ms.STRING_SORT, ms.NAT_SORT],
+            ms.RECURSIVE,
+            [ms.STR_MAP, ms.CHANNEL, ms.STRING, ms.NAT],
         )
 
         self.me.addEq(
@@ -135,7 +135,7 @@ class DNKMaudeModel:
         # and to re-write everything into head normal form
         # using the KATch hook
         exprs: List[str] = [
-            f"({mo.BIG_SWITCH_OP} {SW_MAP_VAR_NAME} {LINK_VAR_NAME}) "
+            f"({mo.BIG_SWITCH} {SW_MAP_VAR_NAME} {LINK_VAR_NAME}) "
             + f"{sym.SEQ} ({BIG_SW_VAR_NAME} {SW_MAP_VAR_NAME})",
         ]
 
@@ -184,7 +184,7 @@ class DNKMaudeModel:
         # and to re-write everything into head normal form
         # using the KATch hook
         exprs: List[str] = [
-            f"({mo.BIG_SWITCH_OP} {SW_MAP_VAR_NAME} {LINK_VAR_NAME}) "
+            f"({mo.BIG_SWITCH} {SW_MAP_VAR_NAME} {LINK_VAR_NAME}) "
             + f"{sym.SEQ} ({termName(SW_MAP_VAR_NAME)})",
         ]
 

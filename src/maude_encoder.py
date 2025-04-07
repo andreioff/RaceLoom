@@ -7,19 +7,19 @@ class MaudeEncodingError(Exception):
 
 
 class MaudeOps(StrEnum):
-    BIG_SWITCH_OP = "bigSwitch"
+    BIG_SWITCH = "bigSwitch"
     GET_REC_POL = "getRecPol"
     PARALLEL = "||"
     BOT = "bot"
 
 
 class MaudeSorts(StrEnum):
-    CHANNEL_SORT = "Channel"
-    STRING_SORT = "String"
-    NAT_SORT = "Nat"
-    STR_MAP_SORT = "StrMap"
-    RECURSIVE_SORT = "Recursive"
-    TRACE_NODES_SORT = "TraceNodes"
+    CHANNEL = "Channel"
+    STRING = "String"
+    NAT = "Nat"
+    STR_MAP = "StrMap"
+    RECURSIVE = "Recursive"
+    TRACE_NODES = "TraceNodes"
 
 
 class MaudeModules(StrEnum):
@@ -179,13 +179,17 @@ class MaudeEncoder:
         vc = self.convertIntoMap(["0" for _i in range(size)])
         return self.convertIntoMap([vc for _i in range(size)])
 
-    def tracerCall(self, threads: int, depth: int, terms: List[str]) -> str:
+    def parallelSeq(self, terms: List[str]) -> str:
         dnkComps: List[str] = []
         for i, term in enumerate(terms):
             dnkComps.append(f"c({term}, {i})")
         dnkExpr = f" {MaudeOps.PARALLEL} ".join(dnkComps)
         if not dnkExpr:
             dnkExpr = f"c({MaudeOps.BOT}, 0)"
+        return dnkExpr
+
+    def tracerCall(self, threads: int, depth: int, terms: List[str]) -> str:
+        dnkExpr = self.parallelSeq(terms)
         vcSize = len(terms) if len(terms) > 0 else 1
         vcMap = self.newVCMap(vcSize)
 

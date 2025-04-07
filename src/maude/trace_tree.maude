@@ -1,11 +1,8 @@
-load vector_clock.maude
-
-fmod TRACE_TREE is
-  protecting VECTOR_CLOCK_MAP .
+fmod TRACE-TREE is
+  protecting VECTOR-CLOCK-MAP .
 
   sorts TraceNode TraceNodes TNType .
 
-  op TLeaf : -> TraceNode .
   ---- A trace node contains a transition, a vector clock map,
   ---- and the next neighbors the node is connected to in the trace
   op TNode(_,_,_,_) : TNType String VCMap TraceNodes -> TraceNode .
@@ -17,16 +14,21 @@ fmod TRACE_TREE is
   op TDR : -> TNType . ---- data race
   op TSTART : -> TNType . ---- start node 
   op TNORMAL : -> TNType . ---- normal node 
+  op TPRUNED : -> TNType . ---- normal node 
 
   var TN : TraceNode .
-  var Nodes RemNodes : TraceNodes .
+  vars Nodes RemNodes : TraceNodes .
 
   eq TConcat(TEmpty, Nodes) = Nodes .
   eq TConcat(TAppend(TN, RemNodes), Nodes) = TConcat(RemNodes, TAppend(TN, Nodes)) .
 endfm
 
-fmod TRACE_TREE_TO_DOT is
-  protecting TRACE_TREE .
+view TraceNodes from TRIV to TRACE-TREE is
+  sort Elt to TraceNodes .
+endv
+
+fmod TRACE-TREE-TO-DOT is
+  protecting TRACE-TREE .
   protecting CONVERSION .
   protecting EXT-BOOL .
 
@@ -39,12 +41,13 @@ fmod TRACE_TREE_TO_DOT is
 
   var T : TNType .
   var N : Nat .
-  var S PID From To : String .
+  vars S PID From To : String .
   var VCs : VCMap .
-  var Nodes RemNodes : TraceNodes .
+  vars Nodes RemNodes : TraceNodes .
 
   ---- purple #9068be 
   eq getNodeColor(TSTART) = "#6ed37e" .
+  eq getNodeColor(TPRUNED) = "#9068be" .
   eq getNodeColor(TDR) = "#e62739" .
   eq getNodeColor(T) = "#e1e8f0" [owise] .
 
@@ -65,9 +68,36 @@ fmod TRACE_TREE_TO_DOT is
   eq TraceToDOT(Nodes) = "digraph G {\n" + TraceToDOTAux(0, "", Nodes) + "}" .
   
   eq TraceToDOTAux(N, PID, TEmpty) = "" .
-  eq TraceToDOTAux(N, PID, TAppend(TLeaf, RemNodes)) = TraceToDOTAux(N, PID, RemNodes) .
   eq TraceToDOTAux(N, PID, TAppend(TNode(T, S, VCs, Nodes), RemNodes)) = declareNode(T, N, PID, VCs) +
                                                                           declareEdge(PID, getNodeId(N, PID), S) +
                                                                           TraceToDOTAux(N, getNodeId(N, PID), Nodes) +
                                                                           TraceToDOTAux(s(N), PID, RemNodes) .
+endfm
+
+fmod TRACE-COLLECTOR is
+  protecting TRACE-TREE .
+  --- Operator with special hook. Works only with the Python package Maude.
+  --- More details here: https://github.com/fadoss/maude-bindings
+  op CollectTrace : String -> String [special (
+      id-hook SpecialHubSymbol
+  )] .
+
+  vars ChildNodes TNs : TraceNodes .
+  var TR : String .
+  var T : TNType .
+  var N : String .
+  var VCs : VCMap .
+
+  ---- the shape of the appended terms should match Python objects of type Tuple[str, List[List[int]]]
+  op traceAppend(_,_,_) : String String VCMap -> String .
+  eq traceAppend("", N, VCs) = "(\"" + N + "\",[" + VCMapToString(VCs) + "])" .
+  eq traceAppend(TR, N, VCs) = TR + ",(\"" + N + "\",[" + VCMapToString(VCs) + "])" .
+
+  op collectTraces(_) : TraceNodes -> String .
+  op $collectTraces(_,_) : TraceNodes String -> String .
+  eq collectTraces(TNs) = $collectTraces(TNs, "") .
+  eq $collectTraces(TEmpty, TR) = CollectTrace("[" + TR + "]") .
+  ---- separate case to prevent collecting incomplete traces 
+  eq $collectTraces(TAppend(TNode(T, N, VCs, ChildNodes), TEmpty), TR) = $collectTraces(ChildNodes, traceAppend(TR, N, VCs)) .
+  eq $collectTraces(TAppend(TNode(T, N, VCs, ChildNodes), TNs), TR) = $collectTraces(ChildNodes, traceAppend(TR, N, VCs)) + $collectTraces(TNs, TR) .
 endfm

@@ -1,7 +1,7 @@
 load restricted_dnk.maude
 
 fmod DNK is
-  protecting RESTRICTED_DNK .
+  protecting RESTRICTED-DNK .
 
   sorts CompComm RecursiveComp UnguardedTerm DNKComp .
 	subsort RecursiveComp < UnguardedTerm < DNKComp .
@@ -18,10 +18,10 @@ fmod DNK is
 	op _|_ : DNKComp DNKComp -> DNKComp [ctor comm prec 42 gather (E e)] .
 	op _||<_ : DNKComp DNKComp -> DNKComp [ctor metadata "left merge" prec 42 gather (e E)] .
 
-	op rcfg(_,_,_,_) : Channel String Nat Nat -> CompComm .
+	op rcfg(_,_,_,_) : Channel String Nat Nat -> CompComm . ---- component communication
 
 
-  var U V : RDNK .
+  vars U V : RDNK .
   var Z : Comm .
   var X : Channel .
   vars P Q R : DNKComp .
@@ -69,7 +69,7 @@ fmod DNK is
 endfm
 
 
-fmod RECURSIVE_DNK is
+fmod RECURSIVE-DNK is
 	including DNK .
 
   var I : Nat .
@@ -99,11 +99,12 @@ fmod RECURSIVE_DNK is
 endfm
 
 
-fmod COMM_STRING_CONVERSION is
+fmod COMM-STRING-CONVERSION is
   protecting DNK .
   protecting META-LEVEL .
   protecting META-TERM .
   protecting QID .
+  protecting CONVERSION .
 
   op compCommToStr(_) : CompComm -> String .
 
@@ -114,6 +115,6 @@ fmod COMM_STRING_CONVERSION is
 
   ---- Use meta programming to get the channel name: move the channel variable 1 reflexion level up,
   ---- then get its name as QID and convert it to string
-  eq compCommToStr(rcfg(X, S, I, J)) = "rcfg(" + string(getName(upTerm(X))) + ", '" + S + "')" .
+  eq compCommToStr(rcfg(X, S, I, J)) = "rcfg(" + string(getName(upTerm(X))) + ", '" + S + "', " + string(I, 10) + ", " + string(J, 10) + ")" .
   eq compCommToStr(C) = "" [owise] .
 endfm

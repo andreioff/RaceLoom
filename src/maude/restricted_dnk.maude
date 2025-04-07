@@ -30,10 +30,9 @@ view Comm from TRIV to COMM is
 	sort Elt to Comm .
 endv
 
-fmod RESTRICTED_DNK is
+fmod RESTRICTED-DNK is
 	protecting COMM .
 	protecting TRUTH-VALUE .
-	protecting SET {Comm} * (sort Set {Comm} to TermSet) .
 
 	sorts RDNK Recursive .
   subsort Recursive < RDNK .
@@ -46,7 +45,6 @@ fmod RESTRICTED_DNK is
 
 	op bot : -> RDNK .
 
-	var H : TermSet . 
 	var M : Nat .
 	var X : Channel .
 	vars P Q R : RDNK .
@@ -66,6 +64,6 @@ fmod RESTRICTED_DNK is
 endfm
 
 
-view RDNK from TRIV to RESTRICTED_DNK is
+view RDNK from TRIV to RESTRICTED-DNK is
   sort Elt to RDNK .
 endv

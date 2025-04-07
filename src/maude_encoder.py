@@ -2,9 +2,15 @@ from enum import StrEnum
 from typing import List, Tuple
 
 
+class MaudeEncodingError(Exception):
+    pass
+
+
 class MaudeOps(StrEnum):
     BIG_SWITCH_OP = "bigSwitch"
     GET_REC_POL = "getRecPol"
+    PARALLEL = "||"
+    BOT = "bot"
 
 
 class MaudeSorts(StrEnum):
@@ -13,6 +19,14 @@ class MaudeSorts(StrEnum):
     NAT_SORT = "Nat"
     STR_MAP_SORT = "StrMap"
     RECURSIVE_SORT = "Recursive"
+    TRACE_NODES_SORT = "TraceNodes"
+
+
+class MaudeModules(StrEnum):
+    TRACER = "TRACER"
+    DNK_MODEL = "DNK-MODEL"
+    DNK_MODEL_UTIL = "DNK-MODEL-UTIL"
+    ENTRY = "ENTRY"
 
 
 class OpTypeDef:
@@ -34,6 +48,7 @@ class OpTypeDef:
 
 class MaudeEncoder:
     def __init__(self) -> None:
+        self.protImports: List[str] = []
         # operator type definition to operator names
         self.ops: dict[OpTypeDef, List[str]] = {}
         # var type to var names
@@ -41,7 +56,30 @@ class MaudeEncoder:
         self.eqs: List[Tuple[str, str]] = []
 
     def build(self) -> str:
-        return "\n\n".join([self.__buildOps(), self.__buildVars(), self.__buildEqs()])
+        return "\n\n".join(
+            [
+                self.__buildProtImports(),
+                self.__buildOps(),
+                self.__buildVars(),
+                self.__buildEqs(),
+            ]
+        )
+
+    def buildAsModule(self, modName: str) -> str:
+        return f"""
+        mod {modName} is
+        {self.build()}
+        endm
+        """
+
+    def __buildProtImports(self) -> str:
+        if not self.protImports:
+            return ""
+
+        importStrs: List[str] = []
+        for modName in self.protImports:
+            importStrs.append(f"protecting {modName} .")
+        return "\n\n".join(importStrs)
 
     def __buildOps(self) -> str:
         if not self.ops:
@@ -84,6 +122,12 @@ class MaudeEncoder:
 
         return "\n".join(varStrs)
 
+    def addProtImport(self, modName: str) -> None:
+        if modName not in MaudeModules:
+            raise MaudeEncodingError(f"Unknown module name: '{modName}'")
+        if modName not in self.protImports:
+            self.protImports.append(modName)
+
     def addOp(self, name: str, retSort: str, argSorts: List[str]) -> None:
         opTypeDef = OpTypeDef(retSort, argSorts)
         if opTypeDef not in self.ops:
@@ -110,7 +154,11 @@ class MaudeEncoder:
     def mapAccess(self, key: str, mapVar: str) -> str:
         return f"{mapVar}[{key}]"
 
-    def toMaudeMap(self, strs: List[str]) -> str:
+    def convertIntoMap(self, strs: List[str]) -> str:
+        """Converts the given list into a Maude map sending consecutive
+        integer keys starting from 0 to elements of the list,
+        in the same order they appear.
+        """
         if not strs:
             return "empty"
 
@@ -124,3 +172,21 @@ class MaudeEncoder:
 
     def concatStr(self, s1: str, s2: str) -> str:
         return f"{s1} + {s2}"
+
+    def newVCMap(self, size: int) -> str:
+        if size <= 0:
+            return "empty"
+        vc = self.convertIntoMap(["0" for _i in range(size)])
+        return self.convertIntoMap([vc for _i in range(size)])
+
+    def tracerCall(self, threads: int, depth: int, terms: List[str]) -> str:
+        dnkComps: List[str] = []
+        for i, term in enumerate(terms):
+            dnkComps.append(f"c({term}, {i})")
+        dnkExpr = f" {MaudeOps.PARALLEL} ".join(dnkComps)
+        if not dnkExpr:
+            dnkExpr = f"c({MaudeOps.BOT}, 0)"
+        vcSize = len(terms) if len(terms) > 0 else 1
+        vcMap = self.newVCMap(vcSize)
+
+        return f"tracer{{<> p-init({threads})}}{{{depth}}}(({dnkExpr}), {vcMap})"

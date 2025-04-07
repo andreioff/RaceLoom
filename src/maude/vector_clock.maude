@@ -1,6 +1,6 @@
 load map_util.maude
 
-fmod VECTOR_CLOCK is 
+fmod VECTOR-CLOCK is 
   protecting CONVERSION .
   protecting EXT-BOOL .
 	protecting MAP {Nat, Nat} * (sort Map {Nat, Nat} to VClock) .
@@ -61,13 +61,13 @@ fmod VECTOR_CLOCK is
   eq VCToString(I |-> X, VC1) = string(X, 10) + ", " + VCToString(VC1) .
 endfm
 
-view VCLOCK from TRIV to VECTOR_CLOCK is
+view VCLOCK from TRIV to VECTOR-CLOCK is
   sort Elt to VClock .
 endv
 
-fmod VECTOR_CLOCK_MAP is
-  protecting VECTOR_CLOCK .
-  protecting MAP_UTIL {Nat, VCLOCK} * (sort Map {Nat, VCLOCK} to VCMap) .
+fmod VECTOR-CLOCK-MAP is
+  protecting VECTOR-CLOCK .
+  protecting MAP-UTIL {Nat, VCLOCK} * (sort Map {Nat, VCLOCK} to VCMap) .
 
   --- Assumes the position corresponds to the correct vector clock of a component in the map, but also to the same component in the vector clock itself
   op inc(_,_) : VCMap Nat -> VCMap .
@@ -80,7 +80,7 @@ fmod VECTOR_CLOCK_MAP is
   op VCMapToString(_) : VCMap -> String .
 
   var VCs : VCMap .
-  var VC1 VC2 : VClock .
+  vars VC1 VC2 : VClock .
   vars I J VCSize : Nat .
 
   eq inc(VCs, I) =
@@ -115,6 +115,6 @@ fmod VECTOR_CLOCK_MAP is
     fi .
 
   eq VCMapToString(empty) = "" .
-  eq VCMapToString(I |-> VC1, empty) = "<" + VCToString(VC1) + ">" .
-  eq VCMapToString(I |-> VC1, VCs) = "<" + VCToString(VC1) + "> || " + VCMapToString(VCs) .
+  eq VCMapToString(I |-> VC1, empty) = "[" + VCToString(VC1) + "]" .
+  eq VCMapToString(I |-> VC1, VCs) = "[" + VCToString(VC1) + "]," + VCMapToString(VCs) .
 endfm

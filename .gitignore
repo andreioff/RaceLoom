@@ -173,3 +173,5 @@ bin/katch/results/*
 .python-version
 test_runs/
 dump/
+.scannerwork/
+sonar-project.properties

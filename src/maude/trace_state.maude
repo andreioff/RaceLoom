@@ -1,0 +1,118 @@
+fmod NODE-SORT is
+  sort Node .
+endfm
+
+view Node from TRIV to NODE-SORT is
+  sort Elt to Node .
+endv
+
+fmod NODE-LIST-SORT is
+  protecting LIST {Node} * (sort List {Node} to NodeList) .
+endfm
+
+view NodeList from TRIV to NODE-LIST-SORT is
+  sort Elt to NodeList .
+endv
+
+fmod NODE-LIST-MAP-SORT is
+  protecting MAP-UTIL {Nat, NodeList} * (sort Map {Nat, NodeList} to NodeListMap) .
+endfm
+
+fmod TRACE-STATE is ---- TODO: Rename this or TRACE-TREE to avoid name clashing and cofusion (maybe name these sstate and state, and keep node for TRACE-TREE)
+  protecting STRING .
+  protecting VECTOR-CLOCK-MAP .
+	protecting RECURSIVE-DNK .
+  protecting NODE-SORT .
+  protecting NODE-LIST-SORT .
+  protecting NODE-LIST-MAP-SORT .
+
+  sort AssignIdsResult NData NType .
+
+  ops NTNone NTProc NTComm : -> NType [ctor] .
+
+  op nd(_,_) : NType String -> NData [ctor] .
+  ---- args: id, starting DNK expression, starting vector clocks
+  op snode(_,_,_) : Nat DNKComp VCMap -> Node [ctor] .
+  ---- args: id, parent id, remaining DNK expression, transition label, updated vector clocks
+  op node(_,_,_,_,_) : Nat Nat DNKComp NData VCMap -> Node [ctor] .
+
+  var P : DNKComp .
+  var ND : NData .
+  var N : Node .
+  var VCs : VCMap .
+  vars ID PID NID : Nat .
+  vars Nodes RemNodes : NodeList .
+
+  op assignIds(_,_) : NodeList Nat -> AssignIdsResult .
+  op $assignIds(_,_,_) : NodeList NodeList Nat -> AssignIdsResult .
+  op assignIdsResult(_,_) : NodeList Nat -> AssignIdsResult .
+
+  eq assignIds(Nodes, NID) = $assignIds(Nodes, nil, NID) .
+  eq $assignIds(nil, Nodes, NID) = assignIdsResult(Nodes, NID) .
+  eq $assignIds((snode(ID, P, VCs) RemNodes), Nodes, NID) = $assignIds(
+    RemNodes,
+    append(snode(NID, P, VCs), Nodes), s(NID)) .
+  eq $assignIds((node(ID, PID, P, ND, VCs) RemNodes), Nodes, NID) = $assignIds(RemNodes, append(node(NID, PID, P, ND, VCs), Nodes), s(NID)) .
+endfm
+
+mod HEAD-NORMAL-FORM is
+	protecting RECURSIVE-DNK .
+  protecting COMM-STRING-CONVERSION .
+  protecting CONVERSION .
+  protecting TRACE-STATE .
+
+  ---- args: DNK exprs to reduce, vector clocks, parent node id
+  op hnf(_,_,_,_) : NType DNKComp VCMap Nat -> NodeList .
+
+  var PrevNT : NType .
+  vars P Q : DNKComp .
+  var N : String .
+  var X : Channel .
+  var VCs : VCMap .
+  vars I J PID : Nat .
+
+  eq hnf(PrevNT, c(bot, I), VCs, PID) = nil .
+
+  eq hnf(PrevNT, P o+ Q, VCs, PID) = append(hnf(PrevNT, P, VCs, PID), hnf(PrevNT, Q, VCs, PID)) .
+
+  ---- Sending or receiving alone does not count in the trace, which is similar to applying the delta operator.
+  ---- The trace also stops here since the expected behavior of a component is to wait when executing a
+  ---- communication instruction until it can synchronize with another component.
+  eq hnf(PrevNT, c((X ! N), I) ; P, VCs, PID) = nil .
+  eq hnf(PrevNT, c((X ? N), I) ; P, VCs, PID) = nil .
+  eq hnf(PrevNT, rcfg(X, N, I, J) ; P, VCs, PID) = (node(0, PID, P, nd(NTComm, compCommToStr(rcfg(X, N, I, J))), transferVC(VCs, I, J)) nil) .
+
+  eq hnf(NTProc, c(N, I) ; P, VCs, PID) = nil . ---- Heuristic 1: prune trace if it contains two consecutive packet processing transitions
+  eq hnf(PrevNT, c(N, I) ; P, VCs, PID) = (node(0, PID, P, nd(NTProc, "proc('" + N + "'," + string(I, 10) + ")"), inc(VCs, I)) nil) .
+
+  ceq [rec-4] : hnf(PrevNT, P, VCs, PID) = hnf(PrevNT, unfold(P), VCs, PID) if notUnfolded(P) [owise] .
+endm
+
+mod DNK-MODEL is
+  protecting DNK-MODEL-UTIL .
+  ---- This module is eventually overwritten with the input provided by the user,
+  ---- but it has to be declared here to include it in the meta-interpreters
+  ---- of the parallel computation.
+endm
+
+mod COMPUTE-NEXT-LAYER is
+  protecting TRACE-STATE .
+  protecting HEAD-NORMAL-FORM .
+  protecting CONVERSION .
+  protecting DNK-MODEL .
+
+  op computeNextLayer : NodeList -> NodeList .
+
+  var P : DNKComp .
+  var NTy : NType .
+  var N : String .
+  var ND : NData .
+  var VCs : VCMap .
+  vars ID PID : Nat .
+  vars Nodes RemNodes : NodeList .
+
+  eq computeNextLayer(nil) = nil .
+  eq computeNextLayer(snode(ID, P, VCs) RemNodes) = (hnf(NTNone, P, VCs, ID) computeNextLayer(RemNodes)) .
+  eq computeNextLayer(node(ID, PID, P, nd(NTy, N), VCs) RemNodes) = (hnf(NTy, P, VCs, ID) computeNextLayer(RemNodes)) .
+endm
+

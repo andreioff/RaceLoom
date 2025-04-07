@@ -1,13 +1,15 @@
+from enum import StrEnum
 from typing import List
 
 from typing_extensions import Self
 
 import src.model.json_model as jm
-from src.KATch_hook import KATCH_HOOK_MAUDE_NAME as KATCH_OP
 from src.maude_encoder import MaudeEncoder
+from src.maude_encoder import MaudeModules as mm
 from src.maude_encoder import MaudeOps as mo
 from src.maude_encoder import MaudeSorts as ms
 from src.util import DyNetKATSymbols as sym
+from src.stats import StatsGenerator, StatsEntry
 
 LINK_VAR_NAME = "Link"
 BIG_SW_VAR_NAME = "BSWMain"
@@ -18,33 +20,42 @@ INDX_VAR_NAME = "I"
 FR_VAR_NAME = "FR"
 
 
-class DNKModelError(Exception):
+class ElementType(StrEnum):
+    CT = "CT"
+    SW = "SW"
+
+
+class DNKModelError(Exception, StatsGenerator):
     pass
 
 
 class DNKMaudeModel:
     def __init__(self) -> None:
         self.me = MaudeEncoder()
-        self.bigSwitchTerm: str = ""
-        self.controllersMaudeMap: str = self.me.toMaudeMap([])
+        self.elTypeDict: dict[int, ElementType] = {}
+        self.elementTerms: List[str] = []
+        self.branchCounts: dict[str, int] = {}
 
-    def fromJson(self, jsonStr: str) -> Self:
+    @classmethod
+    def fromJson(cls, jsonStr: str) -> Self:
         """
         Raises: ValidationError if `jsonStr` does not correspond to the expected model
         """
         jsonModel = jm.DNKNetwork.model_validate_json(jsonStr)
-        self.__declareLink(jsonModel)
-        self.__declareChannels(jsonModel)
-        self.__declareInitialSwitches(jsonModel)
-        self.__declareControllers(jsonModel)
-        self.__declareBigSwitch(jsonModel)
-        self.__buildBigSwitchTerm(jsonModel)
-        self.__buildControllersMapTerm(jsonModel)
 
-        return self
+        m = cls()
+        m.__declareLink(jsonModel)
+        m.__declareChannels(jsonModel)
+        m.__declareInitialSwitches(jsonModel)
+        m.__declareControllers(jsonModel)
+        m.__declareBigSwitch(jsonModel)
+        m.__buildElementTerms(jsonModel)
 
-    def toMaudeModuleContent(self) -> str:
-        return self.me.build()
+        return m
+
+    def toMaudeModule(self) -> str:
+        self.me.addProtImport(mm.DNK_MODEL_UTIL)
+        return self.me.buildAsModule(mm.DNK_MODEL)
 
     def __declareChannels(self, model: jm.DNKNetwork) -> None:
         channels: dict[str, bool] = {}
@@ -75,6 +86,7 @@ class DNKMaudeModel:
         for name, expr in model.Controllers.items():
             self.me.addOp(name, ms.RECURSIVE_SORT, [])
             self.me.addEq(self.me.recPolTerm(name), expr)
+            self.__addBranchCount(name, expr.count(sym.OPLUS))
 
     def __declareLink(self, model: jm.DNKNetwork) -> None:
         """
@@ -123,7 +135,7 @@ class DNKMaudeModel:
         # and to re-write everything into head normal form
         # using the KATch hook
         exprs: List[str] = [
-            f"{KATCH_OP}({mo.BIG_SWITCH_OP} {SW_MAP_VAR_NAME} {LINK_VAR_NAME}) "
+            f"({mo.BIG_SWITCH_OP} {SW_MAP_VAR_NAME} {LINK_VAR_NAME}) "
             + f"{sym.SEQ} ({BIG_SW_VAR_NAME} {SW_MAP_VAR_NAME})",
         ]
 
@@ -157,6 +169,7 @@ class DNKMaudeModel:
             for ru in switch.RequestedUpdates:
                 exprs.append(sendAndEnterRecvMode(ru, i))
 
+        self.__addBranchCount("BSw", len(exprs))
         return f" {sym.OPLUS} ".join(exprs)
 
     def __buildBigSwRecvExpr(self, model: jm.DNKNetwork) -> str:
@@ -171,7 +184,7 @@ class DNKMaudeModel:
         # and to re-write everything into head normal form
         # using the KATch hook
         exprs: List[str] = [
-            f"{KATCH_OP}({mo.BIG_SWITCH_OP} {SW_MAP_VAR_NAME} {LINK_VAR_NAME}) "
+            f"({mo.BIG_SWITCH_OP} {SW_MAP_VAR_NAME} {LINK_VAR_NAME}) "
             + f"{sym.SEQ} ({termName(SW_MAP_VAR_NAME)})",
         ]
 
@@ -204,23 +217,40 @@ class DNKMaudeModel:
 
         return f" {sym.OPLUS} ".join(exprs)
 
-    def __buildBigSwitchTerm(self, model: jm.DNKNetwork) -> None:
+    def __buildBigSwitchTerm(self, model: jm.DNKNetwork) -> str:
         sws: List[str] = []
         for name in model.Switches.keys():
             sws.append(name)
-        self.bigSwitchTerm = self.me.recPolTerm(
-            f"{BIG_SW_VAR_NAME} {self.me.toMaudeMap(sws)}"
-        )
+        return self.me.recPolTerm(f"{BIG_SW_VAR_NAME} {self.me.convertIntoMap(sws)}")
 
-    def __buildControllersMapTerm(self, model: jm.DNKNetwork) -> None:
-        recursiveControllers: List[str] = []
-        for name in model.Controllers.keys():
-            recursiveControllers.append(self.me.recPolTerm(name))
+    def __buildElementTerms(self, model: jm.DNKNetwork) -> None:
+        elTerms: List[str] = [self.__buildBigSwitchTerm(model)]
+        self.elTypeDict = {0: ElementType.SW}
+        for i, name in enumerate(model.Controllers.keys()):
+            elTerms.append(self.me.recPolTerm(name))
+            self.elTypeDict[i + 1] = ElementType.CT
+        self.elementTerms = elTerms
 
-        self.controllersMaudeMap = self.me.toMaudeMap(recursiveControllers)
+    def __addBranchCount(self, key: str, count: int) -> None:
+        while key in self.branchCounts:
+            key = key + "*"
+        self.branchCounts[key] = count
 
-    def getBigSwitchTerm(self) -> str:
-        return self.bigSwitchTerm
+    def getBranchCounts(self) -> str:
+        bStrs: List[str] = [
+            f"{key}:{count}" for (key, count) in self.branchCounts.items()
+        ]
+        return ";".join(bStrs)
 
-    def getControllersMaudeMap(self) -> str:
-        return self.controllersMaudeMap
+    def getElementTerms(self) -> List[str]:
+        return self.elementTerms
+
+    def getMaudeModuleName(self) -> str:
+        return mm.DNK_MODEL
+
+    def getStats(self) -> List[StatsEntry]:
+        return [
+            StatsEntry(
+                "modelBranchCounts", "Network model branches", self.getBranchCounts()
+            )
+        ]

@@ -8,7 +8,8 @@ import networkx.algorithms as ga
 from networkx.classes.coreviews import AdjacencyView, AtlasView
 
 import src
-from src.model.dnk_maude_model import DNKMaudeModel
+from src.maude_encoder import MaudeModules as mm
+from src.model.dnk_maude_model import DNKMaudeModel, ElementType
 
 PROJECT_DIR = os.path.dirname(inspect.getabsfile(src))
 TEST_DIR = os.path.dirname(inspect.getabsfile(test.src))
@@ -16,21 +17,42 @@ TEST_DIR = os.path.dirname(inspect.getabsfile(test.src))
 
 class DNKTestModel(DNKMaudeModel):
     def __init__(
-        self, maudeModuleContent: str, bigSwitch: str, controllersMaudeMap: str
+        self, maudeModuleContent: str, parallelExpr: str
     ):
+        """Initializes a DNKModel object from a Maude module content
+        and an expression of shape 'T1 || T2 || ...'. Assumes that T1 is always
+        a switch."""
         super().__init__()
         self.maudeModuleContent = maudeModuleContent
-        self.bigSwitch = bigSwitch
-        self.controllersMaudeMap = controllersMaudeMap
 
-    def toMaudeModuleContent(self) -> str:
-        return self.maudeModuleContent
+        for i, term in enumerate(parallelExpr.split("||")):
+            self.elementTerms.append(term.strip())
+            if i == 0:
+                self.elTypeDict[i] = ElementType.SW
+                continue
+            self.elTypeDict[i] = ElementType.CT
 
-    def getBigSwitchTerm(self) -> str:
-        return self.bigSwitch
+    def toMaudeModule(self) -> str:
+        return f"""
+            mod {mm.DNK_MODEL} is
+            protecting {mm.DNK_MODEL_UTIL} .
+            {self.maudeModuleContent}
+            endm
+        """
 
-    def getControllersMaudeMap(self) -> str:
-        return self.controllersMaudeMap
+    def getElementTerms(self) -> List[str]:
+        return self.elementTerms
+
+    @classmethod
+    def fromDebugMaudeFile(cls, fileContent: str) -> DNKMaudeModel:
+        # Only for debugging purposes
+        fileContentLines = fileContent.split("\n")
+        maudeStr = "\n".join(fileContentLines[:-2])
+        elsMap = fileContentLines[-2]
+        return cls(
+            maudeStr,
+            elsMap
+        )
 
 
 def assertEqualTrees(t1: networkx.MultiGraph, t2: networkx.MultiGraph) -> None:
@@ -45,7 +67,8 @@ def assertEqualTrees(t1: networkx.MultiGraph, t2: networkx.MultiGraph) -> None:
     centersT2 = ga.center(t2)
     visitedNodes1: dict[str, bool] = {}
     visitedNodes2: dict[str, bool] = {}
-    assert areEqualTrees(t1, t2, centersT1, centersT2, visitedNodes1, visitedNodes2)
+    assert areEqualTrees(t1, t2, centersT1, centersT2,
+                         visitedNodes1, visitedNodes2)
     assert (
         len(visitedNodes1) == t1.number_of_nodes()
     ), f"Not all nodes were visited! Expected: {t1.number_of_nodes()}, actual: {len(visitedNodes1)}."

@@ -1,0 +1,19 @@
+fmod DNK-MODEL-UTIL is
+  protecting RECURSIVE-DNK .
+	protecting MAP-UTIL {Nat, String} * (sort Map {Nat, String} to StrMap) .
+
+  op concatSws_ : StrMap -> String .
+  op network__ : StrMap String -> String [gather (E e)].
+  op bigSwitch__ : StrMap String -> String [gather (E e)].
+
+  var Sws : StrMap .
+  vars L X : String .
+  var I : Nat .
+
+  eq concatSws empty = "" .
+  eq concatSws (I |-> X , empty) = X .
+  eq concatSws (I |-> X , Sws) = X + "+" + concatSws Sws .
+
+  eq network Sws L = "(" + (concatSws Sws) + ") . " + "(" + L + ")" .
+  eq bigSwitch Sws L = (network Sws L) + " . (" + (network Sws L) + ")*" .
+endfm

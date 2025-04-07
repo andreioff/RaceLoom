@@ -101,13 +101,13 @@ def test_processJSONPackets_valid_json_multiple_packet_success(katch: KATchComm)
 
 
 def test_process_output_empty_string_error(katch: KATchComm):
-    res, err = katch.process_output("")
+    res, err = katch.processPktMappingOutput("")
     assert not res
     assert err
 
 
 def test_process_output_no_matching_string_error(katch: KATchComm):
-    res, err = katch.process_output(
+    res, err = katch.processPktMappingOutput(
         'invalid Inoutmap at /path/to/file {"json": "json"}\n'
     )
     assert not res
@@ -115,60 +115,64 @@ def test_process_output_no_matching_string_error(katch: KATchComm):
 
 
 def test_process_output_no_path_error(katch: KATchComm):
-    res, err = katch.process_output("Inoutmap at []\n")
+    res, err = katch.processPktMappingOutput("Inoutmap at []\n")
     assert not res
     assert err
 
 
 def test_process_output_no_json_error(katch: KATchComm):
-    res, err = katch.process_output("Inoutmap at /path/to/file\n")
+    res, err = katch.processPktMappingOutput("Inoutmap at /path/to/file\n")
     assert not res
     assert err
 
 
 def test_process_output_empty_matching_path_and_json_success(katch: KATchComm):
-    res, err = katch.process_output("Inoutmap at  \n")
+    res, err = katch.processPktMappingOutput("Inoutmap at  \n")
     assert res == sym.ZERO
     assert err is None
 
 
 def test_process_output_empty_matching_json_success(katch: KATchComm):
-    res, err = katch.process_output("Inoutmap at /path/to/file \n")
+    res, err = katch.processPktMappingOutput("Inoutmap at /path/to/file \n")
     assert res == sym.ZERO
     assert err is None
 
 
 def test_process_output_empty_matching_json_only_whitespaces_success(katch: KATchComm):
-    res, err = katch.process_output("Inoutmap at /path/to/file \t\t\n\n")
+    res, err = katch.processPktMappingOutput("Inoutmap at /path/to/file \t\t\n\n")
     assert res == sym.ZERO
     assert err is None
 
 
 def test_process_output_empty_matching_path_success(katch: KATchComm):
-    res, err = katch.process_output("Inoutmap at  []\n")
+    res, err = katch.processPktMappingOutput("Inoutmap at  []\n")
     assert res == sym.ZERO
     assert err is None
 
 
 def test_process_output_no_new_line_success(katch: KATchComm):
-    res, err = katch.process_output("Inoutmap at /path/to/file []")
+    res, err = katch.processPktMappingOutput("Inoutmap at /path/to/file []")
     assert res == sym.ZERO
     assert err is None
 
 
 def test_process_output_no_new_line(katch: KATchComm):
-    res, err = katch.process_output("Inoutmap at /path/to/file []")
+    res, err = katch.processPktMappingOutput("Inoutmap at /path/to/file []")
     assert res == sym.ZERO
     assert err is None
 
 
 def test_process_output_drop_all_packets_success(katch: KATchComm):
-    res, err = katch.process_output(f"Inoutmap at /path/to/file [[ {KATCH_FALSE} ]]")
+    res, err = katch.processPktMappingOutput(
+        f"Inoutmap at /path/to/file [[ {KATCH_FALSE} ]]"
+    )
     assert res == sym.ZERO
     assert err is None
 
 
 def test_process_output_forward_all_packets_success(katch: KATchComm):
-    res, err = katch.process_output(f"Inoutmap at /path/to/file [[ {KATCH_TRUE} ]]")
+    res, err = katch.processPktMappingOutput(
+        f"Inoutmap at /path/to/file [[ {KATCH_TRUE} ]]"
+    )
     assert res == sym.ONE
     assert err is None

@@ -1,20 +1,27 @@
-import optparse
 import os
 import sys
 import time
-from typing import List, Tuple
+from test.util import DNKTestModel
 
 from pydantic import ValidationError
 
 from src.model.dnk_maude_model import DNKMaudeModel
-from src.tracer import MaudeError, Tracer, TracerConfig, TracerStats
-from src.util import createDir, exportFile, getFileName, isExe, isJson, readFile
+from src.tracer import MaudeError, Tracer, TracerConfig
+from src.util import createDir, getFileName, readFile, removeFile
+from src.stats import StatsCollector, StatsEntry
+from src.cli import getCLIArgs, CLIError
+from src.analyzer.trace_file_analyzer import TraceFileAnalyzer
+from src.KATch_comm import KATchComm
 
 PROJECT_DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 OUTPUT_DIR_PATH = os.path.join(PROJECT_DIR_PATH, "output")
 MAUDE_FILES_DIR_PATH = os.path.join(PROJECT_DIR_PATH, "src", "maude")
-RESULT_FILE_NAME = "result"
-EXEC_STATS_FILE_NAME = "execution_stats"
+RUN_DIR_NAME = "run"
+TRACES_FILE_NAME = "traces"
+HARMFUL_TRACES_DIR_NAME = "harmful_traces"
+HARMFUL_TRACES_RAW_DIR_NAME = "harmful_traces_raw"
+TRACES_GEN_STATS_FILE_NAME = "trace_generation_stats"
+STATS_FILE_NAME = "final_stats"
 
 
 def printAndExit(msg: str) -> None:
@@ -22,119 +29,122 @@ def printAndExit(msg: str) -> None:
     sys.exit()
 
 
-def buildArgsParser() -> optparse.OptionParser:
-    parser = optparse.OptionParser()
-    parser.add_option(
-        "-d",
-        "--depth",
-        type="int",
-        dest="depth",
-        default=5,
-        help="Depth of search (default is 5)",
-    )
-    parser.add_option(
-        "-a",
-        "--all-traces",
-        dest="allTraces",
-        default=False,
-        action="store_true",
-        help="Passing this option instructs the tool to extract \
-                all traces that lead to concurrent behavior \
-                instead of only the first one (impacts performance)",
-    )
-    parser.add_option(
-        "--to-dot",
-        dest="toDot",
-        default=False,
-        action="store_true",
-        help="Passing this option converts the traces into DOT format",
-    )
-    return parser
-
-
-def validateArgs(args: List[str]) -> Tuple[str, str]:
-    """Validates the command line arguments and returns the paths to the KATch
-    executable and the input JSON file."""
-    if len(args) < 2:
-        printAndExit("Error: provide the arguments <path_to_katch> <input_file>.")
-
-    if not os.path.exists(args[0]) or not isExe(args[0]):
-        printAndExit("KATch tool could not be found in the given path!")
-
-    if not isJson(args[1]) or not os.path.isfile(args[1]):
-        printAndExit("Please provide a .json input file!")
-    return args[0], args[1]
-
-
-def writeTracesToFile(
-    currTime: time.struct_time, fileContent: str, inputFileName: str, fileExt: str
-) -> None:
+def createRunOutputDir(currTime: time.struct_time) -> str:
+    createDir(OUTPUT_DIR_PATH)
     currTimeStr = time.strftime("%Y_%m_%dT%H_%M_%S", currTime)
-    exportFilePath = os.path.join(
-        OUTPUT_DIR_PATH, f"{RESULT_FILE_NAME}_{currTimeStr}_{inputFileName}.{fileExt}"
+    dirPath = os.path.join(
+        OUTPUT_DIR_PATH,
+        f"{RUN_DIR_NAME}_{currTimeStr}",
     )
-    exportFile(exportFilePath, fileContent)
-    print(f"Trace(s) written to: {exportFilePath}.")
+    createDir(dirPath)
+    return dirPath
 
 
-def logRunStats(
-    currTime: time.struct_time, inputFileName: str, stats: TracerStats
-) -> None:
-    logFilePath = os.path.join(OUTPUT_DIR_PATH, f"{EXEC_STATS_FILE_NAME}.csv")
-
-    statsVarNames: List[str] = [str(k) for k in vars(stats).keys()]  # type: ignore
-    statsVarValues: List[str] = [str(v) for v in vars(stats).values()]  # type: ignore
+def logRunStats(stats: StatsCollector, fileName: str) -> None:
+    logFilePath = os.path.join(OUTPUT_DIR_PATH, f"{fileName}.csv")
+    sep = ","
     if not os.path.exists(logFilePath):
         with open(logFilePath, "w") as f:
-            f.write(",".join(["date", "input_file"] + statsVarNames))
+            f.write(stats.keys(sep))
             f.write(os.linesep)
 
-    fmtTime = time.strftime("%Y-%m-%d;%H:%M:%S", currTime)
     with open(logFilePath, "a") as f:
-        f.write(",".join([fmtTime, inputFileName] + statsVarValues))
+        f.write(stats.values(sep))
         f.write(os.linesep)
 
 
+def readDNKModelFromFile(filePath: str) -> DNKMaudeModel:
+    fileExt = filePath.split(".")[-1]
+    fileContent = readFile(filePath)
+    if fileExt == "maude":
+        return DNKTestModel.fromDebugMaudeFile(fileContent)
+    if fileExt == "json":
+        return DNKMaudeModel.fromJson(fileContent)
+    printAndExit(f"Unknown input file extension: '{fileExt}'!")
+    return DNKMaudeModel()
+
+
 def main() -> None:
-    (options, args) = buildArgsParser().parse_args()
-    katchPath, inputFilePath = validateArgs(args)
-
-    createDir(OUTPUT_DIR_PATH)
-    config = TracerConfig(
-        outputDirPath=OUTPUT_DIR_PATH,
-        katchPath=katchPath,
-        maudeFilesDirPath=MAUDE_FILES_DIR_PATH,
-    )
-
     try:
-        jsonStr = readFile(inputFilePath)
-        tracer = Tracer(config)
-
-        traceTreeStr, isEmpty = tracer.run(
-            DNKMaudeModel().fromJson(jsonStr), options.depth, options.allTraces  # type: ignore
-        )
-        execStats = tracer.getExecTimeStats()
-        print(execStats)
+        args = getCLIArgs()
+        dnkModel = readDNKModelFromFile(args.inputFilePath)
 
         currTime = time.localtime()
-        inputFileName = getFileName(inputFilePath)
-        logRunStats(currTime, inputFileName, execStats)
+        fmtTime = time.strftime("%Y-%m-%d;%H:%M:%S", currTime)
+        runOutputDir = createRunOutputDir(currTime)
 
-        if isEmpty:
+        config = TracerConfig(
+            outputDirPath=runOutputDir,
+            katchPath=args.katchPath,
+            maudeFilesDirPath=MAUDE_FILES_DIR_PATH,
+            threads=args.threads,
+            verbose=args.verbose,
+        )
+
+        inputFileName = getFileName(args.inputFilePath)
+        tracesFilePath = os.path.join(
+            runOutputDir, f"{TRACES_FILE_NAME}_{inputFileName}.txt"
+        )
+        with open(tracesFilePath, "a") as file:
+            tracer = Tracer(config, file)
+            print("Generating traces...")
+            collectedTraces = tracer.run(dnkModel, args.depth)
+
+        stats = StatsCollector()
+        stats.addEntries(
+            [
+                StatsEntry("date", "Date", fmtTime),
+                StatsEntry(
+                    "inputFile", "Input file", os.path.basename(args.inputFilePath)
+                ),
+                StatsEntry("depth", "Depth", args.depth),
+            ]
+        )
+        stats.addEntries(dnkModel.getStats())
+        stats.addEntries(tracer.getStats())
+
+        print()
+        print(stats.toPrettyStr())
+        print()
+        logRunStats(stats, TRACES_GEN_STATS_FILE_NAME)
+
+        if collectedTraces == 0:
+            removeFile(tracesFilePath)
             printAndExit(
-                "Could not find any concurrent behavior "
-                + "for the given network and depth!"
+                "Could not generate any traces for the given network and depth!"
             )
 
-        fileExt = "maude"
-        outputContent = traceTreeStr
-        if options.toDot:  # type: ignore
-            fileExt = "gv"
-            outputContent = tracer.convertTraceToDOT(traceTreeStr)
+        print("Analyzing traces...")
+        outputDirRaw = os.path.join(runOutputDir, HARMFUL_TRACES_RAW_DIR_NAME)
+        outputDirDOT = os.path.join(runOutputDir, HARMFUL_TRACES_DIR_NAME)
+        createDir(outputDirRaw)
+        createDir(outputDirDOT)
 
-        print("Concurrent behavior detected!")
-        writeTracesToFile(currTime, outputContent, inputFileName, fileExt)
+        katchComm = KATchComm(args.katchPath, runOutputDir)
+        pta = TraceFileAnalyzer(katchComm, outputDirRaw, outputDirDOT)
+        pta.analyzeFile(tracesFilePath, dnkModel.elTypeDict)
 
+        stats.addEntries(katchComm.getStats())
+        stats.addEntries(pta.getStats())
+        stats.addEntries(
+            [
+                StatsEntry(
+                    "totalExecTime",
+                    "Total execution time",
+                    tracer.getTotalExecTime() + pta.getTotalExecTime(),
+                )
+            ]
+        )
+
+        print()
+        print("========== Final Stats ==========")
+        print(stats.toPrettyStr())
+        print("=================================")
+        logRunStats(stats, STATS_FILE_NAME)
+        print(f"Output written to: {runOutputDir}")
+
+    except CLIError as e:
+        printAndExit(e.__str__())
     except MaudeError as e:
         print(f"Error encountered while executing Maude:\n\t{e}")
     except ValidationError as e:

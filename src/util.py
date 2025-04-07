@@ -47,6 +47,12 @@ def executeCmd(cmd: list[str]) -> Tuple[str, str | None]:
     return proc.stdout.decode("utf-8"), error if error != "" else None
 
 
+def removeFile(filePath: str) -> None:
+    """Removes the file at the given path if it exists."""
+    if os.path.exists(filePath):
+        os.remove(filePath)
+
+
 def exportFile(filePath: str, contents: str) -> None:
     """Exports a file with the given name and contents."""
     with open(filePath, "w") as f:
@@ -64,11 +70,6 @@ def readFile(filePath: str) -> str:
     return content
 
 
-def isJson(fpath: str) -> bool:
-    """Takes a file path and checks if the file is in .json format."""
-    return len(fpath) > 5 and fpath[-5:] == ".json"
-
-
 def isExe(fpath: str) -> bool:
     """Takes a file path and checks if the file is an executable."""
     return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
@@ -83,3 +84,12 @@ def createDir(dirPath: str) -> None:
 def getFileName(filePath: str) -> str:
     fileName = os.path.basename(filePath)
     return fileName.split(".")[0]
+
+
+def splitIntoLines(s: str, lineSize: int, charMargin: int = 0) -> str:
+    """Inserts new line characters in the given string every 'lineSize' chars.
+    If a character margin is given, the string remains unchanged if its length
+    is <= lineSize + charMargin."""
+    if lineSize < 1 or lineSize + charMargin > len(s):
+        return s
+    return os.linesep.join([s[i : i + lineSize] for i in range(0, len(s), lineSize)])

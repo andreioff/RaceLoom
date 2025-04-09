@@ -16,18 +16,16 @@ TEST_DIR = os.path.dirname(inspect.getabsfile(test.src))
 
 
 class DNKTestModel(DNKMaudeModel):
-    def __init__(
-        self, maudeModuleContent: str, parallelExpr: str
-    ):
+    def __init__(self, maudeModuleContent: str, parallelExpr: str):
         """Initializes a DNKModel object from a Maude module content
-        and an expression of shape 'T1 || T2 || ...'. Assumes that T1 is always
-        a switch."""
+        and an expression of shape 'T1 || T2 || ...'. Considers any term in
+        the expression to be a switch if it contains 'SW' in its name"""
         super().__init__()
         self.maudeModuleContent = maudeModuleContent
 
         for i, term in enumerate(parallelExpr.split("||")):
             self.elementTerms.append(term.strip())
-            if i == 0:
+            if "SW" in term:
                 self.elTypeDict[i] = ElementType.SW
                 continue
             self.elTypeDict[i] = ElementType.CT
@@ -49,10 +47,7 @@ class DNKTestModel(DNKMaudeModel):
         fileContentLines = fileContent.split("\n")
         maudeStr = "\n".join(fileContentLines[:-2])
         elsMap = fileContentLines[-2]
-        return cls(
-            maudeStr,
-            elsMap
-        )
+        return cls(maudeStr, elsMap)
 
 
 def assertEqualTrees(t1: networkx.MultiGraph, t2: networkx.MultiGraph) -> None:
@@ -67,8 +62,7 @@ def assertEqualTrees(t1: networkx.MultiGraph, t2: networkx.MultiGraph) -> None:
     centersT2 = ga.center(t2)
     visitedNodes1: dict[str, bool] = {}
     visitedNodes2: dict[str, bool] = {}
-    assert areEqualTrees(t1, t2, centersT1, centersT2,
-                         visitedNodes1, visitedNodes2)
+    assert areEqualTrees(t1, t2, centersT1, centersT2, visitedNodes1, visitedNodes2)
     assert (
         len(visitedNodes1) == t1.number_of_nodes()
     ), f"Not all nodes were visited! Expected: {t1.number_of_nodes()}, actual: {len(visitedNodes1)}."

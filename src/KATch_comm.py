@@ -1,12 +1,12 @@
 import os
 import re
-from typing import Tuple, List, Hashable
+from typing import Hashable, List, Tuple
 
-from src.decorators.exec_time import with_time_execution, PExecTimes
-from src.decorators.bool_cache import CacheStats, with_bool_cache, PBoolCache
+from src.decorators.bool_cache import CacheStats, PBoolCache, with_bool_cache
+from src.decorators.exec_time import PExecTimes, with_time_execution
+from src.stats import StatsEntry, StatsGenerator
 from src.util import DyNetKATSymbols as sym
 from src.util import executeCmd, exportFile, getTempFilePath
-from src.stats import StatsGenerator, StatsEntry
 
 KATCH_FILE_EXT = "nkpl"
 NKPL_LARROW = b"\xe2\x86\x90".decode("utf-8")  # ←
@@ -82,7 +82,7 @@ class KATchComm(PBoolCache, PExecTimes, StatsGenerator):
         fmtNKEnc1 = self.tool_format(nkEnc1)
         fmtNKEnc2 = self.tool_format(nkEnc2)
         npklProgram = (
-            f"{NKPL_CHECK} {fmtNKEnc1} {NKPL_DIFF} {fmtNKEnc2} "
+            f"{NKPL_CHECK} ({fmtNKEnc1}) {NKPL_DIFF} ({fmtNKEnc2}) "
             + f"{NKPL_NOT_EQUIV} {NKPL_FALSE}"
         )
 
@@ -95,7 +95,7 @@ class KATchComm(PBoolCache, PExecTimes, StatsGenerator):
     def areNotEquiv(self, nkEnc1: str, nkEnc2: str) -> bool:
         fmtNKEnc1 = self.tool_format(nkEnc1)
         fmtNKEnc2 = self.tool_format(nkEnc2)
-        npklProgram = f"{NKPL_CHECK} {fmtNKEnc1} {NKPL_NOT_EQUIV} {fmtNKEnc2}"
+        npklProgram = f"{NKPL_CHECK} ({fmtNKEnc1}) {NKPL_NOT_EQUIV} ({fmtNKEnc2})"
 
         output, error = self.__runNPKLProgram(npklProgram)
 

@@ -1,95 +1,26 @@
-import re
 from typing import List, Self, Tuple, cast
 
-
-class ParseError(Exception):
-    pass
-
-
-class TraceTransition:
-    def __init__(self) -> None:
-        self.policy = ""
-        self.causesHarmfulRace = False
-
-    def isModifyingVCPos(self, pos: int) -> bool:
-        return False
-
-    def __str__(self) -> str:
-        return ""
-
-
-class PktProcTrans(TraceTransition):
-    def __init__(self, policy: str, swPos: int) -> None:
-        super().__init__()
-        self.policy = policy
-        self.swPos = swPos
-
-    def isModifyingVCPos(self, pos: int) -> bool:
-        return self.swPos == pos
-
-    @classmethod
-    def fromStr(cls, s: str) -> Self:
-        res = re.search(r"proc\('([^']*)',([0-9]+)\)", s)
-        if res is None:
-            raise ParseError(f"'{s}' is not a valid packet processing transition")
-
-        t = cls(str(res.group(1)), int(res.group(2)))
-        return t
-
-    def __str__(self) -> str:
-        return f"proc('{self.policy}', {self.swPos})"
-
-
-class RcfgTrans(TraceTransition):
-    def __init__(self, policy: str, srcPos: int, dstPos: int, channel: str) -> None:
-        super().__init__()
-        self.policy = policy
-        self.srcPos: int = srcPos
-        self.dstPos: int = dstPos
-        self.channel: str = channel
-
-    def isModifyingVCPos(self, pos: int) -> bool:
-        return self.srcPos == pos or self.dstPos == pos
-
-    @classmethod
-    def fromStr(cls, s: str) -> Self:
-        res = re.search(r"rcfg\(([^,]*), '([^']*)', ([0-9]+), ([0-9]+)\)", s)
-        if res is None:
-            raise ParseError(f"'{s}' is not a valid reconfiguration transition")
-
-        t = cls(
-            str(res.group(2)),
-            int(res.group(3)),
-            int(res.group(4)),
-            str(res.group(1)),
-        )
-        return t
-
-    def __str__(self) -> str:
-        return f"rcfg({self.channel}, '{self.policy}', {self.srcPos}, {self.dstPos})"
+from src.analyzer.trace_transition import ITransition, newTraceTransition
+from src.errors import ParseError
 
 
 class TraceNode:
-    def __init__(self) -> None:
-        self.trans = TraceTransition()
-        self.vectorClocks: List[List[int]] = []
-        self.racingElements: Tuple[int, int] | None = None
+    def __init__(
+        self,
+        trans: ITransition,
+        vectorClocks: List[List[int]],
+    ) -> None:
+        self.trans = trans
+        self.vectorClocks = vectorClocks
+        self.racingElements = None
 
-    def fromTuple(self, t: Tuple) -> Self:  # type: ignore
-        el = self.__validateTupleType(t)  # type: ignore
-        self.vectorClocks = el[1]
-        if not el[0]:
-            self.trans = TraceTransition()
-        elif el[0][:4] == "rcfg":
-            self.trans = RcfgTrans.fromStr(el[0])
-        else:
-            self.trans = PktProcTrans.fromStr(el[0])
+    @classmethod
+    def fromTuple(cls, t: Tuple) -> Self:  # type: ignore
+        el = cls.__validateTupleType(t)  # type: ignore
+        return cls(newTraceTransition(el[0]), el[1])
 
-        return self
-
-    def __validateTupleType(
-        self, t: Tuple  # type: ignore
-    ) -> Tuple[str, List[List[int]]]:
+    @staticmethod
+    def __validateTupleType(t: Tuple) -> Tuple[str, List[List[int]]]:  # type: ignore
         err = ParseError("Trace element must be of type Tuple[str, List[List[int]]]")
         if not isinstance(t[0], str) or not isinstance(t[1], list):  # type: ignore
             raise err
@@ -114,6 +45,12 @@ class TraceNode:
                     posPairs.append((i, j))
         return posPairs
 
+    def __repr__(self) -> str:
+        return f'(\\"{self.trans}\\",{self.vectorClocks})'
+
+    def __str__(self) -> str:
+        return f'(\\"{self.trans}\\",{self.vectorClocks})'
+
 
 class TraceParser:
     @staticmethod
@@ -128,5 +65,5 @@ class TraceParser:
         for el in pTrace:
             if not isinstance(el, tuple):
                 raise ParseError("Trace elements must be tuples")
-            trace.append(TraceNode().fromTuple(el))
+            trace.append(TraceNode.fromTuple(el))
         return trace

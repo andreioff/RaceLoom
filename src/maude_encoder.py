@@ -11,6 +11,8 @@ class MaudeOps(StrEnum):
     GET_REC_POL = "getRecPol"
     PARALLEL = "||"
     BOT = "bot"
+    HNF = "hnf"
+    TRANS_TYPE_NONE = "TNone"
 
 
 class MaudeSorts(StrEnum):
@@ -20,12 +22,16 @@ class MaudeSorts(StrEnum):
     STR_MAP = "StrMap"
     RECURSIVE = "Recursive"
     TRACE_NODES = "TraceNodes"
+    TDATA = "TData"
+    TTYPE = "TType"
+    DNK_COMP = "DNKComp"
 
 
 class MaudeModules(StrEnum):
     TRACER = "TRACER"
     DNK_MODEL = "DNK-MODEL"
     DNK_MODEL_UTIL = "DNK-MODEL-UTIL"
+    HEAD_NORMAL_FORM = "HEAD-NORMAL-FORM"
     ENTRY = "ENTRY"
 
 
@@ -179,7 +185,8 @@ class MaudeEncoder:
         vc = self.convertIntoMap(["0" for _i in range(size)])
         return self.convertIntoMap([vc for _i in range(size)])
 
-    def parallelSeq(self, terms: List[str]) -> str:
+    @staticmethod
+    def parallelSeq(terms: List[str]) -> str:
         dnkComps: List[str] = []
         for i, term in enumerate(terms):
             dnkComps.append(f"c({term}, {i})")
@@ -188,9 +195,6 @@ class MaudeEncoder:
             dnkExpr = f"c({MaudeOps.BOT}, 0)"
         return dnkExpr
 
-    def tracerCall(self, threads: int, depth: int, terms: List[str]) -> str:
-        dnkExpr = self.parallelSeq(terms)
-        vcSize = len(terms) if len(terms) > 0 else 1
-        vcMap = self.newVCMap(vcSize)
-
-        return f"tracer{{<> p-init({threads})}}{{{depth}}}(({dnkExpr}), {vcMap})"
+    @staticmethod
+    def hnfCall(dnkExpr: str, transType: str) -> str:
+        return f"{MaudeOps.HNF}({transType}, {dnkExpr})"

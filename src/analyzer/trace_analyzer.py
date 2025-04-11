@@ -1,13 +1,9 @@
 from os import linesep
 from typing import Callable, List, Protocol, Tuple, TypeVar, cast
-from src.analyzer.harmful_trace import HarmfulTrace, RaceType
 
-from src.analyzer.trace_parser import (
-    PktProcTrans,
-    RcfgTrans,
-    TraceNode,
-    TraceTransition,
-)
+from src.analyzer.harmful_trace import HarmfulTrace, RaceType
+from src.analyzer.trace_parser import TraceNode
+from src.analyzer.trace_transition import ITransition, PktProcTrans, RcfgTrans
 from src.KATch_comm import KATchComm
 from src.model.dnk_maude_model import ElementType
 
@@ -16,8 +12,8 @@ class TraceAnalyzerError(Exception):
     pass
 
 
-_T1 = TypeVar("_T1", bound=TraceTransition)
-_T2 = TypeVar("_T2", bound=TraceTransition)
+_T1 = TypeVar("_T1", bound=ITransition)
+_T2 = TypeVar("_T2", bound=ITransition)
 
 
 class _TransitionCheckers(Protocol):
@@ -43,7 +39,7 @@ class TransitionsChecker:
         self.__checks[(PktProcTrans, RcfgTrans)] = self.checkProcRcfg
         self.__checks[(RcfgTrans, RcfgTrans)] = self.checkRcfgRcfg
 
-    def check(self, t1: TraceTransition, t2: TraceTransition) -> RaceType | None:
+    def check(self, t1: ITransition, t2: ITransition) -> RaceType | None:
         key = (type(t1), type(t2))
         if key in self.__checks:
             return self.__checks[key](t1, t2)
@@ -68,7 +64,7 @@ class TransitionsChecker:
         res = self.katchComm.isNonEmptyDifference(t1.policy, t2.policy)
         return RaceType.SWCT if res else None
 
-    def checkDefault(self, t1: TraceTransition, t2: TraceTransition) -> RaceType | None:
+    def checkDefault(self, t1: ITransition, t2: ITransition) -> RaceType | None:
         key = f"({type(t1).__name__}, {type(t2).__name__})"
         if key in self.__unexpected:
             self.__unexpected[key] += 1

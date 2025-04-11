@@ -1,18 +1,16 @@
 import os
-from typing import Tuple, List
+from typing import List, Tuple
 
-from src.analyzer.trace_analyzer import (
-    TraceAnalyzer,
-    TraceAnalyzerError,
-    TransitionsChecker,
-)
-from src.analyzer.trace_parser import ParseError, TraceParser
 from src.analyzer.harmful_trace import HarmfulTrace, RaceType
+from src.analyzer.trace_analyzer import (TraceAnalyzer, TraceAnalyzerError,
+                                         TransitionsChecker)
+from src.analyzer.trace_parser import TraceParser
+from src.decorators.exec_time import PExecTimes, with_time_execution
+from src.errors import ParseError
 from src.KATch_comm import KATchComm
 from src.model.dnk_maude_model import ElementType
+from src.stats import StatsEntry, StatsGenerator
 from src.util import exportFile
-from src.decorators.exec_time import PExecTimes, with_time_execution
-from src.stats import StatsGenerator, StatsEntry
 
 RAW_HARMFUL_TRACE_FILE_NAME = "harmful_trace_raw"
 HARMFUL_TRACE_FILE_NAME = "harmful_trace"

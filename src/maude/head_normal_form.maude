@@ -1,0 +1,80 @@
+load dnk.maude
+load map_util.maude
+load dnk_model_util.maude
+
+fmod TRANS-DATA is
+  protecting STRING .
+	protecting RECURSIVE-DNK .
+
+  sort TData TType .
+
+  ops TNone TProc TComm : -> TType [ctor] .
+
+  op td(_,_,_) : TType String DNKComp -> TData [ctor] .
+endfm
+
+view TData from TRIV to TRANS-DATA is
+  sort Elt to TData .
+endv
+
+mod HEAD-NORMAL-FORM is
+  protecting COMM-STRING-CONVERSION .
+  protecting CONVERSION .
+  protecting LIST {TData} * (sort List {TData} to TDataList) .
+  protecting TRANS-DATA .
+
+  ---- args: DNK exprs to reduce, vector clocks, parent node id
+  op hnf(_,_) : TType DNKComp -> TDataList .
+
+  var PrevTT : TType .
+  vars P Q : DNKComp .
+  var N : String .
+  var X : Channel .
+  vars I J PID : Nat .
+
+  eq hnf(PrevTT, c(bot, I)) = nil .
+
+  eq hnf(PrevTT, P o+ Q) = append(hnf(PrevTT, P), hnf(PrevTT, Q)) .
+
+  ---- Sending or receiving alone does not count in the trace, which is similar to applying the delta operator.
+  ---- The trace also stops here since the expected behavior of a component is to wait when executing a
+  ---- communication instruction until it can synchronize with another component.
+  eq hnf(PrevTT, c((X ! N), I) ; P) = nil .
+  eq hnf(PrevTT, c((X ? N), I) ; P) = nil .
+  eq hnf(PrevTT, rcfg(X, N, I, J) ; P) = td(TComm, compCommToStr(rcfg(X, N, I, J)), P) .
+
+  eq hnf(TProc, c(N, I) ; P) = nil . ---- Heuristic 1: prune trace if it contains two consecutive packet processing transitions
+  eq hnf(PrevTT, c(N, I) ; P) = td(TProc, "proc('" + N + "'," + string(I, 10) + ")", P) .
+
+  ceq [rec-4] : hnf(PrevTT, P) = hnf(PrevTT, unfold(P)) if notUnfolded(P) [owise] .
+endm
+
+---- mod DNK-MODEL is
+----   protecting DNK-MODEL-UTIL .
+  ---- This module is eventually overwritten with the input provided by the user,
+  ---- but it has to be declared here to include it in the meta-interpreters
+  ---- of the parallel computation.
+---- endm
+
+----mod COMPUTE-NEXT-LAYER is
+----  protecting HEAD-NORMAL-FORM .
+----  protecting CONVERSION .
+----  protecting DNK-MODEL .
+----
+----  var P : DNKComp .
+----  var TTy : TType .
+----  var N : String .
+----  var TD : TData .
+----  var VCs : VCMap .
+----  vars ID PID : Nat .
+----  vars Nodes RemNodes : NodeList .
+----
+----  op computeNextLayer : NodeList -> NodeList .
+----  eq computeNextLayer(nil) = nil .
+----  eq computeNextLayer(snode(ID, P, VCs) RemNodes) = (hnf(NTNone, P, VCs, ID) computeNextLayer(RemNodes)) .
+----  eq computeNextLayer(node(ID, PID, P, nd(NTy, N), VCs) RemNodes) = (hnf(NTy, P, VCs, ID) computeNextLayer(RemNodes)) .
+----
+----  op computeNeighbors : TData -> NodeList .
+----  eq computeNeighbors(snode(ID, P, VCs)) = hnf(NTNone, P, VCs, ID) .
+----  eq computeNeighbors(node(ID, PID, P, nd(NTy, N), VCs)) = hnf(NTy, P, VCs, ID) .
+----endm

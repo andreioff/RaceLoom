@@ -29,12 +29,12 @@ fmod TRACE-STATES-TO-TRACE-TREE is
   op $insertTN(_,_,_) : Nat TraceNode TraceNodesMap -> TraceNodesMap .
   eq $insertTN(ID, TN, empty) = (ID |-> TAppend(TN, TEmpty)) .
   eq $insertTN(ID, TN, (M, ID |-> TNs)) = (M, ID |-> TAppend(TN, TNs)) .
-  eq $insertTN(ID, TN, M) = (M, ID |-> TAppend(TN, TEmpty)) .
+  eq $insertTN(ID, TN, (M, L |-> TNs)) = (M, L |-> TNs, ID |-> TAppend(TN, TEmpty)) [owise] .
 
   op $getChildren(_,_) : Nat TraceNodesMap -> TraceNodes .
   eq $getChildren(ID, empty) = TEmpty .
   eq $getChildren(ID, (ChildrenM, ID |-> TNs)) = TNs .
-  eq $getChildren(ID, (ChildrenM, L |-> TNs)) = TEmpty .
+  eq $getChildren(ID, (ChildrenM, L |-> TNs)) = TEmpty [owise] .
 
   op TNMapPrepend(_,_) : NodeList TraceNodesMap -> TraceNodesMap .
   ---- These 2 equations have to explicitly match the second argument
@@ -86,8 +86,8 @@ mod TRACER is
 
 	op rd{_}{_}(_,_) : Configuration Nat NodeList Nat -> TraceNodesMap .
 	op $rd{_}{_}(_) : Configuration Nat AssignIdsResult -> TraceNodesMap .
-  eq rd{WorkersConfig}{0}(Nodes, NID) = TNMapPrepend(Nodes, empty) .
   eq rd{WorkersConfig}{D}(nil, NID) = empty .
+  eq rd{WorkersConfig}{0}((TN Nodes), NID) = TNMapPrepend((TN Nodes), empty) .
   eq rd{WorkersConfig}{s(D)}(Nodes, NID) = TNMapPrepend(Nodes, 
     $rd{WorkersConfig}{D}(
       assignIds(
@@ -99,6 +99,6 @@ mod TRACER is
 
 	op tracer{_}{_}(_,_) : Configuration Nat DNKComp VCMap -> String .
   eq tracer{WorkersConfig}{0}(P, VCs) = "" .
-  eq tracer{<> < M : User | state: PReady, AS >}{D}(P, VCs) = collectTraces(flattenTNMap(
-    rd{< M : User | state: PReady, AS >}{D}(snode(0, P, VCs), 1))).
+  eq tracer{<> < M : User | state: PReady, AS >}{s(D)}(P, VCs) = collectTraces(flattenTNMap(
+    rd{< M : User | state: PReady, AS >}{s(D)}(snode(0, P, VCs), 1))).
 endm

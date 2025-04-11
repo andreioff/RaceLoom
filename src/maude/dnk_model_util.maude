@@ -7,12 +7,12 @@ fmod DNK-MODEL-UTIL is
   op bigSwitch__ : StrMap String -> String [gather (E e)].
 
   var Sws : StrMap .
-  vars L X : String .
-  var I : Nat .
+  vars L X Y : String .
+  vars I J : Nat .
 
   eq concatSws empty = "" .
   eq concatSws (I |-> X , empty) = X .
-  eq concatSws (I |-> X , Sws) = X + "+" + concatSws Sws .
+  eq concatSws (I |-> X , (J |-> Y, Sws)) = X + "+" + concatSws (J |-> Y, Sws) .
 
   eq network Sws L = "(" + (concatSws Sws) + ") . " + "(" + L + ")" .
   eq bigSwitch Sws L = (network Sws L) + " . (" + (network Sws L) + ")*" .

@@ -83,15 +83,17 @@ fmod TRACE-COLLECTOR is
   )] .
 
   vars ChildNodes TNs : TraceNodes .
+  var TN : TraceNode .
   var TR : String .
   var T : TNType .
   var N : String .
   var VCs : VCMap .
 
   ---- the shape of the appended terms should match Python objects of type Tuple[str, List[List[int]]]
+  op nodeDataToStr(_,_) : String VCMap -> String .
+  eq nodeDataToStr(N, VCs) = "(\"" + N + "\",[" + VCMapToString(VCs) + "])" .
   op traceAppend(_,_,_) : String String VCMap -> String .
-  eq traceAppend("", N, VCs) = "(\"" + N + "\",[" + VCMapToString(VCs) + "])" .
-  eq traceAppend(TR, N, VCs) = TR + ",(\"" + N + "\",[" + VCMapToString(VCs) + "])" .
+  eq traceAppend(TR, N, VCs) = if TR == "" then nodeDataToStr(N, VCs) else TR + "," + nodeDataToStr(N, VCs) fi .
 
   op collectTraces(_) : TraceNodes -> String .
   op $collectTraces(_,_) : TraceNodes String -> String .
@@ -99,5 +101,5 @@ fmod TRACE-COLLECTOR is
   eq $collectTraces(TEmpty, TR) = CollectTrace("[" + TR + "]") .
   ---- separate case to prevent collecting incomplete traces 
   eq $collectTraces(TAppend(TNode(T, N, VCs, ChildNodes), TEmpty), TR) = $collectTraces(ChildNodes, traceAppend(TR, N, VCs)) .
-  eq $collectTraces(TAppend(TNode(T, N, VCs, ChildNodes), TNs), TR) = $collectTraces(ChildNodes, traceAppend(TR, N, VCs)) + $collectTraces(TNs, TR) .
+  eq $collectTraces(TAppend(TNode(T, N, VCs, ChildNodes), TAppend(TN, TNs)), TR) = $collectTraces(ChildNodes, traceAppend(TR, N, VCs)) + $collectTraces(TAppend(TN, TNs), TR) .
 endfm

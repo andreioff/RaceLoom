@@ -35,7 +35,7 @@ var W : List{Worker} .
 var C : Configuration .
 
 eq p-init(0) = < manager : User | none > .
-eq p-init(N) = < manager : User | none > init(manager, N) .
+eq p-init(s(N)) = < manager : User | none > init(manager, s(N)) .
 
 eq p-run(< manager : User | #workers: 0, AS >, IL) = < manager : User | state: PReady, resultList: (empty, 0) > .
 eq p-run(< manager : User | workers: nil, AS >, IL) = < manager : User | state: PReady, resultList: (empty, 0) > .
@@ -190,11 +190,11 @@ mod PARALLEL-COMPUTE-NEXT-LAYER is
   ---- first arg: nr of sublists, second arg: total size 
   op calcSubListSize(_,_) : Nat Nat -> Nat .
   eq calcSubListSize(0, K) = K .
-  eq calcSubListSize(I, K) = if (K quo I) == 0 then 1 else (K quo I) fi [print "Processing " K " nodes"] .
+  eq calcSubListSize(s(I), K) = if (K quo s(I)) == 0 then 1 else (K quo s(I)) fi [print "Processing " K " nodes"] .
 
   op cnlParallel : Configuration NodeList -> NodeList .
   op $cnlParallel : Configuration TermList -> NodeList .
   eq cnlParallel(< manager : User | #workers: K, AS >, Nodes) =
     $cnlParallel(< manager : User | #workers: K, AS >, splitNodesList(calcSubListSize(K, size(Nodes)), Nodes)) .
-  eq $cnlParallel(WorkersConfig, TL) = extractRes(<> p-run(WorkersConfig, TL)) .
+  eq $cnlParallel(WorkersConfig, (T, TL)) = extractRes(<> p-run(WorkersConfig, (T, TL))) .
 endm

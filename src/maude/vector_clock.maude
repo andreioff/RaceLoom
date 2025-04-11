@@ -13,7 +13,7 @@ fmod VECTOR-CLOCK is
   op VCToString(_) : VClock -> String .
 
   vars VC1 VC2 : VClock .
-  vars N I J X : Nat .
+  vars N I J X Y : Nat .
   var B : Bool .
 
   eq newVC(0) = empty .
@@ -58,7 +58,7 @@ fmod VECTOR-CLOCK is
 
   eq VCToString(empty) = "" .
   eq VCToString(I |-> X, empty) = string(X, 10) + "" .
-  eq VCToString(I |-> X, VC1) = string(X, 10) + ", " + VCToString(VC1) .
+  eq VCToString(I |-> X, J |-> Y, VC1) = string(X, 10) + ", " + VCToString(J |-> Y, VC1) .
 endfm
 
 view VCLOCK from TRIV to VECTOR-CLOCK is
@@ -116,5 +116,5 @@ fmod VECTOR-CLOCK-MAP is
 
   eq VCMapToString(empty) = "" .
   eq VCMapToString(I |-> VC1, empty) = "[" + VCToString(VC1) + "]" .
-  eq VCMapToString(I |-> VC1, VCs) = "[" + VCToString(VC1) + "]," + VCMapToString(VCs) .
+  eq VCMapToString(I |-> VC1, J |-> VC2, VCs) = "[" + VCToString(VC1) + "]," + VCMapToString(J |-> VC2, VCs) .
 endfm

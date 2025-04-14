@@ -10,7 +10,7 @@ from src.errors import MaudeError
 from src.maude_encoder import MaudeEncoder
 from src.maude_encoder import MaudeModules as mm
 from src.model.dnk_maude_model import DNKMaudeModel
-from src.otf.trace_generator import TraceGenerator
+from src.otf.trace_generator import SequentialTraceGenerator
 from src.stats import StatsEntry, StatsGenerator
 
 
@@ -34,7 +34,10 @@ class Tracer(PExecTimes, StatsGenerator):
     maudeInitialized: bool = False
 
     def __init__(
-        self, config: TracerConfig, traceCollectFile: IO[str], generator: TraceGenerator
+        self,
+        config: TracerConfig,
+        traceCollectFile: IO[str],
+        generator: SequentialTraceGenerator,
     ) -> None:
         self.config = config
         self.execTimes: dict[str, float] = {}

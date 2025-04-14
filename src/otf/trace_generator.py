@@ -1,6 +1,5 @@
 # mypy: disable-error-code="import-untyped,no-any-unimported,misc"
 
-from abc import ABC, abstractmethod
 from typing import List, Tuple
 
 import maude
@@ -12,6 +11,7 @@ from src.maude_encoder import MaudeOps as mo
 from src.maude_encoder import MaudeSorts as ms
 from src.model.dnk_maude_model import DNKMaudeModel
 from src.otf.vector_clock import newVectorClocks
+from src.otf.worklist import Queue, Stack, WorkList
 
 
 def extractListTerms(term: maude.Term, elSort: maude.Sort) -> List[maude.Term]:
@@ -33,13 +33,62 @@ def getSort(mod: maude.Module, sortName: str) -> maude.Sort:
     return sort
 
 
-class TraceGenerator(ABC):
-    @abstractmethod
+def buildTraces(
+    nodes: List[Tuple[TraceNode, int]], traceEnds: List[int]
+) -> List[List[TraceNode]]:
+    if not traceEnds:
+        return []
+    traces: List[List[TraceNode]] = []
+    for end in traceEnds:
+        trace: List[TraceNode] = []
+        i = end
+        while i >= 0:
+            node, nextI = nodes[i]
+            trace.append(node)
+            i = nextI
+        trace.reverse()
+        traces.append(trace)
+    return traces
+
+
+class SequentialTraceGenerator:
+    def __init__(self, workList: WorkList[Tuple[str, str, int, int]]):
+        self.workList = workList
+
     def run(
         self, model: DNKMaudeModel, mod: maude.Module, depth: int
-    ) -> List[List[TraceNode]]: ...
+    ) -> List[List[TraceNode]]:
+        startDnkExpr = MaudeEncoder.parallelSeq(model.getElementTerms())
+        startVC = newVectorClocks(len(model.getElementTerms()))
+        startNode = TraceNode.fromTuple(("", startVC))
+        # list of (node, parent index)
+        nodes: List[Tuple[TraceNode, int]] = [(startNode, -1)]
+        traceEnds: List[int] = []
 
-    def extractTransData(
+        self.workList.reset()
+        self.workList.append((startDnkExpr, mo.TRANS_TYPE_NONE, 0, 0))
+        while not self.workList.isEmpty():
+            (dnkExpr, transType, currI, d) = self.workList.pop()
+
+            term = mod.parseTerm(MaudeEncoder.hnfCall(dnkExpr, transType))
+            term.reduce()
+
+            neighbors = extractListTerms(term, getSort(mod, ms.TDATA))
+            if not neighbors:
+                traceEnds.append(currI)
+                continue
+
+            for n in neighbors:
+                transType, trans, dnkExpr = self.__extractTransData(n, mod)
+                vc = trans.updateVC(nodes[currI][0].vectorClocks)
+                nodes.append((TraceNode(trans, vc), currI))
+                if d + 1 < depth:
+                    self.workList.append((dnkExpr, transType, len(nodes) - 1, d + 1))
+                else:
+                    traceEnds.append(len(nodes) - 1)
+        return buildTraces(nodes, traceEnds)
+
+    def __extractTransData(
         self, term: maude.Term, mod: maude.Module
     ) -> Tuple[str, ITransition, str]:
         expSorts: List[maude.Sort] = [
@@ -61,38 +110,11 @@ class TraceGenerator(ABC):
         return args[0], trans, args[2]
 
 
-class DFSTraceGenerator(TraceGenerator):
-    def run(
-        self, model: DNKMaudeModel, mod: maude.Module, depth: int
-    ) -> List[List[TraceNode]]:
-        traces: List[List[TraceNode]] = []
-        startDnkExpr = MaudeEncoder.parallelSeq(model.getElementTerms())
-        startVC = newVectorClocks(len(model.getElementTerms()))
-        startNode = TraceNode.fromTuple(("", startVC))
+class DFSTraceGenerator(SequentialTraceGenerator):
+    def __init__(self) -> None:
+        super().__init__(Stack[Tuple[str, str, int, int]]())
 
-        stack: List[Tuple[str, str, TraceNode, int]] = [
-            (startDnkExpr, mo.TRANS_TYPE_NONE, startNode, 0)
-        ]
-        trace: List[TraceNode] = []
-        while stack:
-            (dnkExpr, transType, currTN, d) = stack.pop()
-            trace = trace[:d]
-            trace.append(currTN)
-            if d == depth:
-                traces.append(trace.copy())
-                continue
 
-            term = mod.parseTerm(MaudeEncoder.hnfCall(dnkExpr, transType))
-            term.reduce()
-
-            neighbors = extractListTerms(term, getSort(mod, ms.TDATA))
-            if not neighbors:
-                traces.append(trace.copy())
-                continue
-
-            for n in neighbors:
-                transType, trans, dnkExpr = self.extractTransData(n, mod)
-                vc = trans.updateVC(trace[-1].vectorClocks)
-                stack.append((dnkExpr, transType, TraceNode(trans, vc), d + 1))
-
-        return traces
+class BFSTraceGenerator(SequentialTraceGenerator):
+    def __init__(self) -> None:
+        super().__init__(Queue[Tuple[str, str, int, int]]())

@@ -5,13 +5,15 @@ from test.util import DNKTestModel
 
 from pydantic import ValidationError
 
-from src.model.dnk_maude_model import DNKMaudeModel
-from src.tracer import MaudeError, Tracer, TracerConfig
-from src.util import createDir, getFileName, readFile, removeFile
-from src.stats import StatsCollector, StatsEntry
-from src.cli import getCLIArgs, CLIError
-from src.analyzer.trace_file_analyzer import TraceFileAnalyzer
+from src.analyzer.traces_analyzer import TracesAnalyzer
+from src.cli import CLIError, getCLIArgs
+from src.errors import MaudeError
 from src.KATch_comm import KATchComm
+from src.model.dnk_maude_model import DNKMaudeModel
+from src.otf.trace_generator import BFSTraceGenerator, DFSTraceGenerator
+from src.otf.tracer import Tracer, TracerConfig
+from src.stats import StatsCollector, StatsEntry
+from src.util import createDir, exportFile, getFileName, readFile, removeFile
 
 PROJECT_DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 OUTPUT_DIR_PATH = os.path.join(PROJECT_DIR_PATH, "output")
@@ -85,10 +87,11 @@ def main() -> None:
         tracesFilePath = os.path.join(
             runOutputDir, f"{TRACES_FILE_NAME}_{inputFileName}.txt"
         )
-        with open(tracesFilePath, "a") as file:
-            tracer = Tracer(config, file)
-            print("Generating traces...")
-            collectedTraces = tracer.run(dnkModel, args.depth)
+        tracer = Tracer(config, DFSTraceGenerator())
+        print("Generating traces...")
+        generatedTraces = tracer.run(dnkModel, args.depth)
+
+        exportFile(tracesFilePath, os.linesep.join([str(t) for t in generatedTraces]))
 
         stats = StatsCollector()
         stats.addEntries(
@@ -108,7 +111,7 @@ def main() -> None:
         print()
         logRunStats(stats, TRACES_GEN_STATS_FILE_NAME)
 
-        if collectedTraces == 0:
+        if not generatedTraces:
             removeFile(tracesFilePath)
             printAndExit(
                 "Could not generate any traces for the given network and depth!"
@@ -121,17 +124,17 @@ def main() -> None:
         createDir(outputDirDOT)
 
         katchComm = KATchComm(args.katchPath, runOutputDir)
-        pta = TraceFileAnalyzer(katchComm, outputDirRaw, outputDirDOT)
-        pta.analyzeFile(tracesFilePath, dnkModel.elTypeDict)
+        ta = TracesAnalyzer(katchComm, outputDirRaw, outputDirDOT)
+        ta.analyzeFile(generatedTraces, dnkModel.elTypeDict)
 
         stats.addEntries(katchComm.getStats())
-        stats.addEntries(pta.getStats())
+        stats.addEntries(ta.getStats())
         stats.addEntries(
             [
                 StatsEntry(
                     "totalExecTime",
                     "Total execution time",
-                    tracer.getTotalExecTime() + pta.getTotalExecTime(),
+                    tracer.getTotalExecTime() + ta.getTotalExecTime(),
                 )
             ]
         )

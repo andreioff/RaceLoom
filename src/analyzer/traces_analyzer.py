@@ -1,12 +1,11 @@
 import os
-from typing import List, Tuple
+from typing import List
 
-from src.analyzer.harmful_trace import HarmfulTrace, RaceType
+from src.analyzer.harmful_trace import HarmfulTrace
 from src.analyzer.trace_analyzer import (TraceAnalyzer, TraceAnalyzerError,
                                          TransitionsChecker)
-from src.analyzer.trace_parser import TraceParser
+from src.analyzer.trace_parser import TraceNode
 from src.decorators.exec_time import PExecTimes, with_time_execution
-from src.errors import ParseError
 from src.KATch_comm import KATchComm
 from src.model.dnk_maude_model import ElementType
 from src.stats import StatsEntry, StatsGenerator
@@ -16,8 +15,8 @@ RAW_HARMFUL_TRACE_FILE_NAME = "harmful_trace_raw"
 HARMFUL_TRACE_FILE_NAME = "harmful_trace"
 
 
-class TraceFileAnalyzer(PExecTimes, StatsGenerator):
-    """Class for reading and analyzing trace files."""
+class TracesAnalyzer(PExecTimes, StatsGenerator):
+    """Class analyzing traces"""
 
     def __init__(
         self, katchComm: KATchComm, outputDirRaw: str, outputDirDOT: str
@@ -29,52 +28,31 @@ class TraceFileAnalyzer(PExecTimes, StatsGenerator):
         self.harmfulRacesCount = 0
 
     @with_time_execution
-    def analyzeFile(self, traceFilePath: str, elDict: dict[int, ElementType]) -> None:
-        """Parses and analyzes each trace in the given file (1 trace per line), and outputs every
-        trace posing a harmful race in 2 ways: once as a file containing the raw trace and the information about
-        the harmful race, and once as a DOT file."""
+    def analyzeFile(
+        self, traces: List[List[TraceNode]], elDict: dict[int, ElementType]
+    ) -> None:
+        """Analyzes each trace in the given list, and outputs every trace posing
+        a harmful race in 2 ways: once as a file containing the raw trace and the
+        information about the harmful race, and once as a DOT file."""
         transChecker = TransitionsChecker(self.katchComm, elDict)
         ta = TraceAnalyzer(transChecker, elDict)
-        lineCount = 0
-        traceFile = open(traceFilePath, "r", newline="\n")
-        for line in traceFile:
-            traceStr = line.strip().replace("\\", "")
-            htrace = self.__analyzeTrace(lineCount, traceStr, ta)
-            if htrace is not None:
+        for i, trace in enumerate(traces):
+            try:
+                htrace = ta.analyze(trace)
+                if htrace is None:
+                    continue
                 self.harmfulRacesCount += 1
-                self.__writeRawTraceToFile(
-                    traceStr, htrace.racingTrans, htrace.raceType
-                )
+                self.__writeRawTraceToFile(htrace)
                 self.__writeDOTTraceToFile(htrace.toDOT())
-            lineCount += 1
-        traceFile.close()
+            except TraceAnalyzerError as e:
+                print(f"At trace {i}: {e}")
         self.__printUnexpTransMsg(transChecker)
 
-    def __analyzeTrace(
-        self,
-        lineNr: int,
-        traceStr: str,
-        ta: TraceAnalyzer,
-    ) -> HarmfulTrace | None:
-        try:
-            trace = TraceParser.parse(traceStr)
-            return ta.analyze(trace)
-        except SyntaxError:
-            print(
-                f"On line {
-                    lineNr}: Argument 'traceStr' does not contain valid Python3 syntax."
-            )
-        except ParseError as e:
-            print(f"On line {lineNr}: {e}")
-        except TraceAnalyzerError as e:
-            print(f"On line {lineNr}: {e}")
-
-        return None
-
-    def __writeRawTraceToFile(
-        self, traceStr: str, transPos: Tuple[int, int], raceType: RaceType
-    ) -> None:
-        content = f"{traceStr}\n{raceType}\n{transPos[0]},{transPos[1]}"
+    def __writeRawTraceToFile(self, htrace: HarmfulTrace) -> None:
+        content = (
+            f"{htrace.nodes}\n{htrace.raceType}\n"
+            + f"{htrace.racingTrans[0]},{htrace.racingTrans[1]}"
+        )
         fileName = f"{RAW_HARMFUL_TRACE_FILE_NAME}_{
             self.harmfulRacesCount}.txt"
         exportFile(os.path.join(self.outputDirRaw, fileName), content)

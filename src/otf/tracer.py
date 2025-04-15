@@ -36,7 +36,6 @@ class Tracer(PExecTimes, StatsGenerator):
     def __init__(
         self,
         config: TracerConfig,
-        traceCollectFile: IO[str],
         generator: SequentialTraceGenerator,
     ) -> None:
         self.config = config

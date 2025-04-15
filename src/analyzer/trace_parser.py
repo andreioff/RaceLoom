@@ -1,18 +1,14 @@
+from dataclasses import dataclass
 from typing import List, Self, Tuple, cast
 
 from src.analyzer.trace_transition import ITransition, newTraceTransition
 from src.errors import ParseError
 
 
+@dataclass(frozen=True)
 class TraceNode:
-    def __init__(
-        self,
-        trans: ITransition,
-        vectorClocks: List[List[int]],
-    ) -> None:
-        self.trans = trans
-        self.vectorClocks = vectorClocks
-        self.racingElements = None
+    trans: ITransition
+    vectorClocks: List[List[int]]
 
     @classmethod
     def fromTuple(cls, t: Tuple) -> Self:  # type: ignore

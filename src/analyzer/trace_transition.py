@@ -1,15 +1,15 @@
 import re
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import List, Self
 
 from src.errors import ParseError
 from src.otf.vector_clock import incrementVC, transferVC
 
 
+@dataclass(frozen=True)
 class ITransition(ABC):
-    def __init__(self) -> None:
-        self.causesHarmfulRace = False
-        self.policy = ""
+    policy: str
 
     @abstractmethod
     def isModifyingVCPos(self, pos: int) -> bool: ...
@@ -18,7 +18,11 @@ class ITransition(ABC):
     def updateVC(self, vc: List[List[int]]) -> List[List[int]]: ...
 
 
+@dataclass(frozen=True)
 class TraceTransition(ITransition):
+    def __init__(self) -> None:
+        super().__init__("")
+
     def isModifyingVCPos(self, pos: int) -> bool:
         return False
 
@@ -29,11 +33,9 @@ class TraceTransition(ITransition):
         return ""
 
 
+@dataclass(frozen=True)
 class PktProcTrans(ITransition):
-    def __init__(self, policy: str, swPos: int) -> None:
-        super().__init__()
-        self.policy = policy
-        self.swPos = swPos
+    swPos: int
 
     def isModifyingVCPos(self, pos: int) -> bool:
         return self.swPos == pos
@@ -54,13 +56,11 @@ class PktProcTrans(ITransition):
         return f"proc('{self.policy}', {self.swPos})"
 
 
+@dataclass(frozen=True)
 class RcfgTrans(ITransition):
-    def __init__(self, policy: str, srcPos: int, dstPos: int, channel: str) -> None:
-        super().__init__()
-        self.policy = policy
-        self.srcPos: int = srcPos
-        self.dstPos: int = dstPos
-        self.channel: str = channel
+    srcPos: int
+    dstPos: int
+    channel: str
 
     def isModifyingVCPos(self, pos: int) -> bool:
         return self.srcPos == pos or self.dstPos == pos

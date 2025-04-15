@@ -1,13 +1,9 @@
 from __future__ import annotations
+
 from functools import wraps
-from typing import Protocol, Dict, Callable, Concatenate, Hashable, Tuple
-from dataclasses import dataclass
+from typing import Callable, Concatenate, Dict, Hashable, Protocol, Tuple
 
-
-@dataclass
-class CacheStats:
-    hits: int
-    misses: int
+from src.decorators.cache_stats import CacheStats
 
 
 class PBoolCache(Protocol):

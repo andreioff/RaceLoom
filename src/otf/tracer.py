@@ -100,9 +100,19 @@ class Tracer(PExecTimes, StatsGenerator):
     def getStats(self) -> List[StatsEntry]:
         return [
             StatsEntry(
-                "tracesGenerationTime",
+                "tracesGenTime",
                 "Trace(s) generation time",
                 self.getTotalExecTime(),
+            ),
+            StatsEntry(
+                "traceGenCacheHits",
+                "Trace generation cache hits",
+                self.generator.cacheStats.hits,
+            ),
+            StatsEntry(
+                "traceGenCacheMisses",
+                "Trace generation cache misses",
+                self.generator.cacheStats.misses,
             ),
             StatsEntry("generatedTraces", "Generated traces", self.generatedTraces),
         ]

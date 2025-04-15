@@ -1,10 +1,11 @@
 # mypy: disable-error-code="import-untyped,no-any-unimported,misc"
 
-from typing import List, Tuple
+from typing import Dict, Hashable, List, Tuple
 
 import maude
 from src.analyzer.trace_parser import TraceNode
-from src.analyzer.trace_transition import ITransition, newTraceTransition
+from src.analyzer.trace_transition import newTraceTransition
+from src.decorators.cache_stats import CacheStats
 from src.errors import MaudeError
 from src.maude_encoder import MaudeEncoder
 from src.maude_encoder import MaudeOps as mo
@@ -54,6 +55,8 @@ def buildTraces(
 class SequentialTraceGenerator:
     def __init__(self, workList: WorkList[Tuple[str, str, int, int]]):
         self.workList = workList
+        self.cache: Dict[Tuple[Hashable, ...], List[Tuple[str, str, str]]] = {}
+        self.cacheStats = CacheStats(0, 0)
 
     def run(
         self, model: DNKMaudeModel, mod: maude.Module, depth: int
@@ -68,29 +71,45 @@ class SequentialTraceGenerator:
         self.workList.reset()
         self.workList.append((startDnkExpr, mo.TRANS_TYPE_NONE, 0, 0))
         while not self.workList.isEmpty():
-            (dnkExpr, transType, currI, d) = self.workList.pop()
-
-            term = mod.parseTerm(MaudeEncoder.hnfCall(dnkExpr, transType))
-            term.reduce()
-
-            neighbors = extractListTerms(term, getSort(mod, ms.TDATA))
+            (dnkExpr, prevTransType, currI, d) = self.workList.pop()
+            neighbors = self.__computeNeighbors(mod, dnkExpr, prevTransType)
             if not neighbors:
                 traceEnds.append(currI)
                 continue
 
-            for n in neighbors:
-                transType, trans, dnkExpr = self.__extractTransData(n, mod)
+            for prevTransType, transLabel, dnkExpr in neighbors:
+                trans = newTraceTransition(transLabel)
                 vc = trans.updateVC(nodes[currI][0].vectorClocks)
                 nodes.append((TraceNode(trans, vc), currI))
                 if d + 1 < depth:
-                    self.workList.append((dnkExpr, transType, len(nodes) - 1, d + 1))
+                    self.workList.append(
+                        (dnkExpr, prevTransType, len(nodes) - 1, d + 1)
+                    )
                 else:
                     traceEnds.append(len(nodes) - 1)
         return buildTraces(nodes, traceEnds)
 
+    def __computeNeighbors(
+        self, mod: maude.Module, dnkExpr: str, prevTransType: str
+    ) -> List[Tuple[str, str, str]]:
+        key = (dnkExpr, prevTransType)
+        if key in self.cache:
+            self.cacheStats.hits += 1
+            return self.cache[key]
+
+        term = mod.parseTerm(MaudeEncoder.hnfCall(dnkExpr, prevTransType))
+        term.reduce()
+
+        neighbors = extractListTerms(term, getSort(mod, ms.TDATA))
+        result = [self.__extractTransData(n, mod) for n in neighbors]
+
+        self.cache[key] = result
+        self.cacheStats.misses += 1
+        return result
+
     def __extractTransData(
         self, term: maude.Term, mod: maude.Module
-    ) -> Tuple[str, ITransition, str]:
+    ) -> Tuple[str, str, str]:
         expSorts: List[maude.Sort] = [
             getSort(mod, ms.TTYPE),
             getSort(mod, ms.STRING),
@@ -106,8 +125,7 @@ class SequentialTraceGenerator:
                     + f"Found: '{arg.getSort()}', expected: '{expSorts[i]}'."
                 )
             args.append(arg.prettyPrint(maude.PRINT_MIXFIX))
-        trans = newTraceTransition(args[1].strip('"'))
-        return args[0], trans, args[2]
+        return args[0], args[1].strip('"'), args[2]
 
 
 class DFSTraceGenerator(SequentialTraceGenerator):

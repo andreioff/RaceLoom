@@ -1,17 +1,17 @@
 # mypy: disable-error-code="import-untyped,no-any-unimported,misc"
 
 import os
-from typing import IO, List
+from typing import List
 
 import maude
-from src.analyzer.trace_parser import TraceNode
 from src.decorators.exec_time import PExecTimes, with_time_execution
 from src.errors import MaudeError
+from src.generator.trace_generator import SequentialTraceGenerator
 from src.maude_encoder import MaudeEncoder
 from src.maude_encoder import MaudeModules as mm
 from src.model.dnk_maude_model import DNKMaudeModel
-from src.otf.trace_generator import SequentialTraceGenerator
 from src.stats import StatsEntry, StatsGenerator
+from src.trace.node import TraceNode
 
 
 class TracerConfig:

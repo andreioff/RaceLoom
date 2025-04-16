@@ -2,10 +2,10 @@ from os import linesep
 from typing import Callable, List, Protocol, Tuple, TypeVar, cast
 
 from src.analyzer.harmful_trace import HarmfulTrace, RaceType
-from src.analyzer.trace_parser import TraceNode
-from src.analyzer.trace_transition import ITransition, PktProcTrans, RcfgTrans
 from src.KATch_comm import KATchComm
 from src.model.dnk_maude_model import ElementType
+from src.trace.node import TraceNode
+from src.trace.transition import ITransition, PktProcTrans, RcfgTrans
 
 
 class TraceAnalyzerError(Exception):

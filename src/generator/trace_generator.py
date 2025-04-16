@@ -4,16 +4,16 @@ from enum import StrEnum
 from typing import Dict, Hashable, List, Tuple
 
 import maude
-from src.analyzer.trace_parser import TraceNode
-from src.analyzer.trace_transition import newTraceTransition
 from src.decorators.cache_stats import CacheStats
 from src.errors import MaudeError
+from src.generator.worklist import Queue, Stack, WorkList
 from src.maude_encoder import MaudeEncoder
 from src.maude_encoder import MaudeOps as mo
 from src.maude_encoder import MaudeSorts as ms
 from src.model.dnk_maude_model import DNKMaudeModel
-from src.otf.vector_clock import newVectorClocks
-from src.otf.worklist import Queue, Stack, WorkList
+from src.trace.node import TraceNode
+from src.trace.transition import newTraceTransition
+from src.trace.vector_clocks import newVectorClocks
 
 
 def extractListTerms(term: maude.Term, elSort: maude.Sort) -> List[maude.Term]:

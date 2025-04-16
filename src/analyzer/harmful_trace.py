@@ -2,8 +2,8 @@ from enum import StrEnum
 from os import linesep
 from typing import List, Tuple
 
-from src.analyzer.trace_parser import TraceNode
 from src.model.dnk_maude_model import ElementType
+from src.trace.node import TraceNode
 from src.util import splitIntoLines
 
 

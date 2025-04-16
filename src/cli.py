@@ -3,7 +3,7 @@ import os
 from dataclasses import dataclass
 from typing import List
 
-from src.otf.trace_generator import TraceGenOption
+from src.generator.trace_generator import TraceGenOption
 from src.stats import StatsEntry, StatsGenerator
 from src.util import isExe
 

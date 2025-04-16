@@ -8,10 +8,10 @@ from pydantic import ValidationError
 from src.analyzer.traces_analyzer import TracesAnalyzer
 from src.cli import CLIError, getCLIArgs
 from src.errors import MaudeError
+from src.generator.trace_generator import newTraceGenerator
+from src.generator.tracer import Tracer, TracerConfig
 from src.KATch_comm import KATchComm
 from src.model.dnk_maude_model import DNKMaudeModel
-from src.otf.trace_generator import newTraceGenerator
-from src.otf.tracer import Tracer, TracerConfig
 from src.stats import StatsCollector, StatsEntry
 from src.util import createDir, exportFile, getFileName, readFile, removeFile
 

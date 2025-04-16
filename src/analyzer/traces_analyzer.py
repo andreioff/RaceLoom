@@ -4,11 +4,11 @@ from typing import List
 from src.analyzer.harmful_trace import HarmfulTrace
 from src.analyzer.trace_analyzer import (TraceAnalyzer, TraceAnalyzerError,
                                          TransitionsChecker)
-from src.analyzer.trace_parser import TraceNode
 from src.decorators.exec_time import PExecTimes, with_time_execution
 from src.KATch_comm import KATchComm
 from src.model.dnk_maude_model import ElementType
 from src.stats import StatsEntry, StatsGenerator
+from src.trace.node import TraceNode
 from src.util import exportFile
 
 RAW_HARMFUL_TRACE_FILE_NAME = "harmful_trace_raw"

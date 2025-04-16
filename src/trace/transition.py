@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import List, Self
 
 from src.errors import ParseError
-from src.otf.vector_clock import incrementVC, transferVC
+from src.trace.vector_clocks import incrementVC, transferVC
 
 
 @dataclass(frozen=True)

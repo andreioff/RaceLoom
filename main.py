@@ -10,7 +10,7 @@ from src.cli import CLIError, getCLIArgs
 from src.errors import MaudeError
 from src.KATch_comm import KATchComm
 from src.model.dnk_maude_model import DNKMaudeModel
-from src.otf.trace_generator import BFSTraceGenerator, DFSTraceGenerator
+from src.otf.trace_generator import newTraceGenerator
 from src.otf.tracer import Tracer, TracerConfig
 from src.stats import StatsCollector, StatsEntry
 from src.util import createDir, exportFile, getFileName, readFile, removeFile
@@ -87,22 +87,15 @@ def main() -> None:
         tracesFilePath = os.path.join(
             runOutputDir, f"{TRACES_FILE_NAME}_{inputFileName}.txt"
         )
-        tracer = Tracer(config, DFSTraceGenerator())
+        tracer = Tracer(config, newTraceGenerator(args.strategy))
         print("Generating traces...")
         generatedTraces = tracer.run(dnkModel, args.depth)
 
         exportFile(tracesFilePath, os.linesep.join([str(t) for t in generatedTraces]))
 
         stats = StatsCollector()
-        stats.addEntries(
-            [
-                StatsEntry("date", "Date", fmtTime),
-                StatsEntry(
-                    "inputFile", "Input file", os.path.basename(args.inputFilePath)
-                ),
-                StatsEntry("depth", "Depth", args.depth),
-            ]
-        )
+        stats.addEntries([StatsEntry("date", "Date", fmtTime)])
+        stats.addEntries(args.getStats())
         stats.addEntries(dnkModel.getStats())
         stats.addEntries(tracer.getStats())
 

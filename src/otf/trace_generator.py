@@ -1,5 +1,6 @@
 # mypy: disable-error-code="import-untyped,no-any-unimported,misc"
 
+from enum import StrEnum
 from typing import Dict, Hashable, List, Tuple
 
 import maude
@@ -136,3 +137,14 @@ class DFSTraceGenerator(SequentialTraceGenerator):
 class BFSTraceGenerator(SequentialTraceGenerator):
     def __init__(self) -> None:
         super().__init__(Queue[Tuple[str, str, int, int]]())
+
+
+class TraceGenOption(StrEnum):
+    DFS = "dfs"
+    BFS = "bfs"
+
+
+def newTraceGenerator(option: TraceGenOption) -> SequentialTraceGenerator:
+    if option == TraceGenOption.DFS:
+        return DFSTraceGenerator()
+    return BFSTraceGenerator()

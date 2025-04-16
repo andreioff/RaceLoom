@@ -1,6 +1,10 @@
-import os
 import argparse
+import os
 from dataclasses import dataclass
+from typing import List
+
+from src.otf.trace_generator import TraceGenOption
+from src.stats import StatsEntry, StatsGenerator
 from src.util import isExe
 
 
@@ -9,13 +13,21 @@ class CLIError(Exception):
 
 
 @dataclass
-class CLIArguments:
+class CLIArguments(StatsGenerator):
     katchPath: str
     inputFilePath: str
     depth: int
     threads: int
     debug: bool
     verbose: bool
+    strategy: TraceGenOption
+
+    def getStats(self) -> List[StatsEntry]:
+        return [
+            StatsEntry("inputFile", "Input file", os.path.basename(self.inputFilePath)),
+            StatsEntry("strategy", "Trace generation strategy", self.strategy),
+            StatsEntry("depth", "Depth", self.depth),
+        ]
 
 
 def buildArgsParser() -> argparse.ArgumentParser:
@@ -55,6 +67,15 @@ def buildArgsParser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print log messages during execution",
     )
+    parser.add_argument(
+        "-s",
+        "--strategy",
+        type=TraceGenOption,
+        choices=list(TraceGenOption),
+        dest="strategy",
+        default=TraceGenOption.BFS,
+        help=f"Strategy used to generate the traces (default is '{TraceGenOption.BFS}')",
+    )
     return parser
 
 
@@ -78,6 +99,8 @@ def validateArgs(args: CLIArguments) -> None:
         raise CLIError("Depth cannot be negative")
     if args.threads < 1:
         raise CLIError("Number of threads must be a positive integer")
+    if args.strategy not in TraceGenOption:
+        raise CLIError(f"Unknown strategy: '{args.strategy}'")
 
 
 def getCLIArgs() -> CLIArguments:

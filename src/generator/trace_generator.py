@@ -98,7 +98,7 @@ class SequentialTraceGenerator:
             self.cacheStats.hits += 1
             return self.cache[key]
 
-        term = mod.parseTerm(MaudeEncoder.hnfCall(dnkExpr, prevTransType))
+        term = mod.parseTerm(MaudeEncoder.hnfCall(0, dnkExpr, prevTransType))
         term.reduce()
 
         neighbors = extractListTerms(term, getSort(mod, ms.TDATA))
@@ -112,6 +112,7 @@ class SequentialTraceGenerator:
         self, term: maude.Term, mod: maude.Module
     ) -> Tuple[str, str, str]:
         expSorts: List[maude.Sort] = [
+            getSort(mod, ms.NAT),
             getSort(mod, ms.TTYPE),
             getSort(mod, ms.STRING),
             getSort(mod, ms.DNK_COMP),
@@ -126,7 +127,7 @@ class SequentialTraceGenerator:
                     + f"Found: '{arg.getSort()}', expected: '{expSorts[i]}'."
                 )
             args.append(arg.prettyPrint(maude.PRINT_MIXFIX))
-        return args[0], args[1].strip('"'), args[2]
+        return args[1], args[2].strip('"'), args[3]
 
 
 class DFSTraceGenerator(SequentialTraceGenerator):

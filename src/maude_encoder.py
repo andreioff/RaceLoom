@@ -196,5 +196,5 @@ class MaudeEncoder:
         return dnkExpr
 
     @staticmethod
-    def hnfCall(dnkExpr: str, transType: str) -> str:
-        return f"{MaudeOps.HNF}({transType}, {dnkExpr})"
+    def hnfCall(parentNodeId: int, dnkExpr: str, transType: str) -> str:
+        return f"{MaudeOps.HNF}({parentNodeId}, {transType}, {dnkExpr})"

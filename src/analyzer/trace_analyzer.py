@@ -3,7 +3,7 @@ from typing import Callable, List, Protocol, Tuple, TypeVar, cast
 
 from src.analyzer.harmful_trace import HarmfulTrace, RaceType
 from src.KATch_comm import KATchComm
-from src.model.dnk_maude_model import ElementType
+from src.model.dnk_maude_model import ElementMetadata, ElementType
 from src.trace.node import TraceNode
 from src.trace.transition import ITransition, PktProcTrans, RcfgTrans
 
@@ -31,12 +31,15 @@ class _TransitionCheckers(Protocol):
 
 
 class TransitionsChecker:
-    def __init__(self, katchComm: KATchComm, elDict: dict[int, ElementType]) -> None:
+    def __init__(
+        self, katchComm: KATchComm, elDict: dict[int, ElementMetadata]
+    ) -> None:
         self.elDict = elDict
         self.katchComm = katchComm
         self.__unexpected: dict[str, int] = {}
         self.__checks: _TransitionCheckers = cast(_TransitionCheckers, {})
         self.__checks[(PktProcTrans, RcfgTrans)] = self.checkProcRcfg
+        self.__checks[(RcfgTrans, PktProcTrans)] = self.checkRcfgProc
         self.__checks[(RcfgTrans, RcfgTrans)] = self.checkRcfgRcfg
 
     def check(self, t1: ITransition, t2: ITransition) -> RaceType | None:
@@ -47,10 +50,14 @@ class TransitionsChecker:
 
     def checkRcfgRcfg(self, t1: RcfgTrans, t2: RcfgTrans) -> RaceType | None:
         # TODO AND THERE ARE NO OTHER RCFGs in between that modify the same switch
+        src1Type = self.elDict[t1.srcPos].pType
+        src2Type = self.elDict[t2.srcPos].pType
+        targetSw1Id = self.elDict[t1.dstPos].pID
+        targetSw2Id = self.elDict[t2.dstPos].pID
         if (
-            t1.dstPos != t2.dstPos
-            or self.elDict[t1.srcPos] == ElementType.SW
-            or self.elDict[t2.srcPos] == ElementType.SW
+            targetSw1Id != targetSw2Id
+            or src1Type == ElementType.SW
+            or src2Type == ElementType.SW
         ):
             return None
 
@@ -58,11 +65,16 @@ class TransitionsChecker:
         return RaceType.CTCT if res else None
 
     def checkProcRcfg(self, t1: PktProcTrans, t2: RcfgTrans) -> RaceType | None:
-        if t2.dstPos != t1.swPos:
+        targetSwId = self.elDict[t2.dstPos].pID
+        srcSwId = self.elDict[t1.swPos].pID
+        if targetSwId != srcSwId:
             return None
 
         res = self.katchComm.isNonEmptyDifference(t1.policy, t2.policy)
         return RaceType.SWCT if res else None
+
+    def checkRcfgProc(self, t1: RcfgTrans, t2: PktProcTrans) -> RaceType | None:
+        return self.checkProcRcfg(t2, t1)
 
     def checkDefault(self, t1: ITransition, t2: ITransition) -> RaceType | None:
         key = f"({type(t1).__name__}, {type(t2).__name__})"
@@ -73,7 +85,7 @@ class TransitionsChecker:
         self.__unexpected[key] = 1
         return None
 
-    def getUnexpectedTransPairs(self, prefix: str = "") -> str:
+    def getUnexpectedTransPairsStr(self, prefix: str = "") -> str:
         sb: List[str] = []
         for key, value in self.__unexpected.items():
             sb.append(f"{prefix}{key}: {value} occurrences")
@@ -82,11 +94,12 @@ class TransitionsChecker:
 
 class TraceAnalyzer:
     def __init__(
-        self, transChecker: TransitionsChecker, elDict: dict[int, ElementType]
+        self, transChecker: TransitionsChecker, elDict: dict[int, ElementMetadata]
     ) -> None:
         self.transChecker = transChecker
         self.elDict = elDict
         self.trace: List[TraceNode] = []
+        self.__skippedRaces: dict[RaceType, int] = {}
 
     def analyze(self, trace: List[TraceNode]) -> HarmfulTrace | None:
         """Does not account for policies/flow rules that are appended to a flow table.
@@ -145,8 +158,11 @@ class TraceAnalyzer:
                     el1} or {el2}"
             )
             return None
-        if self.elDict[el1] == ElementType.SW and self.elDict[el2] == ElementType.SW:
-            print("Skipping SW-SW race...")
+        if (
+            self.elDict[el1].pType == ElementType.SW
+            and self.elDict[el2].pType == ElementType.SW
+        ):
+            self.__addSkippedRace(RaceType.SWSW)
             return None
         ps = self.__findTransitions(startNodePos, el1, el2)
         if ps is None:
@@ -159,3 +175,15 @@ class TraceAnalyzer:
             return ps, raceType
 
         return None
+
+    def __addSkippedRace(self, rt: RaceType) -> None:
+        if rt not in self.__skippedRaces:
+            self.__skippedRaces[rt] = 1
+            return
+        self.__skippedRaces[rt] += 1
+
+    def getSkippedRacesStr(self, prefix: str = "") -> str:
+        sb: List[str] = []
+        for key, value in self.__skippedRaces.items():
+            sb.append(f"{prefix}{key}: {value} times")
+        return linesep.join(sb)

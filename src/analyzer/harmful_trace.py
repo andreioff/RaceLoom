@@ -2,12 +2,13 @@ from enum import StrEnum
 from os import linesep
 from typing import List, Tuple
 
-from src.model.dnk_maude_model import ElementType
+from src.model.dnk_maude_model import ElementMetadata
 from src.trace.node import TraceNode
 from src.util import splitIntoLines
 
 
 class RaceType(StrEnum):
+    SWSW = "SW-SW"
     SWCT = "SW-CT"
     CTCT = "CT-CT"
 
@@ -24,7 +25,7 @@ class HarmfulTrace:
     def __init__(
         self,
         nodes: List[TraceNode],
-        elDict: dict[int, ElementType],
+        elDict: dict[int, ElementMetadata],
         srcNode: int,
         racingTrans: Tuple[int, int],
         racingElements: Tuple[int, int],
@@ -70,15 +71,16 @@ class HarmfulTrace:
         return ColorScheme.NODE_BG
 
     def __getNodeLabel(self, node: TraceNode, isSource: bool) -> str:
-        typeLabel = ""
-        vcLabel = ""
-        prefix = ""
+        elNames, vcLabel, prefix = "", "", ""
         for i, vc in enumerate(node.vectorClocks):
-            typeLabel += prefix + self.elDict[i]
+            elName = self.elDict[i].name
+            if not elName:
+                elName = self.elDict[i].pType
+            elNames += prefix + elName
             vcLabel += prefix
             if isSource and i in self.racingElements:
                 vcLabel += f'<font color="{ColorScheme.ACCENT}">{vc}</font>'
             else:
                 vcLabel += f"{vc}"
             prefix = ", "
-        return typeLabel + "<br/>[" + vcLabel + "]"
+        return elNames + "<br/>[" + vcLabel + "]"

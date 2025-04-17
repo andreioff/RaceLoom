@@ -6,7 +6,7 @@ from src.analyzer.trace_analyzer import (TraceAnalyzer, TraceAnalyzerError,
                                          TransitionsChecker)
 from src.decorators.exec_time import PExecTimes, with_time_execution
 from src.KATch_comm import KATchComm
-from src.model.dnk_maude_model import ElementType
+from src.model.dnk_maude_model import ElementMetadata
 from src.stats import StatsEntry, StatsGenerator
 from src.trace.node import TraceNode
 from src.util import exportFile
@@ -29,24 +29,22 @@ class TracesAnalyzer(PExecTimes, StatsGenerator):
 
     @with_time_execution
     def analyzeFile(
-        self, traces: List[List[TraceNode]], elDict: dict[int, ElementType]
+        self, traces: List[List[TraceNode]], elDict: dict[int, ElementMetadata]
     ) -> None:
         """Analyzes each trace in the given list, and outputs every trace posing
         a harmful race in 2 ways: once as a file containing the raw trace and the
         information about the harmful race, and once as a DOT file."""
         transChecker = TransitionsChecker(self.katchComm, elDict)
         ta = TraceAnalyzer(transChecker, elDict)
-        for i, trace in enumerate(traces):
-            try:
-                htrace = ta.analyze(trace)
-                if htrace is None:
-                    continue
-                self.harmfulRacesCount += 1
-                self.__writeRawTraceToFile(htrace)
-                self.__writeDOTTraceToFile(htrace.toDOT())
-            except TraceAnalyzerError as e:
-                print(f"At trace {i}: {e}")
+        for trace in traces:
+            htrace = ta.analyze(trace)
+            if htrace is None:
+                continue
+            self.harmfulRacesCount += 1
+            self.__writeRawTraceToFile(htrace)
+            self.__writeDOTTraceToFile(htrace.toDOT(), htrace.raceType)
         self.__printUnexpTransMsg(transChecker)
+        self.__printSkippedRaces(ta)
 
     def __writeRawTraceToFile(self, htrace: HarmfulTrace) -> None:
         content = (
@@ -54,15 +52,15 @@ class TracesAnalyzer(PExecTimes, StatsGenerator):
             + f"{htrace.racingTrans[0]},{htrace.racingTrans[1]}"
         )
         fileName = f"{RAW_HARMFUL_TRACE_FILE_NAME}_{
-            self.harmfulRacesCount}.txt"
+            self.harmfulRacesCount}_{htrace.raceType}.txt"
         exportFile(os.path.join(self.outputDirRaw, fileName), content)
 
-    def __writeDOTTraceToFile(self, traceDOT: str) -> None:
-        fileName = f"{HARMFUL_TRACE_FILE_NAME}_{self.harmfulRacesCount}.gv"
+    def __writeDOTTraceToFile(self, traceDOT: str, raceType: str) -> None:
+        fileName = f"{HARMFUL_TRACE_FILE_NAME}_{self.harmfulRacesCount}_{raceType}.gv"
         exportFile(os.path.join(self.outputDirDOT, fileName), traceDOT)
 
     def __printUnexpTransMsg(self, transChecker: TransitionsChecker) -> None:
-        unexpTransPairs = transChecker.getUnexpectedTransPairs("\t")
+        unexpTransPairs = transChecker.getUnexpectedTransPairsStr("\t")
         if not unexpTransPairs:
             return
         print(
@@ -75,6 +73,13 @@ class TracesAnalyzer(PExecTimes, StatsGenerator):
             + "no analysis behavior was programed."
         )
         print("Note: the order of the transitions matters!")
+
+    def __printSkippedRaces(self, ta: TraceAnalyzer) -> None:
+        skippedRaces = ta.getSkippedRacesStr("\t")
+        if not skippedRaces:
+            return
+        print("Skipped races:")
+        print(skippedRaces)
 
     def getStats(self) -> List[StatsEntry]:
         return [

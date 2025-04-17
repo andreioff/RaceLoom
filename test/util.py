@@ -9,7 +9,8 @@ from networkx.classes.coreviews import AdjacencyView, AtlasView
 
 import src
 from src.maude_encoder import MaudeModules as mm
-from src.model.dnk_maude_model import DNKMaudeModel, ElementType
+from src.model.dnk_maude_model import (DNKMaudeModel, ElementMetadata,
+                                       ElementType)
 
 PROJECT_DIR = os.path.dirname(inspect.getabsfile(src))
 TEST_DIR = os.path.dirname(inspect.getabsfile(test.src))
@@ -26,9 +27,9 @@ class DNKTestModel(DNKMaudeModel):
         for i, term in enumerate(parallelExpr.split("||")):
             self.elementTerms.append(term.strip())
             if "SW" in term:
-                self.elTypeDict[i] = ElementType.SW
+                self.elTypeDict[i] = ElementMetadata(i, ElementType.SW)
                 continue
-            self.elTypeDict[i] = ElementType.CT
+            self.elTypeDict[i] = ElementMetadata(i, ElementType.CT)
 
     def toMaudeModule(self) -> str:
         return f"""

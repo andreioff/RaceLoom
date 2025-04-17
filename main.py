@@ -12,6 +12,8 @@ from src.generator.trace_generator import newTraceGenerator
 from src.generator.tracer import Tracer, TracerConfig
 from src.KATch_comm import KATchComm
 from src.model.dnk_maude_model import DNKMaudeModel
+from src.model.split_switch_dnk_model import SplitSwDNKMaudeModel
+from src.model.unsplit_switch_dnk_model import UnsplitSwDNKMaudeModel
 from src.stats import StatsCollector, StatsEntry
 from src.util import createDir, exportFile, getFileName, readFile, removeFile
 
@@ -24,6 +26,8 @@ HARMFUL_TRACES_DIR_NAME = "harmful_traces"
 HARMFUL_TRACES_RAW_DIR_NAME = "harmful_traces_raw"
 TRACES_GEN_STATS_FILE_NAME = "trace_generation_stats"
 STATS_FILE_NAME = "final_stats"
+
+DNK_MAUDE_MODEL_CLASS = SplitSwDNKMaudeModel
 
 
 def printAndExit(msg: str) -> None:
@@ -61,9 +65,9 @@ def readDNKModelFromFile(filePath: str) -> DNKMaudeModel:
     if fileExt == "maude":
         return DNKTestModel.fromDebugMaudeFile(fileContent)
     if fileExt == "json":
-        return DNKMaudeModel.fromJson(fileContent)
+        return DNK_MAUDE_MODEL_CLASS.fromJson(fileContent)
     printAndExit(f"Unknown input file extension: '{fileExt}'!")
-    return DNKMaudeModel()
+    return DNK_MAUDE_MODEL_CLASS()
 
 
 def main() -> None:
@@ -118,7 +122,7 @@ def main() -> None:
 
         katchComm = KATchComm(args.katchPath, runOutputDir)
         ta = TracesAnalyzer(katchComm, outputDirRaw, outputDirDOT)
-        ta.analyzeFile(generatedTraces, dnkModel.elTypeDict)
+        ta.analyzeFile(generatedTraces, dnkModel.getElementMetadataDict())
 
         stats.addEntries(katchComm.getStats())
         stats.addEntries(ta.getStats())

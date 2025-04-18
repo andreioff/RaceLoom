@@ -1,7 +1,7 @@
 import inspect
 import os
 import test.src
-from typing import List
+from typing import List, Self
 
 import networkx
 import networkx.algorithms as ga
@@ -23,13 +23,19 @@ class DNKTestModel(DNKMaudeModel):
         the expression to be a switch if it contains 'SW' in its name"""
         super().__init__()
         self.maudeModuleContent = maudeModuleContent
+        self.elementTerms: List[str] = []
+        self.elMetadataDict: dict[int, ElementMetadata] = {}
 
         for i, term in enumerate(parallelExpr.split("||")):
             self.elementTerms.append(term.strip())
             if "SW" in term:
-                self.elTypeDict[i] = ElementMetadata(i, ElementType.SW)
+                self.elMetadataDict[i] = ElementMetadata(i, ElementType.SW)
                 continue
-            self.elTypeDict[i] = ElementMetadata(i, ElementType.CT)
+            self.elMetadataDict[i] = ElementMetadata(i, ElementType.CT)
+
+    @classmethod
+    def fromJson(cls, jsonStr: str) -> Self:
+        raise Exception("Not implemented")
 
     def toMaudeModule(self) -> str:
         return f"""
@@ -41,6 +47,15 @@ class DNKTestModel(DNKMaudeModel):
 
     def getElementTerms(self) -> List[str]:
         return self.elementTerms
+
+    def getMaudeModuleName(self) -> str:
+        return mm.DNK_MODEL
+
+    def getBranchCounts(self) -> str:
+        return "unknown"
+
+    def getElementMetadataDict(self) -> dict[int, ElementMetadata]:
+        return self.elMetadataDict
 
     @classmethod
     def fromDebugMaudeFile(cls, fileContent: str) -> DNKMaudeModel:

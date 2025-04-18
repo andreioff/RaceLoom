@@ -23,7 +23,7 @@ _FR_VAR_NAME = "FR"
 class UnsplitSwDNKMaudeModel(DNKMaudeModel):
     def __init__(self) -> None:
         self.me = MaudeEncoder()
-        self.elTypeDict: dict[int, ElementMetadata] = {}
+        self.elMetadataDict: dict[int, ElementMetadata] = {}
         self.elementTerms: List[str] = []
         self.branchCounts: dict[str, int] = {}
 
@@ -218,10 +218,10 @@ class UnsplitSwDNKMaudeModel(DNKMaudeModel):
 
     def __buildElementTerms(self, model: jm.DNKNetwork) -> None:
         elTerms: List[str] = [self.__buildBigSwitchTerm(model)]
-        self.elTypeDict = {0: ElementMetadata(0, ElementType.SW)}
+        self.elMetadataDict = {0: ElementMetadata(0, ElementType.SW)}
         for i, name in enumerate(model.Controllers.keys()):
             elTerms.append(self.me.recPolTerm(name))
-            self.elTypeDict[i + 1] = ElementMetadata(i + 1, ElementType.CT)
+            self.elMetadataDict[i + 1] = ElementMetadata(i + 1, ElementType.CT)
         self.elementTerms = elTerms
 
     def __addBranchCount(self, key: str, count: int) -> None:
@@ -242,4 +242,4 @@ class UnsplitSwDNKMaudeModel(DNKMaudeModel):
         return mm.DNK_MODEL
 
     def getElementMetadataDict(self) -> dict[int, ElementMetadata]:
-        return self.elTypeDict
+        return self.elMetadataDict

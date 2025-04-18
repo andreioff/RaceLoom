@@ -17,7 +17,7 @@ view TData from TRIV to TRANS-DATA is
   sort Elt to TData .
 endv
 
-mod HEAD-NORMAL-FORM is
+fmod HEAD-NORMAL-FORM is
   protecting COMM-STRING-CONVERSION .
   protecting CONVERSION .
   protecting LIST {TData} * (sort List {TData} to TDataList) .
@@ -50,7 +50,7 @@ mod HEAD-NORMAL-FORM is
   eq hnf(PID, PrevTT, c(N, I) ; P) = td(PID, TProc, "proc('" + N + "'," + string(I, 10) + ")", P) .
 
   ceq [rec-4] : hnf(PID, PrevTT, P) = hnf(PID, PrevTT, unfold(P)) if notUnfolded(P) [owise] .
-endm
+endfm
 
 view HNFInput from TRIV to HEAD-NORMAL-FORM is
   sort Elt to HNFInput .

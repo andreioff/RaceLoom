@@ -1,38 +1,47 @@
 # mypy: disable-error-code="import-untyped,no-any-unimported,misc"
-
-from enum import StrEnum
+from abc import ABC, abstractmethod
 from typing import Dict, Hashable, List, Tuple
 
 import maude
 from src.decorators.cache_stats import CacheStats
 from src.errors import MaudeError
-from src.generator.worklist import Queue, Stack, WorkList
-from src.maude_encoder import MaudeEncoder
-from src.maude_encoder import MaudeOps as mo
+from src.maude_encoder import MaudeModules
 from src.maude_encoder import MaudeSorts as ms
 from src.model.dnk_maude_model import DNKMaudeModel
+from src.stats import StatsEntry, StatsGenerator
 from src.trace.node import TraceNode
-from src.trace.transition import newTraceTransition
-from src.trace.vector_clocks import newVectorClocks
 
 
-def extractListTerms(term: maude.Term, elSort: maude.Sort) -> List[maude.Term]:
-    if term.getSort() == elSort:
-        return [term]
+class TraceGenerator(StatsGenerator, ABC):
+    def __init__(self) -> None:
+        self.cache: Dict[Tuple[Hashable, ...], List[Tuple[str, str, str]]] = {}
+        self.cacheStats = CacheStats(0, 0)
 
-    elements: List[maude.Term] = []
-    for argument in term.arguments():
-        if argument.getSort() != elSort:
-            continue
-        elements.append(argument)
-    return elements
+    @abstractmethod
+    def run(
+        self, model: DNKMaudeModel, mod: maude.Module, depth: int
+    ) -> List[List[TraceNode]]: ...
 
+    @abstractmethod
+    def getRequiredImports(self) -> List[MaudeModules]: ...
 
-def getSort(mod: maude.Module, sortName: str) -> maude.Sort:
-    sort: maude.Sort | None = mod.findSort(sortName)
-    if sort is None:
-        raise MaudeError(f"Could not find sort '{sortName}' in the given Maude module")
-    return sort
+    def reset(self) -> None:
+        self.cache = {}
+        self.cacheStats = CacheStats(0, 0)
+
+    def getStats(self) -> List[StatsEntry]:
+        return [
+            StatsEntry(
+                "traceGenCacheHits",
+                "Trace generation cache hits",
+                self.cacheStats.hits,
+            ),
+            StatsEntry(
+                "traceGenCacheMisses",
+                "Trace generation cache misses",
+                self.cacheStats.misses,
+            ),
+        ]
 
 
 def buildTraces(
@@ -53,99 +62,45 @@ def buildTraces(
     return traces
 
 
-class SequentialTraceGenerator:
-    def __init__(self, workList: WorkList[Tuple[str, str, int, int]]):
-        self.workList = workList
-        self.cache: Dict[Tuple[Hashable, ...], List[Tuple[str, str, str]]] = {}
-        self.cacheStats = CacheStats(0, 0)
-
-    def run(
-        self, model: DNKMaudeModel, mod: maude.Module, depth: int
-    ) -> List[List[TraceNode]]:
-        startDnkExpr = MaudeEncoder.parallelSeq(model.getElementTerms())
-        startVC = newVectorClocks(len(model.getElementTerms()))
-        startNode = TraceNode.fromTuple(("", startVC))
-        # list of (node, parent index)
-        nodes: List[Tuple[TraceNode, int]] = [(startNode, -1)]
-        traceEnds: List[int] = []
-
-        self.workList.reset()
-        self.workList.append((startDnkExpr, mo.TRANS_TYPE_NONE, 0, 0))
-        while not self.workList.isEmpty():
-            (dnkExpr, prevTransType, currI, d) = self.workList.pop()
-            neighbors = self.__computeNeighbors(mod, dnkExpr, prevTransType)
-            if not neighbors:
-                traceEnds.append(currI)
-                continue
-
-            for prevTransType, transLabel, dnkExpr in neighbors:
-                trans = newTraceTransition(transLabel)
-                vc = trans.updateVC(nodes[currI][0].vectorClocks)
-                nodes.append((TraceNode(trans, vc), currI))
-                if d + 1 < depth:
-                    self.workList.append(
-                        (dnkExpr, prevTransType, len(nodes) - 1, d + 1)
-                    )
-                else:
-                    traceEnds.append(len(nodes) - 1)
-        return buildTraces(nodes, traceEnds)
-
-    def __computeNeighbors(
-        self, mod: maude.Module, dnkExpr: str, prevTransType: str
-    ) -> List[Tuple[str, str, str]]:
-        key = (dnkExpr, prevTransType)
-        if key in self.cache:
-            self.cacheStats.hits += 1
-            return self.cache[key]
-
-        term = mod.parseTerm(MaudeEncoder.hnfCall(0, dnkExpr, prevTransType))
-        term.reduce()
-
-        neighbors = extractListTerms(term, getSort(mod, ms.TDATA))
-        result = [self.__extractTransData(n, mod) for n in neighbors]
-
-        self.cache[key] = result
-        self.cacheStats.misses += 1
-        return result
-
-    def __extractTransData(
-        self, term: maude.Term, mod: maude.Module
-    ) -> Tuple[str, str, str]:
-        expSorts: List[maude.Sort] = [
-            getSort(mod, ms.NAT),
-            getSort(mod, ms.TTYPE),
-            getSort(mod, ms.STRING),
-            getSort(mod, ms.DNK_COMP),
-        ]
-        args: List[str] = []
-        for i, arg in enumerate(term.arguments()):
-            argSort = arg.getSort()
-            if argSort != expSorts[i] and not argSort.leq(expSorts[i]):
-                raise MaudeError(
-                    "Unexpected Maude type when extracting "
-                    + "head normal form result. "
-                    + f"Found: '{arg.getSort()}', expected: '{expSorts[i]}'."
-                )
-            args.append(arg.prettyPrint(maude.PRINT_MIXFIX))
-        return args[1], args[2].strip('"'), args[3]
+def extractListTerms(term: maude.Term, elSort: maude.Sort) -> List[maude.Term]:
+    if term.getSort() == elSort:
+        return [term]
+    elements: List[maude.Term] = []
+    for argument in term.arguments():
+        if argument.getSort() != elSort:
+            continue
+        elements.append(argument)
+    return elements
 
 
-class DFSTraceGenerator(SequentialTraceGenerator):
-    def __init__(self) -> None:
-        super().__init__(Stack[Tuple[str, str, int, int]]())
+def getSort(mod: maude.Module, sortName: str) -> maude.Sort:
+    sort: maude.Sort | None = mod.findSort(sortName)
+    if sort is None:
+        raise MaudeError(f"Could not find sort '{sortName}' in the given Maude module")
+    return sort
 
 
-class BFSTraceGenerator(SequentialTraceGenerator):
-    def __init__(self) -> None:
-        super().__init__(Queue[Tuple[str, str, int, int]]())
-
-
-class TraceGenOption(StrEnum):
-    DFS = "dfs"
-    BFS = "bfs"
-
-
-def newTraceGenerator(option: TraceGenOption) -> SequentialTraceGenerator:
-    if option == TraceGenOption.DFS:
-        return DFSTraceGenerator()
-    return BFSTraceGenerator()
+def extractTransData(term: maude.Term, mod: maude.Module) -> Tuple[int, str, str, str]:
+    expSorts: List[maude.Sort] = [
+        getSort(mod, ms.NAT),
+        getSort(mod, ms.TTYPE),
+        getSort(mod, ms.STRING),
+        getSort(mod, ms.DNK_COMP),
+    ]
+    printFormatCodes: List[int] = [
+        maude.PRINT_NUMBER,
+        maude.PRINT_MIXFIX,
+        maude.PRINT_MIXFIX,
+        maude.PRINT_MIXFIX,
+    ]
+    args: List[str] = []
+    for i, arg in enumerate(term.arguments()):
+        argSort = arg.getSort()
+        if argSort != expSorts[i] and not argSort.leq(expSorts[i]):
+            raise MaudeError(
+                "Unexpected Maude type when extracting "
+                + "head normal form result. "
+                + f"Found: '{arg.getSort()}', expected: '{expSorts[i]}'."
+            )
+        args.append(arg.prettyPrint(printFormatCodes[i]))
+    return int(args[0]), args[1], args[2].strip('"'), args[3]

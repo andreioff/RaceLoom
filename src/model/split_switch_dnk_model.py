@@ -48,7 +48,7 @@ class SplitSwDNKMaudeModel(DNKMaudeModel):
 
     def toMaudeModule(self) -> str:
         self.me.addProtImport(mm.DNK_MODEL_UTIL)
-        return self.me.buildAsModule(mm.DNK_MODEL)
+        return self.me.buildAsFuncModule(mm.DNK_MODEL)
 
     def __declareChannels(self, model: jm.DNKNetwork) -> None:
         channels: dict[str, bool] = {}

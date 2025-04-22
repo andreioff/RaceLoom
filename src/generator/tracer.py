@@ -6,7 +6,7 @@ from typing import List
 import maude
 from src.decorators.exec_time import PExecTimes, with_time_execution
 from src.errors import MaudeError
-from src.generator.trace_generator import SequentialTraceGenerator
+from src.generator.trace_generator import TraceGenerator
 from src.maude_encoder import MaudeEncoder
 from src.maude_encoder import MaudeModules as mm
 from src.model.dnk_maude_model import DNKMaudeModel
@@ -36,7 +36,7 @@ class Tracer(PExecTimes, StatsGenerator):
     def __init__(
         self,
         config: TracerConfig,
-        generator: SequentialTraceGenerator,
+        generator: TraceGenerator,
     ) -> None:
         self.config = config
         self.execTimes: dict[str, float] = {}
@@ -55,7 +55,9 @@ class Tracer(PExecTimes, StatsGenerator):
                 + "Initialization should happen once, maybe it is done multiple times?"
             )
 
-        filePath = os.path.join(self.config.maudeFilesDirPath, "head_normal_form.maude")
+        filePath = os.path.join(
+            self.config.maudeFilesDirPath, "parallel_head_normal_form.maude"
+        )
         success = maude.load(filePath)
         if not success:
             raise MaudeError(f"Failed to load Maude file: {filePath}.")
@@ -68,7 +70,7 @@ class Tracer(PExecTimes, StatsGenerator):
         """Returns the number of traces collected during the run"""
         self.reset()
         self.__declareModelMaudeModule(model)
-        mod = self.__declareEntryMaudeModule(model, depth)
+        mod = self.__declareEntryMaudeModule(self.generator.getRequiredImports())
         traces = self.generator.run(model, mod, depth)
         self.generatedTraces = len(traces)
         return traces
@@ -79,11 +81,10 @@ class Tracer(PExecTimes, StatsGenerator):
         if mod is None:
             raise MaudeError("Failed to declare module for given DyNetKAT model!")
 
-    def __declareEntryMaudeModule(
-        self, model: DNKMaudeModel, depth: int
-    ) -> maude.Module:
+    def __declareEntryMaudeModule(self, imports: List[mm]) -> maude.Module:
         me = MaudeEncoder()
-        me.addProtImport(mm.HEAD_NORMAL_FORM)
+        for imp in imports:
+            me.addProtImport(imp)
         me.addProtImport(mm.DNK_MODEL)
 
         maude.input(me.buildAsModule(mm.ENTRY))
@@ -97,21 +98,11 @@ class Tracer(PExecTimes, StatsGenerator):
         self.generatedTraces = 0
 
     def getStats(self) -> List[StatsEntry]:
-        return [
+        return self.generator.getStats() + [
             StatsEntry(
                 "tracesGenTime",
                 "Trace(s) generation time",
                 self.getTotalExecTime(),
-            ),
-            StatsEntry(
-                "traceGenCacheHits",
-                "Trace generation cache hits",
-                self.generator.cacheStats.hits,
-            ),
-            StatsEntry(
-                "traceGenCacheMisses",
-                "Trace generation cache misses",
-                self.generator.cacheStats.misses,
             ),
             StatsEntry("generatedTraces", "Generated traces", self.generatedTraces),
         ]

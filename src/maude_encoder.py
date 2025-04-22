@@ -12,7 +12,11 @@ class MaudeOps(StrEnum):
     PARALLEL = "||"
     BOT = "bot"
     HNF = "hnf"
+    HNF_INPUT = "hnfInput"
+    PARALLEL_HNF = "parallelHnf"
     TRANS_TYPE_NONE = "TNone"
+    P_INIT = "p-init"
+    PROCESS_HNF_INPUTS = "processHNFInputs"
 
 
 class MaudeSorts(StrEnum):
@@ -32,6 +36,7 @@ class MaudeModules(StrEnum):
     DNK_MODEL = "DNK-MODEL"
     DNK_MODEL_UTIL = "DNK-MODEL-UTIL"
     HEAD_NORMAL_FORM = "HEAD-NORMAL-FORM"
+    PARALLEL_HEAD_NORMAL_FORM = "PARALLEL-HEAD-NORMAL-FORM"
     ENTRY = "ENTRY"
 
 
@@ -76,6 +81,13 @@ class MaudeEncoder:
         mod {modName} is
         {self.build()}
         endm
+        """
+
+    def buildAsFuncModule(self, modName: str) -> str:
+        return f"""
+        fmod {modName} is
+        {self.build()}
+        endfm
         """
 
     def __buildProtImports(self) -> str:
@@ -186,6 +198,10 @@ class MaudeEncoder:
         return self.convertIntoMap([vc for _i in range(size)])
 
     @staticmethod
+    def toList(li: List[str]) -> str:
+        return " ".join(li)
+
+    @staticmethod
     def parallelSeq(terms: List[str]) -> str:
         dnkComps: List[str] = []
         for i, term in enumerate(terms):
@@ -198,3 +214,21 @@ class MaudeEncoder:
     @staticmethod
     def hnfCall(parentNodeId: int, dnkExpr: str, transType: str) -> str:
         return f"{MaudeOps.HNF}({parentNodeId}, {transType}, {dnkExpr})"
+
+    @staticmethod
+    def hnfInput(pid: int, prevTransType: str, dnkExpr: str) -> str:
+        return f"{MaudeOps.HNF_INPUT}({pid}, {prevTransType}, {dnkExpr})"
+
+    @staticmethod
+    def parallelHnfCall(workersConfig: str, inputTerms: List[str]) -> str:
+        maudeTermList = ", ".join(inputTerms)
+        return f"{MaudeOps.PARALLEL_HNF}({workersConfig}, ({maudeTermList}))"
+
+    @staticmethod
+    def metaInterpretersInitCall(threads: int) -> str:
+        return f"{MaudeOps.P_INIT}({threads})"
+
+    @staticmethod
+    def parallelHnfWorkerInputTerm(hnfInputs: List[str]) -> str:
+        hnfInputsMaudeList = MaudeEncoder.toList(hnfInputs)
+        return f"'{MaudeOps.PROCESS_HNF_INPUTS}[upTerm({hnfInputsMaudeList})]"

@@ -49,7 +49,6 @@ class TransitionsChecker:
         return self.checkDefault(t1, t2)
 
     def checkRcfgRcfg(self, t1: RcfgTrans, t2: RcfgTrans) -> RaceType | None:
-        # TODO AND THERE ARE NO OTHER RCFGs in between that modify the same switch
         src1Type = self.elDict[t1.srcPos].pType
         src2Type = self.elDict[t2.srcPos].pType
         targetSw1Id = self.elDict[t1.dstPos].pID

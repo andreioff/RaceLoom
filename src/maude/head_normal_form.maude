@@ -20,12 +20,9 @@ endv
 fmod HEAD-NORMAL-FORM is
   protecting COMM-STRING-CONVERSION .
   protecting CONVERSION .
-  protecting LIST {TData} * (sort List {TData} to TDataList) .
   protecting TRANS-DATA .
+  protecting LIST {TData} * (sort List {TData} to TDataList) .
   
-  sort HNFInput .
-  op hnfInput(_,_,_) : Nat TType DNKComp -> HNFInput .
-
   ---- args: DNK exprs to reduce, vector clocks, parent node id
   op hnf(_,_,_) : Nat TType DNKComp -> TDataList .
 
@@ -45,13 +42,12 @@ fmod HEAD-NORMAL-FORM is
   eq hnf(PID, PrevTT, c((X ! N), I) ; P) = nil .
   eq hnf(PID, PrevTT, c((X ? N), I) ; P) = nil .
   eq hnf(PID, PrevTT, rcfg(X, N, I, J) ; P) = td(PID, TComm, compCommToStr(rcfg(X, N, I, J)), P) .
-
-  eq hnf(PID, TProc, c(N, I) ; P) = nil . ---- Heuristic 1: prune trace if it contains two consecutive packet processing transitions
-  eq hnf(PID, PrevTT, c(N, I) ; P) = td(PID, TProc, "proc('" + N + "'," + string(I, 10) + ")", P) .
+ 
+  eq hnf(PID, PrevTT, c(N, I) ; P) =
+    if PrevTT == TProc 
+    then nil ---- Heuristic 1: prune trace if it contains two consecutive packet processing transitions
+    else td(PID, TProc, "proc('" + N + "'," + string(I, 10) + ")", P)
+    fi .
 
   ceq [rec-4] : hnf(PID, PrevTT, P) = hnf(PID, PrevTT, unfold(P)) if notUnfolded(P) [owise] .
 endfm
-
-view HNFInput from TRIV to HEAD-NORMAL-FORM is
-  sort Elt to HNFInput .
-endv

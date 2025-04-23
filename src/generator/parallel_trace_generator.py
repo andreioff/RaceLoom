@@ -3,9 +3,9 @@
 from typing import Dict, List, Tuple
 
 import maude
-from src.generator.trace_generator import (TraceGenerator, buildTraces,
-                                           extractListTerms, extractTransData,
-                                           getSort)
+from src.generator.trace_generator import TraceGenerator
+from src.generator.util import (buildTraces, extractListTerms,
+                                extractTransData, getSort)
 from src.maude_encoder import MaudeEncoder, MaudeModules
 from src.maude_encoder import MaudeOps as mo
 from src.maude_encoder import MaudeSorts as ms
@@ -13,24 +13,24 @@ from src.model.dnk_maude_model import DNKMaudeModel
 from src.trace.node import TraceNode
 from src.trace.transition import newTraceTransition
 from src.trace.vector_clocks import newVectorClocks
+from src.tracer_config import TracerConfig
 from src.util import uniformSplit
 
 
 class ParallelBFSTraceGenerator(TraceGenerator):
-    def __init__(self, threads: int) -> None:
-        super().__init__()
+    def __init__(self, config: TracerConfig) -> None:
+        super().__init__(config)
         # list of (node, parent index)
         self.nodes: List[Tuple[TraceNode, int]] = []
-        self.threads = threads
 
     def reset(self) -> None:
         super().reset()
         self.nodes = []
 
-    def getRequiredImports(self) -> List[MaudeModules]:
+    def getMaudeImports(self) -> List[MaudeModules]:
         return [MaudeModules.PARALLEL_HEAD_NORMAL_FORM]
 
-    def run(
+    def _generateTraces(
         self, model: DNKMaudeModel, mod: maude.Module, depth: int
     ) -> List[List[TraceNode]]:
         self.reset()
@@ -84,13 +84,14 @@ class ParallelBFSTraceGenerator(TraceGenerator):
     ) -> Dict[int, List[Tuple[str, str, str]]]:
         if not layer:
             return {}
+        # TODO Also look through the layer and see if there are any duplicates that get computed multiple times
         inputs = [MaudeEncoder.hnfInput(node[2], node[1], node[0]) for node in layer]
-        splitInputs = uniformSplit(inputs, self.threads)
+        splitInputs = uniformSplit(inputs, self.config.threads)
         inputTerms = [MaudeEncoder.parallelHnfWorkerInputTerm(li) for li in splitInputs]
         # Workers cannot be initialized separately because the meta interpreters
         # are deleted by the Maude library as soon as the erewrite call is done.
         # So we have to create the meta-interpreters everytime we process a layer
-        workersConfig = MaudeEncoder.metaInterpretersInitCall(self.threads)
+        workersConfig = MaudeEncoder.metaInterpretersInitCall(self.config.threads)
 
         term = mod.parseTerm(MaudeEncoder.parallelHnfCall(workersConfig, inputTerms))
         (res, _) = term.erewrite()

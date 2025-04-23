@@ -28,7 +28,7 @@ class TracesAnalyzer(PExecTimes, StatsGenerator):
         self.harmfulRacesCount = 0
 
     @with_time_execution
-    def analyzeFile(
+    def run(
         self, traces: List[List[TraceNode]], elDict: dict[int, ElementMetadata]
     ) -> None:
         """Analyzes each trace in the given list, and outputs every trace posing

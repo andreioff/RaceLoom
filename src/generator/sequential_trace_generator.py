@@ -3,9 +3,9 @@
 from typing import List, Tuple
 
 import maude
-from src.generator.trace_generator import (TraceGenerator, buildTraces,
-                                           extractListTerms, extractTransData,
-                                           getSort)
+from src.generator.trace_generator import TraceGenerator
+from src.generator.util import (buildTraces, extractListTerms,
+                                extractTransData, getSort)
 from src.generator.worklist import Queue, Stack, WorkList
 from src.maude_encoder import MaudeEncoder, MaudeModules
 from src.maude_encoder import MaudeOps as mo
@@ -14,17 +14,20 @@ from src.model.dnk_maude_model import DNKMaudeModel
 from src.trace.node import TraceNode
 from src.trace.transition import newTraceTransition
 from src.trace.vector_clocks import newVectorClocks
+from src.tracer_config import TracerConfig
 
 
 class SequentialTraceGenerator(TraceGenerator):
-    def __init__(self, workList: WorkList[Tuple[str, str, int, int]]):
-        super().__init__()
+    def __init__(
+        self, config: TracerConfig, workList: WorkList[Tuple[str, str, int, int]]
+    ):
+        super().__init__(config)
         self.workList = workList
 
-    def getRequiredImports(self) -> List[MaudeModules]:
+    def getMaudeImports(self) -> List[MaudeModules]:
         return [MaudeModules.HEAD_NORMAL_FORM]
 
-    def run(
+    def _generateTraces(
         self, model: DNKMaudeModel, mod: maude.Module, depth: int
     ) -> List[List[TraceNode]]:
         startDnkExpr = MaudeEncoder.parallelSeq(model.getElementTerms())
@@ -78,10 +81,10 @@ class SequentialTraceGenerator(TraceGenerator):
 
 
 class DFSTraceGenerator(SequentialTraceGenerator):
-    def __init__(self) -> None:
-        super().__init__(Stack[Tuple[str, str, int, int]]())
+    def __init__(self, config: TracerConfig) -> None:
+        super().__init__(config, Stack[Tuple[str, str, int, int]]())
 
 
 class BFSTraceGenerator(SequentialTraceGenerator):
-    def __init__(self) -> None:
-        super().__init__(Queue[Tuple[str, str, int, int]]())
+    def __init__(self, config: TracerConfig) -> None:
+        super().__init__(config, Queue[Tuple[str, str, int, int]]())

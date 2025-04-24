@@ -25,7 +25,7 @@ _INNER = "Inner"
 class SplitSwDNKMaudeModel(DNKMaudeModel):
     def __init__(self) -> None:
         self.me = MaudeEncoder()
-        self.elMetadataDict: dict[int, ElementMetadata] = {}
+        self.elsMetadata: List[ElementMetadata] = []
         self.elementTerms: List[str] = []
         self.branchCounts: dict[str, int] = {}
 
@@ -242,17 +242,14 @@ class SplitSwDNKMaudeModel(DNKMaudeModel):
             self.__buildBigSwitchProcTerm(model),
             self.me.recPolTerm(_BIG_SW_COMM_VAR_NAME),
         ]
-        self.elMetadataDict = {
-            0: ElementMetadata(0, ElementType.SW, _BIG_SW_PROC_VAR_NAME),
-            1: ElementMetadata(0, ElementType.SW, _BIG_SW_COMM_VAR_NAME),
-        }
+        self.elsMetadata = [
+            ElementMetadata(0, ElementType.SW, _BIG_SW_PROC_VAR_NAME),
+            ElementMetadata(0, ElementType.SW, _BIG_SW_COMM_VAR_NAME),
+        ]
         metadataId = 1
-        key = len(self.elMetadataDict)
         for i, name in enumerate(model.Controllers.keys()):
             elTerms.append(self.me.recPolTerm(name))
-            self.elMetadataDict[key + i] = ElementMetadata(
-                metadataId + i, ElementType.CT
-            )
+            self.elsMetadata.append(ElementMetadata(metadataId + i, ElementType.CT))
         self.elementTerms = elTerms
 
     def __addBranchCount(self, key: str, count: int) -> None:
@@ -272,5 +269,5 @@ class SplitSwDNKMaudeModel(DNKMaudeModel):
     def getMaudeModuleName(self) -> str:
         return mm.DNK_MODEL
 
-    def getElementMetadataDict(self) -> dict[int, ElementMetadata]:
-        return self.elMetadataDict
+    def getElementsMetadata(self) -> List[ElementMetadata]:
+        return self.elsMetadata

@@ -54,7 +54,7 @@ class DNKTestModel(DNKMaudeModel):
     def getBranchCounts(self) -> str:
         return "unknown"
 
-    def getElementMetadataDict(self) -> dict[int, ElementMetadata]:
+    def getElementsMetadata(self) -> List[ElementMetadata]:
         return self.elMetadataDict
 
     @classmethod

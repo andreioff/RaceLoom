@@ -2,8 +2,7 @@ import os
 from typing import List
 
 from src.analyzer.harmful_trace import HarmfulTrace
-from src.analyzer.trace_analyzer import (TraceAnalyzer, TraceAnalyzerError,
-                                         TransitionsChecker)
+from src.analyzer.trace_analyzer import TraceAnalyzer, TransitionsChecker
 from src.decorators.exec_time import PExecTimes, with_time_execution
 from src.KATch_comm import KATchComm
 from src.model.dnk_maude_model import ElementMetadata
@@ -29,13 +28,13 @@ class TracesAnalyzer(PExecTimes, StatsGenerator):
 
     @with_time_execution
     def run(
-        self, traces: List[List[TraceNode]], elDict: dict[int, ElementMetadata]
+        self, traces: List[List[TraceNode]], elsMetadata: List[ElementMetadata]
     ) -> None:
         """Analyzes each trace in the given list, and outputs every trace posing
         a harmful race in 2 ways: once as a file containing the raw trace and the
         information about the harmful race, and once as a DOT file."""
-        transChecker = TransitionsChecker(self.katchComm, elDict)
-        ta = TraceAnalyzer(transChecker, elDict)
+        transChecker = TransitionsChecker(self.katchComm, elsMetadata)
+        ta = TraceAnalyzer(transChecker, elsMetadata)
         for trace in traces:
             htrace = ta.analyze(trace)
             if htrace is None:
@@ -47,9 +46,8 @@ class TracesAnalyzer(PExecTimes, StatsGenerator):
         self.__printSkippedRaces(ta)
 
     def __writeRawTraceToFile(self, htrace: HarmfulTrace) -> None:
-        content = (
-            f"{htrace.nodes}\n{htrace.raceType}\n"
-            + f"{htrace.racingTrans[0]},{htrace.racingTrans[1]}"
+        content = f"{htrace.nodes}\n{htrace.raceType}\n" + ",".join(
+            [f"(trans: {t}, el: {el})" for t, el in htrace.racingTransToEls.items()]
         )
         fileName = f"{RAW_HARMFUL_TRACE_FILE_NAME}_{
             self.harmfulRacesCount}_{htrace.raceType}.txt"

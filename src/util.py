@@ -109,3 +109,7 @@ def uniformSplit[T](li: List[T], parts: int) -> List[List[T]]:
     for j in range(len(li) % parts):
         splitList[j].append(li[start + j])
     return splitList
+
+
+def indexInBounds(index: int, arrayLength: int) -> bool:
+    return 0 <= index and index < arrayLength

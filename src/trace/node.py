@@ -28,19 +28,6 @@ class TraceNode:
                     raise err
         return cast(Tuple[str, List[List[int]]], t)
 
-    def getIncmpPosPairs(self) -> List[Tuple[int, int]]:
-        posPairs: List[Tuple[int, int]] = []
-        for i in range(len(self.vectorClocks)):
-            for j in range(len(self.vectorClocks)):
-                if i >= j:
-                    continue
-                vc1, vc2 = self.vectorClocks[i], self.vectorClocks[j]
-                if (vc1[i] < vc2[i] and vc1[j] > vc2[j]) or (
-                    vc1[i] > vc2[i] and vc1[j] < vc2[j]
-                ):
-                    posPairs.append((i, j))
-        return posPairs
-
     def __repr__(self) -> str:
         return f'(\\"{self.trans}\\",{self.vectorClocks})'
 

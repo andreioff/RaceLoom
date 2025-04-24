@@ -54,7 +54,7 @@ class Tracer:
 
     def analyzeTraces(self) -> None:
         self.__traceAnalyzer.run(
-            self.__generatedTraces, self.dnkModel.getElementMetadataDict()
+            self.__generatedTraces, self.dnkModel.getElementsMetadata()
         )
 
     def getTraceGenerationStats(self) -> List[StatsEntry]:

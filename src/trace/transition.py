@@ -12,7 +12,7 @@ class ITransition(ABC):
     policy: str
 
     @abstractmethod
-    def isModifyingVCPos(self, pos: int) -> bool: ...
+    def getSource(self) -> int: ...
 
     @abstractmethod
     def updateVC(self, vc: List[List[int]]) -> List[List[int]]: ...
@@ -23,8 +23,8 @@ class TraceTransition(ITransition):
     def __init__(self) -> None:
         super().__init__("")
 
-    def isModifyingVCPos(self, pos: int) -> bool:
-        return False
+    def getSource(self) -> int:
+        return -1
 
     def updateVC(self, vcs: List[List[int]]) -> List[List[int]]:
         return vcs
@@ -37,8 +37,8 @@ class TraceTransition(ITransition):
 class PktProcTrans(ITransition):
     swPos: int
 
-    def isModifyingVCPos(self, pos: int) -> bool:
-        return self.swPos == pos
+    def getSource(self) -> int:
+        return self.swPos
 
     @classmethod
     def fromStr(cls, s: str) -> Self:
@@ -62,8 +62,8 @@ class RcfgTrans(ITransition):
     dstPos: int
     channel: str
 
-    def isModifyingVCPos(self, pos: int) -> bool:
-        return self.srcPos == pos or self.dstPos == pos
+    def getSource(self) -> int:
+        return self.srcPos
 
     @classmethod
     def fromStr(cls, s: str) -> Self:

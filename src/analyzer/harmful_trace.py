@@ -1,6 +1,6 @@
 from enum import StrEnum
 from os import linesep
-from typing import List, Tuple
+from typing import List
 
 from src.model.dnk_maude_model import ElementMetadata
 from src.trace.node import TraceNode
@@ -25,61 +25,48 @@ class HarmfulTrace:
     def __init__(
         self,
         nodes: List[TraceNode],
-        elDict: dict[int, ElementMetadata],
-        srcNode: int,
-        racingTrans: Tuple[int, int],
-        racingElements: Tuple[int, int],
+        elsMetadata: List[ElementMetadata],
+        racingTransToEls: dict[int, int],
         raceType: RaceType,
     ) -> None:
         self.nodes = nodes
-        self.elDict = elDict
-        self.srcNode = srcNode
-        self.racingTrans = racingTrans
-        self.racingElements = racingElements
+        self.elsMetadata = elsMetadata
+        self.racingTransToEls = racingTransToEls
         self.raceType = raceType
 
     def toDOT(self) -> str:
         sb: List[str] = ["digraph g {"]
-        for nodeId, node in enumerate(self.nodes):
-            isSource: bool = nodeId == self.srcNode
-            fillColor = self.__getNodeColor(node, isSource)
+        for nodePos, node in enumerate(self.nodes):
             sb.append(
-                f"n{nodeId} [label=<{self.__getNodeLabel(node, isSource)}>, "
-                + f'shape=rectangle, style=filled, fillcolor="{fillColor}"];'
+                f"n{nodePos} [label=<{self.__getNodeLabel(node, nodePos)}>, "
+                + f'shape=rectangle, style=filled, fillcolor="{ColorScheme.NODE_BG}"];'
             )
-            if nodeId == 0:  # first node does not have a transition
+            if nodePos == 0:  # first node does not have a transition
                 continue
             label = splitIntoLines(str(node.trans), 50, 10)
             edgeColor = (
                 ColorScheme.ERR_PRIMARY
-                if nodeId in self.racingTrans
+                if nodePos in self.racingTransToEls
                 else ColorScheme.EDGE
             )
-            penwidth = 2.0 if nodeId in self.racingTrans else 1.0
+            penwidth = 2.0 if nodePos in self.racingTransToEls else 1.0
             sb.append(
-                f'n{nodeId-1} -> n{nodeId} [label="{label}", '
+                f'n{nodePos-1} -> n{nodePos} [label="{label}", '
                 + f'color="{edgeColor}", penwidth={penwidth}];'
             )
         sb.append("}")  # close digraph
         return linesep.join(sb)
 
-    def __getNodeColor(self, node: TraceNode, isSource: bool) -> str:
-        if isSource:
-            return ColorScheme.ERR_PRIMARY
-        if len(node.getIncmpPosPairs()) > 0:
-            return ColorScheme.ERR_SECONDARY
-        return ColorScheme.NODE_BG
-
-    def __getNodeLabel(self, node: TraceNode, isSource: bool) -> str:
+    def __getNodeLabel(self, node: TraceNode, nodePos: int) -> str:
         elNames, vcLabel, prefix = "", "", ""
         for i, vc in enumerate(node.vectorClocks):
-            elName = self.elDict[i].name
+            elName = self.elsMetadata[i].name
             if not elName:
-                elName = self.elDict[i].pType
+                elName = self.elsMetadata[i].pType
             elNames += prefix + elName
             vcLabel += prefix
-            if isSource and i in self.racingElements:
-                vcLabel += f'<font color="{ColorScheme.ACCENT}">{vc}</font>'
+            if i == self.racingTransToEls.get(nodePos, -1):
+                vcLabel += f'<font color="{ColorScheme.ERR_PRIMARY}">{vc}</font>'
             else:
                 vcLabel += f"{vc}"
             prefix = ", "

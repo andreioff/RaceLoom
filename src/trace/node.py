@@ -1,14 +1,40 @@
-from dataclasses import dataclass
 from typing import List, Self, Tuple, cast
 
 from src.errors import ParseError
 from src.trace.transition import ITransition, newTraceTransition
 
 
-@dataclass(frozen=True)
 class TraceNode:
-    trans: ITransition
-    vectorClocks: List[List[int]]
+    __nextId = 0
+
+    def __init__(self, trans: ITransition, vectorClocks: List[List[int]]) -> None:
+        self.__id = TraceNode.__nextId
+        TraceNode.__nextId += 1
+        self.__trans = trans
+        self.__vectorClocks = vectorClocks
+        # ids of other nodes having transitions racing with this node's transition
+        self.__racingNodes: List[int] = []
+
+    @property
+    def id(self) -> int:
+        return self.__id
+
+    @property
+    def trans(self) -> ITransition:
+        return self.__trans
+
+    @property
+    def vectorClocks(self) -> List[List[int]]:
+        return self.__vectorClocks
+
+    def addRacingNode(self, otherNodeId: int) -> None:
+        self.__racingNodes.append(otherNodeId)
+
+    def isRacingWith(self, otherNodeId: int) -> bool:
+        return otherNodeId in self.__racingNodes
+
+    def isPartOfRace(self) -> bool:
+        return len(self.__racingNodes) > 0
 
     @classmethod
     def fromTuple(cls, t: Tuple) -> Self:  # type: ignore

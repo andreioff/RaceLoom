@@ -7,24 +7,6 @@ from src.maude_encoder import MaudeSorts as ms
 from src.trace.node import TraceNode
 
 
-def buildTraces(
-    nodes: List[Tuple[TraceNode, int]], traceEnds: List[int]
-) -> List[List[TraceNode]]:
-    if not traceEnds:
-        return []
-    traces: List[List[TraceNode]] = []
-    for end in traceEnds:
-        trace: List[TraceNode] = []
-        i = end
-        while i >= 0:
-            node, nextI = nodes[i]
-            trace.append(node)
-            i = nextI
-        trace.reverse()
-        traces.append(trace)
-    return traces
-
-
 def extractListTerms(term: maude.Term, elSort: maude.Sort) -> List[maude.Term]:
     if term.getSort() == elSort:
         return [term]

@@ -4,10 +4,10 @@ from typing import List
 from src.analyzer.traces_analyzer import TracesAnalyzer
 from src.generator.trace_generator_factory import (TraceGenOption,
                                                    newTraceGenerator)
+from src.generator.trace_tree import TraceTree
 from src.KATch_comm import KATchComm
 from src.model.dnk_maude_model import DNKMaudeModel
 from src.stats import StatsEntry
-from src.trace.node import TraceNode
 from src.tracer_config import TracerConfig
 from src.util import createDir, exportFile
 
@@ -23,7 +23,7 @@ class Tracer:
         self.config = config
         self.dnkModel = dnkModel
         self.__traceGen = newTraceGenerator(genStrategy, config)
-        self.__generatedTraces: List[List[TraceNode]] = []
+        self.__traceTree: TraceTree = TraceTree()
         self.__initTraceAnalyzer()
 
     def __initTraceAnalyzer(self) -> None:
@@ -39,23 +39,25 @@ class Tracer:
         )
 
     def generateTraces(self, depth: int) -> bool:
+        self.__traceTree = self.__traceGen.run(self.dnkModel, depth)
+
+        if self.__traceTree.traceCount() == 0:
+            return False
+        self.__writeTracesToFile()
+        return True
+
+    def __writeTracesToFile(self) -> None:
         tracesFilePath = os.path.join(
             self.config.outputDirPath,
             f"{_TRACES_FILE_NAME}_{self.config.inputFileName}.txt",
         )
-        self.__generatedTraces = self.__traceGen.run(self.dnkModel, depth)
-
-        if not self.__generatedTraces:
-            return False
-
-        traceStrings = os.linesep.join([str(t) for t in self.__generatedTraces])
-        exportFile(tracesFilePath, traceStrings)
-        return True
+        exportFile(
+            tracesFilePath,
+            os.linesep.join([str(t) for t in self.__traceTree.getTraceIterator()]),
+        )
 
     def analyzeTraces(self) -> None:
-        self.__traceAnalyzer.run(
-            self.__generatedTraces, self.dnkModel.getElementsMetadata()
-        )
+        self.__traceAnalyzer.run(self.__traceTree, self.dnkModel.getElementsMetadata())
 
     def getTraceGenerationStats(self) -> List[StatsEntry]:
         return self.__traceGen.getStats()

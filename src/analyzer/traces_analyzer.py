@@ -4,6 +4,7 @@ from typing import List
 from src.analyzer.harmful_trace import HarmfulTrace
 from src.analyzer.trace_analyzer import TraceAnalyzer, TransitionsChecker
 from src.decorators.exec_time import PExecTimes, with_time_execution
+from src.generator.trace_tree import TraceTree
 from src.KATch_comm import KATchComm
 from src.model.dnk_maude_model import ElementMetadata
 from src.stats import StatsEntry, StatsGenerator
@@ -12,6 +13,30 @@ from src.util import exportFile
 
 RAW_HARMFUL_TRACE_FILE_NAME = "harmful_trace_raw"
 HARMFUL_TRACE_FILE_NAME = "harmful_trace"
+
+
+def _hasExistingRace(trace: List[TraceNode]) -> bool:
+    racingNodes: List[TraceNode] = []
+    for node in trace:
+        if not node.isPartOfRace():
+            continue
+        racingNodes.append(node)
+    for i in range(len(racingNodes)):
+        for j in range(len(racingNodes)):
+            if i >= j:
+                continue
+            if racingNodes[i].isRacingWith(racingNodes[j].id):
+                return True
+    return False
+
+
+def _markRacingNodes(trace: List[TraceNode], nodePos: List[int]) -> None:
+    for p1 in nodePos:
+        for p2 in nodePos:
+            if p1 == p2:
+                continue
+            trace[p1].addRacingNode(trace[p2].id)
+            trace[p2].addRacingNode(trace[p1].id)
 
 
 class TracesAnalyzer(PExecTimes, StatsGenerator):
@@ -27,18 +52,19 @@ class TracesAnalyzer(PExecTimes, StatsGenerator):
         self.harmfulRacesCount = 0
 
     @with_time_execution
-    def run(
-        self, traces: List[List[TraceNode]], elsMetadata: List[ElementMetadata]
-    ) -> None:
+    def run(self, traceTree: TraceTree, elsMetadata: List[ElementMetadata]) -> None:
         """Analyzes each trace in the given list, and outputs every trace posing
         a harmful race in 2 ways: once as a file containing the raw trace and the
         information about the harmful race, and once as a DOT file."""
         transChecker = TransitionsChecker(self.katchComm, elsMetadata)
         ta = TraceAnalyzer(transChecker, elsMetadata)
-        for trace in traces:
+        for trace in traceTree.getTraceIterator():
+            if _hasExistingRace(trace):
+                continue
             htrace = ta.analyze(trace)
             if htrace is None:
                 continue
+            _markRacingNodes(trace, list(htrace.racingTransToEls.keys()))
             self.harmfulRacesCount += 1
             self.__writeRawTraceToFile(htrace)
             self.__writeDOTTraceToFile(htrace.toDOT(), htrace.raceType)

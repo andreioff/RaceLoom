@@ -8,6 +8,7 @@ import maude
 from src.decorators.cache_stats import CacheStats
 from src.decorators.exec_time import PExecTimes, with_time_execution
 from src.errors import MaudeError
+from src.generator.trace_tree import TraceTree
 from src.maude_encoder import MaudeEncoder
 from src.maude_encoder import MaudeModules
 from src.maude_encoder import MaudeModules as mm
@@ -31,7 +32,7 @@ class TraceGenerator(PExecTimes, StatsGenerator, ABC):
     @abstractmethod
     def _generateTraces(
         self, model: DNKMaudeModel, mod: maude.Module, depth: int
-    ) -> List[List[TraceNode]]: ...
+    ) -> TraceTree: ...
 
     @abstractmethod
     def getMaudeImports(self) -> List[MaudeModules]: ...
@@ -58,14 +59,14 @@ class TraceGenerator(PExecTimes, StatsGenerator, ABC):
         TraceGenerator.maudeInitialized = True
 
     @with_time_execution
-    def run(self, model: DNKMaudeModel, depth: int) -> List[List[TraceNode]]:
+    def run(self, model: DNKMaudeModel, depth: int) -> TraceTree:
         """Returns the number of traces collected during the run"""
         self.reset()
         self.__declareModelMaudeModule(model)
         mod = self.__declareEntryMaudeModule(self.getMaudeImports())
-        traces = self._generateTraces(model, mod, depth)
-        self.generatedTraces = len(traces)
-        return traces
+        traceTree = self._generateTraces(model, mod, depth)
+        self.generatedTraces = traceTree.traceCount()
+        return traceTree
 
     def __declareModelMaudeModule(self, model: DNKMaudeModel) -> None:
         maude.input(model.toMaudeModule())

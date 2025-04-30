@@ -1,5 +1,5 @@
 import os
-from typing import List
+from typing import List, Tuple
 
 from src.analyzer.harmful_trace import HarmfulTrace
 from src.analyzer.trace_analyzer import TraceAnalyzer, TransitionsChecker
@@ -36,7 +36,17 @@ def _markRacingNodes(trace: List[TraceNode], nodePos: List[int]) -> None:
             if p1 == p2:
                 continue
             trace[p1].addRacingNode(trace[p2].id)
-            trace[p2].addRacingNode(trace[p1].id)
+
+
+def _getSoonerRace(
+    htrace1: HarmfulTrace,
+    htrace2: HarmfulTrace,
+) -> HarmfulTrace:
+    transIndicies1 = tuple(htrace1.racingTransToEls.keys())
+    transIndicies2 = tuple(htrace2.racingTransToEls.keys())
+    if transIndicies1 <= transIndicies2:
+        return htrace1
+    return htrace2
 
 
 class TracesAnalyzer(PExecTimes, StatsGenerator):
@@ -58,29 +68,53 @@ class TracesAnalyzer(PExecTimes, StatsGenerator):
         information about the harmful race, and once as a DOT file."""
         transChecker = TransitionsChecker(self.katchComm, elsMetadata)
         ta = TraceAnalyzer(transChecker, elsMetadata)
+        htraces: List[HarmfulTrace] = []
         for trace in traceTree.getTraceIterator():
             if _hasExistingRace(trace):
                 continue
             htrace = ta.analyze(trace)
             if htrace is None:
                 continue
+            htraces.append(htrace)
             _markRacingNodes(trace, list(htrace.racingTransToEls.keys()))
-            self.harmfulRacesCount += 1
-            self.__writeRawTraceToFile(htrace)
-            self.__writeDOTTraceToFile(htrace.toDOT(), htrace.raceType)
+        htraces = self.__filterHarmfulRaces(htraces)
+        self.harmfulRacesCount = len(htraces)
+        self.__writeHarmfulTracesToFile(htraces)
         self.__printUnexpTransMsg(transChecker)
         self.__printSkippedRaces(ta)
 
-    def __writeRawTraceToFile(self, htrace: HarmfulTrace) -> None:
+    def __filterHarmfulRaces(
+        self, harmfulTraces: List[HarmfulTrace]
+    ) -> List[HarmfulTrace]:
+        # transition strings tuple to HarmfulTrace
+        filtered: dict[Tuple[str, ...], HarmfulTrace] = {}
+        for htrace in harmfulTraces:
+            transIndicies = htrace.racingTransToEls.keys()
+            key = tuple(str(htrace.nodes[i].trans) for i in transIndicies)
+            currBest = filtered.get(key, None)
+            if currBest is None:
+                filtered[key] = htrace
+                continue
+            currBest = _getSoonerRace(currBest, htrace)
+            filtered[key] = currBest
+        return list(filtered.values())
+
+    def __writeHarmfulTracesToFile(self, htraces: List[HarmfulTrace]) -> None:
+        for i, htrace in enumerate(htraces):
+            self.__writeRawTraceToFile(htrace, i)
+            self.__writeDOTTraceToFile(htrace.toDOT(), htrace.raceType, i)
+
+    def __writeRawTraceToFile(self, htrace: HarmfulTrace, traceNumber: int) -> None:
         content = f"{htrace.nodes}\n{htrace.raceType}\n" + ",".join(
             [f"(trans: {t}, el: {el})" for t, el in htrace.racingTransToEls.items()]
         )
-        fileName = f"{RAW_HARMFUL_TRACE_FILE_NAME}_{
-            self.harmfulRacesCount}_{htrace.raceType}.txt"
+        fileName = f"{RAW_HARMFUL_TRACE_FILE_NAME}_{traceNumber}_{htrace.raceType}.txt"
         exportFile(os.path.join(self.outputDirRaw, fileName), content)
 
-    def __writeDOTTraceToFile(self, traceDOT: str, raceType: str) -> None:
-        fileName = f"{HARMFUL_TRACE_FILE_NAME}_{self.harmfulRacesCount}_{raceType}.gv"
+    def __writeDOTTraceToFile(
+        self, traceDOT: str, raceType: str, traceNumber: int
+    ) -> None:
+        fileName = f"{HARMFUL_TRACE_FILE_NAME}_{traceNumber}_{raceType}.gv"
         exportFile(os.path.join(self.outputDirDOT, fileName), traceDOT)
 
     def __printUnexpTransMsg(self, transChecker: TransitionsChecker) -> None:

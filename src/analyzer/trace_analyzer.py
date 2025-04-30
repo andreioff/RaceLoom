@@ -119,6 +119,8 @@ class TraceAnalyzer:
                     + "This may suggest that the wrong DNK model information "
                     + f"was passed to {TraceAnalyzer.__name__}."
                 )
+            # for rcfgs, we don't have to update the last node of the switch (i.e. the
+            # destination of the rcfg) because we stop at the first SW-CT race found
             self.elLastNode[el1] = i
             for el2 in self.__findElementsRacingWith(el1):
                 res = self.__checkRace(el1, el2)

@@ -59,3 +59,6 @@ class TraceNode:
 
     def __str__(self) -> str:
         return f'(\\"{self.trans}\\",{self.vectorClocks})'
+
+    def __hash__(self) -> int:
+        return self.__id

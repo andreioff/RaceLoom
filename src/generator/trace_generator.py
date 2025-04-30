@@ -14,7 +14,6 @@ from src.maude_encoder import MaudeModules
 from src.maude_encoder import MaudeModules as mm
 from src.model.dnk_maude_model import DNKMaudeModel
 from src.stats import StatsEntry, StatsGenerator
-from src.trace.node import TraceNode
 from src.tracer_config import TracerConfig
 
 

@@ -38,21 +38,23 @@ class ParallelBFSTraceGenerator(TraceGenerator):
         startNode = TraceNode.fromTuple(("", startVC))
         self.traceTree.addNode(startNode)
 
-        # dnkExpr, prevTransType, currNode
-        currLayer: List[Tuple[str, str, TraceNode]] = [
-            (startDnkExpr, mo.TRANS_TYPE_NONE, startNode)
-        ]
+        # currNode to (dnkExpr, previous transition type)
+        currLayer: dict[TraceNode, Tuple[str, str]] = {
+            startNode: (startDnkExpr, mo.TRANS_TYPE_NONE)
+        }
         while currLayer and depth > 0:
-            nextLayer, remLayer = self.__appendCachedNodes(currLayer)
-            results = self.__computeNeighbors(mod, remLayer)
+            nodeToIndex, uniqueDNKData = self.__getUniqueDNKData(currLayer)
+            results: List[Tuple[List[Tuple[str, str, str]], bool]] = [
+                ([], False) for _ in range(len(uniqueDNKData))
+            ]  # list of (results, is computed)
+            self.__addCachedResults(uniqueDNKData, results)
+            self.__addNextTransitions(mod, uniqueDNKData, results)
 
-            for _, _, parentNode in remLayer:
-                neighbors = results.get(parentNode.id, None)
-                if neighbors is None:
-                    continue
-                for prevTransType, transLabel, dnkExpr in neighbors:
+            nextLayer: dict[TraceNode, Tuple[str, str]] = {}
+            for parentNode, index in nodeToIndex.items():
+                for prevTransType, transLabel, dnkExpr in results[index][0]:
                     node = self.__addNewNode(transLabel, parentNode)
-                    nextLayer.append((dnkExpr, prevTransType, node))
+                    nextLayer[node] = (dnkExpr, prevTransType)
             currLayer = nextLayer
             depth -= 1
 
@@ -65,33 +67,44 @@ class ParallelBFSTraceGenerator(TraceGenerator):
         self.traceTree.addNode(node, parentNode.id)
         return node
 
-    def __appendCachedNodes(
-        self, layer: List[Tuple[str, str, TraceNode]]
-    ) -> Tuple[List[Tuple[str, str, TraceNode]], List[Tuple[str, str, TraceNode]]]:
-        nextLayer: List[Tuple[str, str, TraceNode]] = []
-        remLayer: List[Tuple[str, str, TraceNode]] = []
-        for data in layer:
-            currDnkExpr, prevTransType, parentNode = data
-            cachedNeighbors = self.cache.get((currDnkExpr, prevTransType), [])
+    def __addCachedResults(
+        self,
+        dnkData: List[Tuple[str, str]],
+        results: List[Tuple[List[Tuple[str, str, str]], bool]],
+    ) -> None:
+        for i, entry in enumerate(dnkData):
+            cachedNeighbors = self.cache.get(entry, [])
             if not cachedNeighbors:
-                remLayer.append(data)
                 self.cacheStats.misses += 1
                 continue
             self.cacheStats.hits += 1
-            for transType, transLabel, dnkExpr in cachedNeighbors:
-                node = self.__addNewNode(transLabel, parentNode)
-                nextLayer.append((dnkExpr, transType, node))
-        return nextLayer, remLayer
+            results[i] = (cachedNeighbors, True)
 
-    def __computeNeighbors(
-        self, mod: maude.Module, layer: List[Tuple[str, str, TraceNode]]
-    ) -> Dict[int, List[Tuple[str, str, str]]]:
+    def __getUniqueDNKData(
+        self, layer: dict[TraceNode, Tuple[str, str]]
+    ) -> Tuple[dict[TraceNode, int], List[Tuple[str, str]]]:
         if not layer:
-            return {}
-        # TODO Also look through the layer and see if there are any duplicates that get computed multiple times
-        inputs = [MaudeEncoder.hnfInput(node[2].id, node[1], node[0]) for node in layer]
-        splitInputs = uniformSplit(inputs, self.config.threads)
-        inputTerms = [MaudeEncoder.parallelHnfWorkerInputTerm(li) for li in splitInputs]
+            return {}, []
+        nodeToIndex: dict[TraceNode, int] = {}
+        dnkDataToIndex: dict[Tuple[str, str], int] = {}
+        nextIndex = 0
+        for node, dnkTup in layer.items():
+            i = dnkDataToIndex.get(dnkTup, -1)
+            if i == -1:
+                dnkDataToIndex[dnkTup] = nextIndex
+                nodeToIndex[node] = nextIndex
+                nextIndex += 1
+                continue
+            nodeToIndex[node] = i
+        return nodeToIndex, list(dnkDataToIndex.keys())
+
+    def __addNextTransitions(
+        self,
+        mod: maude.Module,
+        dnkData: List[Tuple[str, str]],
+        results: List[Tuple[List[Tuple[str, str, str]], bool]],
+    ) -> None:
+        inputTerms = self.__makeMaudeInput(dnkData, results)
         # Workers cannot be initialized separately because the meta interpreters
         # are deleted by the Maude library as soon as the erewrite call is done.
         # So we have to create the meta-interpreters everytime we process a layer
@@ -101,11 +114,24 @@ class ParallelBFSTraceGenerator(TraceGenerator):
         (res, _) = term.erewrite()
 
         neighbors = extractListTerms(res, getSort(mod, ms.TDATA))
-        resultsByPid: dict[int, List[Tuple[str, str, str]]] = {}
         for n in neighbors:
-            (pid, transType, transLabel, dnkExpr) = extractTransData(n, mod)
-            pidList = resultsByPid.setdefault(pid, [])
-            pidList.append((transType, transLabel, dnkExpr))
-        for node in layer:
-            self.cache.setdefault((node[0], node[1]), resultsByPid[node[2].id])
-        return resultsByPid
+            (index, transType, transLabel, dnkExpr) = extractTransData(n, mod)
+            results[index][0].append((transType, transLabel, dnkExpr))
+        for i, entry in enumerate(dnkData):
+            self.cache.setdefault(entry, results[i][0])
+            results[i] = (results[i][0], True)
+
+    def __makeMaudeInput(
+        self,
+        dnkData: List[Tuple[str, str]],
+        results: List[Tuple[List[Tuple[str, str, str]], bool]],
+    ) -> List[str]:
+        if not dnkData:
+            return []
+        inputs: List[str] = []
+        for i, t in enumerate(dnkData):
+            if results[i][1]:
+                continue
+            inputs.append(MaudeEncoder.hnfInput(i, t[1], t[0]))
+        splitInputs = uniformSplit(inputs, self.config.threads)
+        return [MaudeEncoder.parallelHnfWorkerInputTerm(li) for li in splitInputs]

@@ -48,9 +48,6 @@ class DNKTestModel(DNKMaudeModel):
     def getElementTerms(self) -> List[str]:
         return self.elementTerms
 
-    def getMaudeModuleName(self) -> str:
-        return mm.DNK_MODEL
-
     def getBranchCounts(self) -> str:
         return "unknown"
 

@@ -38,9 +38,6 @@ class DNKMaudeModel(StatsGenerator, ABC):
     def getElementTerms(self) -> List[str]: ...
 
     @abstractmethod
-    def getMaudeModuleName(self) -> str: ...
-
-    @abstractmethod
     def getElementsMetadata(self) -> List[ElementMetadata]: ...
 
     @abstractmethod

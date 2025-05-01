@@ -77,7 +77,7 @@ class UnsplitSwDNKMaudeModel(DNKMaudeModel):
         for name, expr in model.Controllers.items():
             self.me.addOp(name, ms.RECURSIVE, [])
             self.me.addEq(self.me.recPolTerm(name), expr)
-            self.__addBranchCount(name, expr.count(sym.OPLUS))
+            self.__addBranchCount(name, expr.count(sym.OPLUS) + 1)
 
     def __declareLink(self, model: jm.DNKNetwork) -> None:
         """
@@ -237,9 +237,6 @@ class UnsplitSwDNKMaudeModel(DNKMaudeModel):
 
     def getElementTerms(self) -> List[str]:
         return self.elementTerms
-
-    def getMaudeModuleName(self) -> str:
-        return mm.DNK_MODEL
 
     def getElementsMetadata(self) -> List[ElementMetadata]:
         return self.elsMetadata

@@ -23,8 +23,11 @@ class SequentialTraceGenerator(TraceGenerator):
         super().__init__(config)
         self.workList = workList
 
-    def getMaudeImports(self) -> List[MaudeModules]:
-        return [MaudeModules.HEAD_NORMAL_FORM]
+    def _getEntryMaudeModule(self, name: str) -> maude.Module:
+        me = MaudeEncoder()
+        me.addProtImport(MaudeModules.DNK_MODEL)
+        me.addProtImport(MaudeModules.HEAD_NORMAL_FORM)
+        return me.buildAsModule(name)
 
     def _generateTraces(
         self, model: DNKMaudeModel, mod: maude.Module, depth: int

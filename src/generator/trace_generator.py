@@ -9,8 +9,6 @@ from src.decorators.cache_stats import CacheStats
 from src.decorators.exec_time import PExecTimes, with_time_execution
 from src.errors import MaudeError
 from src.generator.trace_tree import TraceTree
-from src.maude_encoder import MaudeEncoder
-from src.maude_encoder import MaudeModules
 from src.maude_encoder import MaudeModules as mm
 from src.model.dnk_maude_model import DNKMaudeModel
 from src.stats import StatsEntry, StatsGenerator
@@ -34,7 +32,7 @@ class TraceGenerator(PExecTimes, StatsGenerator, ABC):
     ) -> TraceTree: ...
 
     @abstractmethod
-    def getMaudeImports(self) -> List[MaudeModules]: ...
+    def _getEntryMaudeModule(self, name: str) -> maude.Module: ...
 
     def __initMaude(self) -> None:
         if TraceGenerator.maudeInitialized:
@@ -62,28 +60,23 @@ class TraceGenerator(PExecTimes, StatsGenerator, ABC):
         """Returns the number of traces collected during the run"""
         self.reset()
         self.__declareModelMaudeModule(model)
-        mod = self.__declareEntryMaudeModule(self.getMaudeImports())
+        mod = self.__declareEntryMaudeModule()
         traceTree = self._generateTraces(model, mod, depth)
         self.generatedTraces = traceTree.traceCount()
         return traceTree
 
-    def __declareModelMaudeModule(self, model: DNKMaudeModel) -> None:
-        maude.input(model.toMaudeModule())
-        mod = maude.getModule(model.getMaudeModuleName())
-        if mod is None:
-            raise MaudeError("Failed to declare module for given DyNetKAT model!")
-
-    def __declareEntryMaudeModule(self, imports: List[mm]) -> maude.Module:
-        me = MaudeEncoder()
-        for imp in imports:
-            me.addProtImport(imp)
-        me.addProtImport(mm.DNK_MODEL)
-
-        maude.input(me.buildAsModule(mm.ENTRY))
+    def __declareEntryMaudeModule(self) -> maude.Module:
+        maude.input(self._getEntryMaudeModule(mm.ENTRY))
         mod = maude.getModule(mm.ENTRY)
         if mod is None:
             raise MaudeError("Failed to declare entry module!")
         return mod
+
+    def __declareModelMaudeModule(self, model: DNKMaudeModel) -> None:
+        maude.input(model.toMaudeModule())
+        mod = maude.getModule(mm.DNK_MODEL)
+        if mod is None:
+            raise MaudeError("Failed to declare module for given DyNetKAT model!")
 
     def reset(self) -> None:
         self.cache = {}

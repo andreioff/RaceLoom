@@ -197,6 +197,8 @@ mod PARALLEL-HEAD-NORMAL-FORM is
   var AS : AttributeSet .
   var W : Oid .
   var WorkersConfig : Configuration .
+  var TDL : TDataList .
+  var TD : TData .
 
   op extractRes(_) : Configuration -> TDataList .
   op extractError : -> [TDataList] .
@@ -206,4 +208,23 @@ mod PARALLEL-HEAD-NORMAL-FORM is
 
   op parallelHnf : Configuration TermList -> TDataList .
   eq parallelHnf(WorkersConfig, (T, TL)) = extractRes(<> p-run(WorkersConfig, (T, TL))) .
+
+  --- Operator with special hook. Works only with the Python package Maude.
+  --- More details here: https://github.com/fadoss/maude-bindings
+  op storeOutputGetNextInput : TDataList -> TermList [special (
+      id-hook SpecialHubSymbol
+  )] .
+  op waitToFinish{_}(_) : Configuration TDataList -> Nat .
+  op generate{_} : Configuration -> Nat .
+  op $generate{_}(_) : Configuration TermList -> Nat .
+  ---- Init call for the hook
+  eq generate{<> < W : User | state: PReady, AS >} = $generate{< W : User | state: PReady, AS >}(storeOutputGetNextInput(nil)) .  
+
+  eq $generate{WorkersConfig}(empty) = 0 .
+  ---- process the input received from the hook in parallel
+  eq $generate{WorkersConfig}(T, TL) = waitToFinish{WorkersConfig}(parallelHnf(WorkersConfig, (T, TL))) .
+  ---- ensures that the input list is actually processed before the result is passed back to the hook
+  ---- (notice the pattern matching: it uses a list constructor instead of a list variable)
+  eq waitToFinish{WorkersConfig}(TD TDL) = $generate{WorkersConfig}(storeOutputGetNextInput(TD TDL)) .
+
 endm

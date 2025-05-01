@@ -17,6 +17,7 @@ class MaudeOps(StrEnum):
     TRANS_TYPE_NONE = "TNone"
     P_INIT = "p-init"
     PROCESS_HNF_INPUTS = "processHNFInputs"
+    GENERATE = "generate"
 
 
 class MaudeSorts(StrEnum):
@@ -220,8 +221,18 @@ class MaudeEncoder:
         return f"{MaudeOps.HNF_INPUT}({pid}, {prevTransType}, {dnkExpr})"
 
     @staticmethod
+    def emptyTermList() -> str:
+        return "(empty).TermList"
+
+    @staticmethod
+    def toTermList(inputTerms: List[str]) -> str:
+        if not inputTerms:
+            return MaudeEncoder.emptyTermList()
+        return ", ".join(inputTerms)
+
+    @staticmethod
     def parallelHnfCall(workersConfig: str, inputTerms: List[str]) -> str:
-        maudeTermList = ", ".join(inputTerms)
+        maudeTermList = MaudeEncoder.toTermList(inputTerms)
         return f"{MaudeOps.PARALLEL_HNF}({workersConfig}, ({maudeTermList}))"
 
     @staticmethod
@@ -232,3 +243,7 @@ class MaudeEncoder:
     def parallelHnfWorkerInputTerm(hnfInputs: List[str]) -> str:
         hnfInputsMaudeList = MaudeEncoder.toList(hnfInputs)
         return f"'{MaudeOps.PROCESS_HNF_INPUTS}[upTerm({hnfInputsMaudeList})]"
+
+    @staticmethod
+    def parallelGeneratorEntryCall(workersConfig: str) -> str:
+        return f"{MaudeOps.GENERATE}{{<> {workersConfig}}}"

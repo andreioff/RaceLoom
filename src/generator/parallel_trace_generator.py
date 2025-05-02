@@ -7,7 +7,7 @@ from src.decorators.cache_stats import CacheStats
 from src.generator.trace_generator import TraceGenerator
 from src.generator.trace_tree import TraceTree
 from src.generator.util import extractListTerms, extractTransData, getSort
-from src.maude_encoder import MaudeEncoder, MaudeModules
+from src.maude_encoder import MaudeBuilder, MaudeEncoder, MaudeModules
 from src.maude_encoder import MaudeOps as mo
 from src.maude_encoder import MaudeSorts as ms
 from src.model.dnk_maude_model import DNKMaudeModel
@@ -97,7 +97,7 @@ class ProcessHook(maude.Hook):  # type: ignore
         inputTerms = self.__makeMaudeInput()
         inputTerm = module.parseTerm(MaudeEncoder.toTermList(inputTerms))
         if inputTerm is None:
-            return MaudeEncoder.emptyTermList()
+            return module.parseTerm(MaudeEncoder.emptyTermList())
         return inputTerm
 
     def __processMaudeResult(
@@ -192,8 +192,8 @@ class ParallelBFSTraceGenerator(TraceGenerator):
         (res, _) = term.erewrite()
         return self.maudeHook.traceTree
 
-    def _getEntryMaudeModule(self, name: str) -> maude.Module:
-        me = MaudeEncoder()
+    def _getEntryMaudeModule(self, name: str) -> str:
+        me = MaudeBuilder()
         me.addProtImport(MaudeModules.DNK_MODEL)
         me.addProtImport(MaudeModules.PARALLEL_HEAD_NORMAL_FORM)
 

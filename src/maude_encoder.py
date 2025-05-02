@@ -58,7 +58,7 @@ class OpTypeDef:
         return False
 
 
-class MaudeEncoder:
+class MaudeBuilder:
     def __init__(self) -> None:
         self.protImports: List[str] = []
         # operator type definition to operator names
@@ -164,16 +164,22 @@ class MaudeEncoder:
     def addEq(self, leftTerm: str, rightTerm: str) -> None:
         self.eqs.append((leftTerm, rightTerm))
 
-    def recPolTerm(self, term: str) -> str:
+
+class MaudeEncoder:
+    @staticmethod
+    def recPolTerm(term: str) -> str:
         return MaudeOps.GET_REC_POL + "(" + term + ")"
 
-    def mapInsert(self, key: str, value: str, mapVar: str) -> str:
+    @staticmethod
+    def mapInsert(key: str, value: str, mapVar: str) -> str:
         return f"insert({key}, {value}, {mapVar})"
 
-    def mapAccess(self, key: str, mapVar: str) -> str:
+    @staticmethod
+    def mapAccess(key: str, mapVar: str) -> str:
         return f"{mapVar}[{key}]"
 
-    def convertIntoMap(self, strs: List[str]) -> str:
+    @staticmethod
+    def convertIntoMap(strs: List[str]) -> str:
         """Converts the given list into a Maude map sending consecutive
         integer keys starting from 0 to elements of the list,
         in the same order they appear.
@@ -189,14 +195,16 @@ class MaudeEncoder:
             maudeMap.append(f"{i} |-> {s}")
         return "(" + " , ".join(maudeMap) + ")"
 
-    def concatStr(self, s1: str, s2: str) -> str:
+    @staticmethod
+    def concatStr(s1: str, s2: str) -> str:
         return f"{s1} + {s2}"
 
-    def newVCMap(self, size: int) -> str:
+    @staticmethod
+    def newVCMap(size: int) -> str:
         if size <= 0:
             return "empty"
-        vc = self.convertIntoMap(["0" for _i in range(size)])
-        return self.convertIntoMap([vc for _i in range(size)])
+        vc = MaudeEncoder.convertIntoMap(["0" for _i in range(size)])
+        return MaudeEncoder.convertIntoMap([vc for _i in range(size)])
 
     @staticmethod
     def toList(li: List[str]) -> str:

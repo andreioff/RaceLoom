@@ -32,7 +32,8 @@ class TraceTree:
         self._nodes.append((node, parentIndex))
         self._isLeaf.append(True)
         index = len(self._nodes) - 1
-        self._isLeaf[parentIndex] = False
+        if parentIndex >= 0:
+            self._isLeaf[parentIndex] = False
         self._nodeIdToIndex[node.id] = index
 
     def traceCount(self) -> int:

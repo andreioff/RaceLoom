@@ -41,8 +41,8 @@ class ProcessHook(maude.Hook):  # type: ignore
     ) -> None:
         super().__init__()
         self.__threads = threads
-        self.cache: dict[Tuple[Hashable, ...], List[Tuple[str, str, str]]] = {}
-        self.cacheStats = CacheStats(0, 0)
+        self.cache = cache
+        self.cacheStats = cacheStats
         self.__init = False
         self.traceTree = TraceTree()
         self.__model = DNKMaudeModel()

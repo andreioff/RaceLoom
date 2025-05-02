@@ -24,14 +24,14 @@ class DNKTestModel(DNKMaudeModel):
         super().__init__()
         self.maudeModuleContent = maudeModuleContent
         self.elementTerms: List[str] = []
-        self.elMetadataDict: dict[int, ElementMetadata] = {}
+        self.elMetadata: List[ElementMetadata] = []
 
         for i, term in enumerate(parallelExpr.split("||")):
             self.elementTerms.append(term.strip())
             if "SW" in term:
-                self.elMetadataDict[i] = ElementMetadata(i, ElementType.SW)
+                self.elMetadata.append(ElementMetadata(i, ElementType.SW))
                 continue
-            self.elMetadataDict[i] = ElementMetadata(i, ElementType.CT)
+            self.elMetadata.append(ElementMetadata(i, ElementType.CT))
 
     @classmethod
     def fromJson(cls, jsonStr: str) -> Self:
@@ -52,7 +52,7 @@ class DNKTestModel(DNKMaudeModel):
         return "unknown"
 
     def getElementsMetadata(self) -> List[ElementMetadata]:
-        return self.elMetadataDict
+        return self.elMetadata
 
     @classmethod
     def fromDebugMaudeFile(cls, fileContent: str) -> DNKMaudeModel:

@@ -7,18 +7,20 @@ def newVectorClocks(size: int) -> List[List[int]]:
 
 
 def __isWithinBounds(vcs: List[List[int]], pos: int) -> bool:
-    return pos >= 0 and pos < len(vcs) and pos < len(vcs[pos])
+    return 0 <= pos < len(vcs) and pos < len(vcs[pos])
 
 
 def incrementVC(vcs: List[List[int]], pos: int) -> List[List[int]]:
     if not __isWithinBounds(vcs, pos):
-        return vcs
+        raise ValueError(
+            f"Position {pos} is out of bounds for the given vector clocks."
+        )
     newVc = [v.copy() for v in vcs]
     newVc[pos][pos] += 1
     return newVc
 
 
-def elementWiseMax(vcs1: List[int], vcs2: List[int]) -> List[int]:
+def _elementWiseMax(vcs1: List[int], vcs2: List[int]) -> List[int]:
     """Returns a new vector clock containing the maximum value
     between the given VCs at each corresponding position.
     The resulting vector clock will have the size of the smallest given vc."""
@@ -30,10 +32,16 @@ def elementWiseMax(vcs1: List[int], vcs2: List[int]) -> List[int]:
 
 
 def transferVC(vcs: List[List[int]], srcPos: int, dstPos: int) -> List[List[int]]:
+    if srcPos == dstPos:
+        raise ValueError(
+            f"Source and destination positions must be different: {srcPos} == {dstPos}"
+        )
     if not __isWithinBounds(vcs, srcPos) or not __isWithinBounds(vcs, dstPos):
-        return vcs
+        raise ValueError(
+            f"Source or destination position is out of bounds for the given vector clocks."
+        )
     newVc = [v.copy() for v in vcs]
     newVc[srcPos][srcPos] += 1
-    newVc[dstPos] = elementWiseMax(newVc[srcPos], newVc[dstPos])
+    newVc[dstPos] = _elementWiseMax(newVc[srcPos], newVc[dstPos])
     newVc[dstPos][dstPos] += 1
     return newVc

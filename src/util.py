@@ -2,7 +2,7 @@ import os
 import subprocess
 import time
 from enum import StrEnum
-from typing import Tuple
+from typing import List, Tuple
 
 TMP_FILE_NAME = "_tmp"
 
@@ -93,3 +93,23 @@ def splitIntoLines(s: str, lineSize: int, charMargin: int = 0) -> str:
     if lineSize < 1 or lineSize + charMargin > len(s):
         return s
     return os.linesep.join([s[i : i + lineSize] for i in range(0, len(s), lineSize)])
+
+
+def uniformSplit[T](li: List[T], parts: int) -> List[List[T]]:
+    if parts == 0:
+        return [li]
+    parts = len(li) if parts > len(li) else parts
+    sublistSize = len(li) // parts
+    splitList: List[List[T]] = []
+    start, end = 0, sublistSize
+    while len(splitList) < parts and end <= len(li):
+        splitList.append(li[start:end])
+        start = end
+        end += sublistSize
+    for j in range(len(li) % parts):
+        splitList[j].append(li[start + j])
+    return splitList
+
+
+def indexInBounds(index: int, arrayLength: int) -> bool:
+    return 0 <= index and index < arrayLength

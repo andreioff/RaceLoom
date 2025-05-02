@@ -1,0 +1,53 @@
+load dnk.maude
+load map_util.maude
+load dnk_model_util.maude
+
+fmod TRANS-DATA is
+  protecting STRING .
+	protecting RECURSIVE-DNK .
+
+  sort TData TType .
+
+  ops TNone TProc TComm : -> TType [ctor] .
+
+  op td(_,_,_,_) : Nat TType String DNKComp -> TData [ctor] .
+endfm
+
+view TData from TRIV to TRANS-DATA is
+  sort Elt to TData .
+endv
+
+fmod HEAD-NORMAL-FORM is
+  protecting COMM-STRING-CONVERSION .
+  protecting CONVERSION .
+  protecting TRANS-DATA .
+  protecting LIST {TData} * (sort List {TData} to TDataList) .
+  
+  ---- args: DNK exprs to reduce, vector clocks, parent node id
+  op hnf(_,_,_) : Nat TType DNKComp -> TDataList .
+
+  var PrevTT : TType .
+  vars P Q : DNKComp .
+  var N : String .
+  var X : Channel .
+  vars I J PID : Nat .
+
+  eq hnf(PID, PrevTT, c(bot, I)) = nil .
+
+  eq hnf(PID, PrevTT, P o+ Q) = append(hnf(PID, PrevTT, P), hnf(PID, PrevTT, Q)) .
+
+  ---- Sending or receiving alone does not count in the trace, which is similar to applying the delta operator.
+  ---- The trace also stops here since the expected behavior of a component is to wait when executing a
+  ---- communication instruction until it can synchronize with another component.
+  eq hnf(PID, PrevTT, c((X ! N), I) ; P) = nil .
+  eq hnf(PID, PrevTT, c((X ? N), I) ; P) = nil .
+  eq hnf(PID, PrevTT, rcfg(X, N, I, J) ; P) = td(PID, TComm, compCommToStr(rcfg(X, N, I, J)), P) .
+ 
+  eq hnf(PID, PrevTT, c(N, I) ; P) =
+    if PrevTT == TProc 
+    then nil ---- Heuristic 1: prune trace if it contains two consecutive packet processing transitions
+    else td(PID, TProc, "proc('" + N + "'," + string(I, 10) + ")", P)
+    fi .
+
+  ceq [rec-4] : hnf(PID, PrevTT, P) = hnf(PID, PrevTT, unfold(P)) if notUnfolded(P) [owise] .
+endfm

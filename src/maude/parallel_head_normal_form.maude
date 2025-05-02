@@ -1,0 +1,230 @@
+load metaInterpreter.maude
+load head_normal_form.maude
+
+fmod DNK-MODEL is
+  protecting DNK-MODEL-UTIL .
+  ---- This module is eventually overwritten with the input provided by the user,
+  ---- but it has to be declared here to include it in the meta-interpreters
+  ---- of the parallel computation.
+endfm
+
+fmod HNF-INPUT is
+  protecting TRANS-DATA .
+
+  sort HNFInput .
+  op hnfInput(_,_,_) : Nat TType DNKComp -> HNFInput [ctor] .
+endfm
+
+view HNFInput from TRIV to HNF-INPUT is
+  sort Elt to HNFInput .
+endv
+
+fmod WORKER-MODULES is
+  protecting HEAD-NORMAL-FORM .
+  protecting CONVERSION .
+  protecting DNK-MODEL .
+  protecting LIST {HNFInput} .
+
+  var RemInputs : List{HNFInput} .
+  var PrevTT : TType .
+  vars P : DNKComp .
+  vars PID : Nat .
+
+  op processHNFInputs : List{HNFInput} -> TDataList .
+  eq processHNFInputs(nil) = nil .
+  eq processHNFInputs(hnfInput(PID, PrevTT, P) RemInputs) = (hnf(PID, PrevTT, P) processHNFInputs(RemInputs)) .
+endfm
+
+view Worker from TRIV to CONFIGURATION is
+    sort Elt to Oid .
+endv
+
+mod CNL-MANAGER is
+extending META-INTERPRETER .
+
+protecting CONVERSION .
+protecting LIST{Worker} .
+
+sort PState .
+
+op manager : -> Oid .
+op User : -> Cid .
+
+op inputList:_ : TermList -> Attribute .
+op resultList:(_,_) : TermList Nat -> Attribute .
+op #workers:_ : Nat -> Attribute .
+op workers:_ : List{Worker} -> Attribute .
+
+op state:_ : PState -> Attribute .
+ops PInit PWorking PReady : -> PState .
+
+op p-run : Configuration TermList -> Configuration .
+op p-init : Nat -> Configuration .
+op init : Oid Nat -> Msg [ctor msg] .
+
+vars X Y WID : Oid .
+var AS : AttributeSet .
+vars K N R R2 : Nat .
+vars T T2 T3 : Term .
+vars IL TL : TermList .
+var ResType : Type .
+var W : List{Worker} .
+var C : Configuration .
+
+
+op $p-init : Configuration -> Configuration .
+eq p-init(0) = < manager : User | none > .
+eq p-init(s(N)) = $p-init(<> < manager : User | none > init(manager, s(N))) .
+---- use pattern matching to force Maude to re-write the configuration until the workers are ready to process input
+eq $p-init(<> < manager : User | state: PReady, AS >) = < manager : User | state: PReady, AS > .
+
+eq p-run(< manager : User | #workers: 0, AS >, IL) = < manager : User | state: PReady, resultList: (empty, 0) > .
+eq p-run(< manager : User | workers: nil, AS >, IL) = < manager : User | state: PReady, resultList: (empty, 0) > .
+eq p-run(C, empty) = C .
+eq p-run(< manager : User | state: PReady, #workers: K, workers: W, inputList: empty, resultList: (TL, N), AS >, IL)
+  = < manager : User | state: PReady, #workers: K, workers: W, inputList: IL, resultList: (empty, 0), AS > .
+
+op produceInterpreter : Oid Nat -> Configuration .
+eq produceInterpreter(X, 0) = none .
+eq produceInterpreter(X, s(N)) = createInterpreter(interpreterManager, X, newProcess)
+    produceInterpreter(X, N) .
+
+rl < X : User |
+    AS >
+    init(X, N)
+=> < X : User |
+    state: PInit,
+    #workers: N,
+    workers: nil,
+    AS >
+    produceInterpreter(X, N) .
+
+rl < X : User | 
+    state: PInit,
+    AS >
+createdInterpreter(X, Y, WID)
+=> < X : User | 
+  state: PInit,
+    AS >
+    insertModule(WID, X, upModule('WORKER-MODULES, true)) .
+
+rl < X : User | 
+  state: PInit,
+  workers: W,
+  AS >
+insertedModule(X, WID)
+=> < X : User | 
+  state: PInit,
+  workers: (WID W),
+  AS > .
+
+crl < X : User | 
+    state: PInit,
+    #workers: N,
+    workers: W,
+    AS >
+=> < X : User | 
+  state: PReady,
+  #workers: N,
+  workers: W,
+  inputList: empty,
+  resultList: (empty, 0),
+  AS >
+if N == size(W) .
+
+rl < X : User | 
+    state: PReady,
+    #workers: N,
+    workers: W,
+    inputList: (T, TL),
+    AS >
+=> < X : User | 
+  state: PWorking,
+  #workers: N,
+  workers: W,
+  inputList: (T, TL),
+  AS > .
+
+rl < X : User | 
+  state: PWorking,
+  inputList: (T, TL),
+  workers: (WID W),
+  AS >
+=> < X : User | 
+  state: PWorking,
+  inputList: TL,
+  workers: W,
+  AS >
+  reduceTerm(WID, X, 'WORKER-MODULES, T) .
+
+rl < X : User |
+  state: PWorking,
+  workers: W,
+  resultList: (TL, R),
+  AS >
+  reducedTerm(X, WID, R2, T, ResType)
+=> < X : User | 
+    state: PWorking,
+    workers: (W WID),
+    resultList: ((TL, T), (R2 + R)),
+    AS  
+   > .
+
+crl < X : User |
+    state: PWorking,
+    #workers: N,
+    workers: W,
+    inputList: empty,
+    AS >
+=> < X : User |
+    state: PReady,
+    #workers: N,
+    workers: W,
+    inputList: empty,
+    AS > 
+if N == size(W) .
+
+endm
+
+mod PARALLEL-HEAD-NORMAL-FORM is
+  protecting LIST{HNFInput} .
+  protecting HEAD-NORMAL-FORM .
+  protecting CNL-MANAGER .
+
+  var I : Nat .
+  var T : Term .
+  var TL : TermList .
+  var AS : AttributeSet .
+  var W : Oid .
+  var WorkersConfig : Configuration .
+  var TDL : TDataList .
+  var TD : TData .
+
+  op extractRes(_) : Configuration -> TDataList .
+  op extractError : -> [TDataList] .
+  eq extractRes(<> < W : User | state: PReady, inputList: empty, resultList: (empty, I), AS >) = nil .
+  eq extractRes(<> < W : User | state: PReady, inputList: empty, resultList: ((T, TL), I), AS >) = downTerm(T, extractError) 
+     extractRes(<> < W : User | state: PReady, inputList: empty, resultList: (TL, I), AS >) . ---- TODO Could use some error handling
+
+  op parallelHnf : Configuration TermList -> TDataList .
+  eq parallelHnf(WorkersConfig, (T, TL)) = extractRes(<> p-run(WorkersConfig, (T, TL))) .
+
+  --- Operator with special hook. Works only with the Python package Maude.
+  --- More details here: https://github.com/fadoss/maude-bindings
+  op storeOutputGetNextInput : TDataList -> TermList [special (
+      id-hook SpecialHubSymbol
+  )] .
+  op waitToFinish{_}(_) : Configuration TDataList -> Nat .
+  op generate{_} : Configuration -> Nat .
+  op $generate{_}(_) : Configuration TermList -> Nat .
+  ---- Init call for the hook
+  eq generate{<> < W : User | state: PReady, AS >} = $generate{< W : User | state: PReady, AS >}(storeOutputGetNextInput(nil)) .  
+
+  eq $generate{WorkersConfig}(empty) = 0 .
+  ---- process the input received from the hook in parallel
+  eq $generate{WorkersConfig}(T, TL) = waitToFinish{WorkersConfig}(parallelHnf(WorkersConfig, (T, TL))) .
+  ---- ensures that the input list is actually processed before the result is passed back to the hook
+  ---- (notice the pattern matching: it uses a list constructor instead of a list variable)
+  eq waitToFinish{WorkersConfig}(TD TDL) = $generate{WorkersConfig}(storeOutputGetNextInput(TD TDL)) .
+
+endm

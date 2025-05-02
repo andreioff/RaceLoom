@@ -5,21 +5,19 @@ from test.util import DNKTestModel
 
 from pydantic import ValidationError
 
+from src.cli import CLIError, getCLIArgs
+from src.errors import MaudeError
 from src.model.dnk_maude_model import DNKMaudeModel
-from src.tracer import MaudeError, Tracer, TracerConfig
-from src.util import createDir, getFileName, readFile, removeFile
 from src.stats import StatsCollector, StatsEntry
-from src.cli import getCLIArgs, CLIError
-from src.analyzer.trace_file_analyzer import TraceFileAnalyzer
-from src.KATch_comm import KATchComm
+from src.tracer import Tracer
+from src.tracer_config import TracerConfig
+from src.util import createDir, getFileName, readFile
 
 PROJECT_DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 OUTPUT_DIR_PATH = os.path.join(PROJECT_DIR_PATH, "output")
 MAUDE_FILES_DIR_PATH = os.path.join(PROJECT_DIR_PATH, "src", "maude")
 RUN_DIR_NAME = "run"
-TRACES_FILE_NAME = "traces"
-HARMFUL_TRACES_DIR_NAME = "harmful_traces"
-HARMFUL_TRACES_RAW_DIR_NAME = "harmful_traces_raw"
+
 TRACES_GEN_STATS_FILE_NAME = "trace_generation_stats"
 STATS_FILE_NAME = "final_stats"
 
@@ -74,64 +72,44 @@ def main() -> None:
         runOutputDir = createRunOutputDir(currTime)
 
         config = TracerConfig(
-            outputDirPath=runOutputDir,
-            katchPath=args.katchPath,
-            maudeFilesDirPath=MAUDE_FILES_DIR_PATH,
-            threads=args.threads,
-            verbose=args.verbose,
+            runOutputDir,
+            args.katchPath,
+            MAUDE_FILES_DIR_PATH,
+            args.threads,
+            args.verbose,
+            getFileName(args.inputFilePath),
         )
 
-        inputFileName = getFileName(args.inputFilePath)
-        tracesFilePath = os.path.join(
-            runOutputDir, f"{TRACES_FILE_NAME}_{inputFileName}.txt"
-        )
-        with open(tracesFilePath, "a") as file:
-            tracer = Tracer(config, file)
-            print("Generating traces...")
-            collectedTraces = tracer.run(dnkModel, args.depth)
+        tracer = Tracer(config, args.strategy, dnkModel)
+        print("Generating traces...")
+        ok = tracer.generateTraces(args.depth)
 
         stats = StatsCollector()
-        stats.addEntries(
-            [
-                StatsEntry("date", "Date", fmtTime),
-                StatsEntry(
-                    "inputFile", "Input file", os.path.basename(args.inputFilePath)
-                ),
-                StatsEntry("depth", "Depth", args.depth),
-            ]
-        )
+        stats.addEntries([StatsEntry("date", "Date", fmtTime)])
+        stats.addEntries(args.getStats())
         stats.addEntries(dnkModel.getStats())
-        stats.addEntries(tracer.getStats())
+        stats.addEntries(tracer.getTraceGenerationStats())
+
+        if not ok:
+            printAndExit(
+                "Could not generate any traces for the given network and depth!"
+            )
 
         print()
         print(stats.toPrettyStr())
         print()
         logRunStats(stats, TRACES_GEN_STATS_FILE_NAME)
 
-        if collectedTraces == 0:
-            removeFile(tracesFilePath)
-            printAndExit(
-                "Could not generate any traces for the given network and depth!"
-            )
-
         print("Analyzing traces...")
-        outputDirRaw = os.path.join(runOutputDir, HARMFUL_TRACES_RAW_DIR_NAME)
-        outputDirDOT = os.path.join(runOutputDir, HARMFUL_TRACES_DIR_NAME)
-        createDir(outputDirRaw)
-        createDir(outputDirDOT)
+        tracer.analyzeTraces()
 
-        katchComm = KATchComm(args.katchPath, runOutputDir)
-        pta = TraceFileAnalyzer(katchComm, outputDirRaw, outputDirDOT)
-        pta.analyzeFile(tracesFilePath, dnkModel.elTypeDict)
-
-        stats.addEntries(katchComm.getStats())
-        stats.addEntries(pta.getStats())
+        stats.addEntries(tracer.getTraceAnalysisStats())
         stats.addEntries(
             [
                 StatsEntry(
                     "totalExecTime",
                     "Total execution time",
-                    tracer.getTotalExecTime() + pta.getTotalExecTime(),
+                    tracer.getTotalExecTime(),
                 )
             ]
         )

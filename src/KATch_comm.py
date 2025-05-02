@@ -2,7 +2,8 @@ import os
 import re
 from typing import Hashable, List, Tuple
 
-from src.decorators.bool_cache import CacheStats, PBoolCache, with_bool_cache
+from src.decorators.bool_cache import PBoolCache, with_bool_cache
+from src.decorators.cache_stats import CacheStats
 from src.decorators.exec_time import PExecTimes, with_time_execution
 from src.stats import StatsEntry, StatsGenerator
 from src.util import DyNetKATSymbols as sym

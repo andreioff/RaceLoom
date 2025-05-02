@@ -7,25 +7,37 @@ class MaudeEncodingError(Exception):
 
 
 class MaudeOps(StrEnum):
-    BIG_SWITCH_OP = "bigSwitch"
+    BIG_SWITCH = "bigSwitch"
     GET_REC_POL = "getRecPol"
     PARALLEL = "||"
     BOT = "bot"
+    HNF = "hnf"
+    HNF_INPUT = "hnfInput"
+    PARALLEL_HNF = "parallelHnf"
+    TRANS_TYPE_NONE = "TNone"
+    P_INIT = "p-init"
+    PROCESS_HNF_INPUTS = "processHNFInputs"
+    GENERATE = "generate"
 
 
 class MaudeSorts(StrEnum):
-    CHANNEL_SORT = "Channel"
-    STRING_SORT = "String"
-    NAT_SORT = "Nat"
-    STR_MAP_SORT = "StrMap"
-    RECURSIVE_SORT = "Recursive"
-    TRACE_NODES_SORT = "TraceNodes"
+    CHANNEL = "Channel"
+    STRING = "String"
+    NAT = "Nat"
+    STR_MAP = "StrMap"
+    RECURSIVE = "Recursive"
+    TRACE_NODES = "TraceNodes"
+    TDATA = "TData"
+    TTYPE = "TType"
+    DNK_COMP = "DNKComp"
 
 
 class MaudeModules(StrEnum):
     TRACER = "TRACER"
     DNK_MODEL = "DNK-MODEL"
     DNK_MODEL_UTIL = "DNK-MODEL-UTIL"
+    HEAD_NORMAL_FORM = "HEAD-NORMAL-FORM"
+    PARALLEL_HEAD_NORMAL_FORM = "PARALLEL-HEAD-NORMAL-FORM"
     ENTRY = "ENTRY"
 
 
@@ -70,6 +82,13 @@ class MaudeEncoder:
         mod {modName} is
         {self.build()}
         endm
+        """
+
+    def buildAsFuncModule(self, modName: str) -> str:
+        return f"""
+        fmod {modName} is
+        {self.build()}
+        endfm
         """
 
     def __buildProtImports(self) -> str:
@@ -179,14 +198,52 @@ class MaudeEncoder:
         vc = self.convertIntoMap(["0" for _i in range(size)])
         return self.convertIntoMap([vc for _i in range(size)])
 
-    def tracerCall(self, threads: int, depth: int, terms: List[str]) -> str:
+    @staticmethod
+    def toList(li: List[str]) -> str:
+        return " ".join(li)
+
+    @staticmethod
+    def parallelSeq(terms: List[str]) -> str:
         dnkComps: List[str] = []
         for i, term in enumerate(terms):
             dnkComps.append(f"c({term}, {i})")
         dnkExpr = f" {MaudeOps.PARALLEL} ".join(dnkComps)
         if not dnkExpr:
             dnkExpr = f"c({MaudeOps.BOT}, 0)"
-        vcSize = len(terms) if len(terms) > 0 else 1
-        vcMap = self.newVCMap(vcSize)
+        return dnkExpr
 
-        return f"tracer{{<> p-init({threads})}}{{{depth}}}(({dnkExpr}), {vcMap})"
+    @staticmethod
+    def hnfCall(parentNodeId: int, dnkExpr: str, transType: str) -> str:
+        return f"{MaudeOps.HNF}({parentNodeId}, {transType}, {dnkExpr})"
+
+    @staticmethod
+    def hnfInput(pid: int, prevTransType: str, dnkExpr: str) -> str:
+        return f"{MaudeOps.HNF_INPUT}({pid}, {prevTransType}, {dnkExpr})"
+
+    @staticmethod
+    def emptyTermList() -> str:
+        return "(empty).TermList"
+
+    @staticmethod
+    def toTermList(inputTerms: List[str]) -> str:
+        if not inputTerms:
+            return MaudeEncoder.emptyTermList()
+        return ", ".join(inputTerms)
+
+    @staticmethod
+    def parallelHnfCall(workersConfig: str, inputTerms: List[str]) -> str:
+        maudeTermList = MaudeEncoder.toTermList(inputTerms)
+        return f"{MaudeOps.PARALLEL_HNF}({workersConfig}, ({maudeTermList}))"
+
+    @staticmethod
+    def metaInterpretersInitCall(threads: int) -> str:
+        return f"{MaudeOps.P_INIT}({threads})"
+
+    @staticmethod
+    def parallelHnfWorkerInputTerm(hnfInputs: List[str]) -> str:
+        hnfInputsMaudeList = MaudeEncoder.toList(hnfInputs)
+        return f"'{MaudeOps.PROCESS_HNF_INPUTS}[upTerm({hnfInputsMaudeList})]"
+
+    @staticmethod
+    def parallelGeneratorEntryCall(workersConfig: str) -> str:
+        return f"{MaudeOps.GENERATE}{{<> {workersConfig}}}"

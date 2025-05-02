@@ -1,117 +1,71 @@
-# mypy: disable-error-code="import-untyped,no-any-unimported,misc"
-
 import os
-from typing import IO, List
+from typing import List
 
-import maude
-from src.maude_encoder import MaudeEncoder
-from src.maude_encoder import MaudeModules as mm
-from src.maude_encoder import MaudeSorts as ms
+from src.analyzer.traces_analyzer import TracesAnalyzer
+from src.generator.trace_generator_factory import (TraceGenOption,
+                                                   newTraceGenerator)
+from src.generator.trace_tree import TraceTree
+from src.KATch_comm import KATchComm
 from src.model.dnk_maude_model import DNKMaudeModel
-from src.trace_collector_hook import TRACE_COLLECTOR_HOOK_MAUDE_NAME, TraceCollectorHook
-from src.decorators.exec_time import PExecTimes, with_time_execution
-from src.stats import StatsEntry, StatsGenerator
+from src.stats import StatsEntry
+from src.tracer_config import TracerConfig
+from src.util import createDir, exportFile
 
-ENTRY_POINT_NAME = "init"
-
-
-class MaudeError(Exception):
-    pass
+_TRACES_FILE_NAME = "traces"
+_HARMFUL_TRACES_DIR_NAME = "harmful_traces"
+_HARMFUL_TRACES_RAW_DIR_NAME = "harmful_traces_raw"
 
 
-class TracerConfig:
+class Tracer:
     def __init__(
-        self,
-        outputDirPath: str,
-        katchPath: str,
-        maudeFilesDirPath: str,
-        threads: int,
-        verbose: bool,
+        self, config: TracerConfig, genStrategy: TraceGenOption, dnkModel: DNKMaudeModel
     ) -> None:
-        self.outputDirPath = outputDirPath
-        self.katchPath = katchPath
-        self.maudeFilesDirPath = maudeFilesDirPath
-        self.threads = threads
-        self.verbose = verbose
-
-
-class Tracer(PExecTimes, StatsGenerator):
-    maudeInitialized: bool = False
-
-    def __init__(self, config: TracerConfig, traceCollectFile: IO[str]) -> None:
         self.config = config
-        self.execTimes: dict[str, float] = {}
-        self.traceCollector = TraceCollectorHook(traceCollectFile)
-        self.__initMaude()
+        self.dnkModel = dnkModel
+        self.__traceGen = newTraceGenerator(genStrategy, config)
+        self.__traceTree: TraceTree = TraceTree()
+        self.__initTraceAnalyzer()
 
-    def __initMaude(self) -> None:
-        if Tracer.maudeInitialized:
-            return
+    def __initTraceAnalyzer(self) -> None:
+        outputDirRaw = os.path.join(
+            self.config.outputDirPath, _HARMFUL_TRACES_RAW_DIR_NAME
+        )
+        outputDirDOT = os.path.join(self.config.outputDirPath, _HARMFUL_TRACES_DIR_NAME)
+        createDir(outputDirRaw)
+        createDir(outputDirDOT)
+        self.__katchComm = KATchComm(self.config.katchPath, self.config.outputDirPath)
+        self.__traceAnalyzer = TracesAnalyzer(
+            self.__katchComm, outputDirRaw, outputDirDOT
+        )
 
-        success = maude.init(advise=False)
-        if not success:
-            raise MaudeError(
-                "Failed to initialize Maude library! "
-                + "Initialization should happen once, maybe it is done multiple times?"
-            )
-        maude.connectEqHook(TRACE_COLLECTOR_HOOK_MAUDE_NAME, self.traceCollector)
+    def generateTraces(self, depth: int) -> bool:
+        self.__traceTree = self.__traceGen.run(self.dnkModel, depth)
 
-        filePath = os.path.join(self.config.maudeFilesDirPath, "tracer.maude")
-        success = maude.load(filePath)
-        if not success:
-            raise MaudeError(f"Failed to load Maude file: {filePath}.")
-        if self.config.verbose:
-            maude.input("set print attribute on .")
-        Tracer.maudeInitialized = True
+        if self.__traceTree.traceCount() == 0:
+            return False
+        self.__writeTracesToFile()
+        return True
 
-    @with_time_execution
-    def run(self, model: DNKMaudeModel, depth: int) -> int:
-        """Returns the number of traces collected during the run"""
-        self.reset()
-        self.__declareModelMaudeModule(model)
-        mod = self.__declareEntryMaudeModule(model, depth)
+    def __writeTracesToFile(self) -> None:
+        tracesFilePath = os.path.join(
+            self.config.outputDirPath,
+            f"{_TRACES_FILE_NAME}_{self.config.inputFileName}.txt",
+        )
+        exportFile(
+            tracesFilePath,
+            os.linesep.join([str(t) for t in self.__traceTree.getTraceIterator()]),
+        )
 
-        term = mod.parseTerm(f"{ENTRY_POINT_NAME}")
-        if term is None:
-            raise MaudeError("Failed to declare Tracer entry point.")
+    def analyzeTraces(self) -> None:
+        self.__traceAnalyzer.run(self.__traceTree, self.dnkModel.getElementsMetadata())
 
-        term.erewrite()
-        return self.traceCollector.calls
+    def getTraceGenerationStats(self) -> List[StatsEntry]:
+        return self.__traceGen.getStats()
 
-    def __declareModelMaudeModule(self, model: DNKMaudeModel) -> None:
-        maude.input(model.toMaudeModule())
-        mod = maude.getModule(model.getMaudeModuleName())
-        if mod is None:
-            raise MaudeError("Failed to declare module for given DyNetKAT model!")
+    def getTraceAnalysisStats(self) -> List[StatsEntry]:
+        return self.__katchComm.getStats() + self.__traceAnalyzer.getStats()
 
-    def __declareEntryMaudeModule(
-        self, model: DNKMaudeModel, depth: int
-    ) -> maude.Module:
-        me = MaudeEncoder()
-        me.addProtImport(mm.TRACER)
-        me.addProtImport(mm.DNK_MODEL)
-        me.addOp(ENTRY_POINT_NAME, ms.STRING_SORT, [])
-
-        elTerms = model.getElementTerms()
-        me.addEq(ENTRY_POINT_NAME, me.tracerCall(self.config.threads, depth, elTerms))
-        maude.input(me.buildAsModule(mm.ENTRY))
-        mod = maude.getModule(mm.ENTRY)
-        if mod is None:
-            raise MaudeError("Failed to declare entry module!")
-        return mod
-
-    def reset(self) -> None:
-        self.execTimes = {}
-        self.traceCollector.reset()
-
-    def getStats(self) -> List[StatsEntry]:
-        return [
-            StatsEntry(
-                "tracesGenerationTime",
-                "Trace(s) generation time",
-                self.getTotalExecTime(),
-            ),
-            StatsEntry(
-                "generatedTraces", "Generated traces", self.traceCollector.calls
-            ),
-        ]
+    def getTotalExecTime(self) -> float:
+        return (
+            self.__traceGen.getTotalExecTime() + self.__traceAnalyzer.getTotalExecTime()
+        )

@@ -1,23 +1,22 @@
+from dataclasses import dataclass
 from enum import StrEnum
-from typing import List
-
-from typing_extensions import Self
+from typing import List, Self
 
 import src.model.json_model as jm
 from src.maude_encoder import MaudeEncoder
 from src.maude_encoder import MaudeModules as mm
 from src.maude_encoder import MaudeOps as mo
 from src.maude_encoder import MaudeSorts as ms
+from src.stats import StatsEntry, StatsGenerator
 from src.util import DyNetKATSymbols as sym
-from src.stats import StatsGenerator, StatsEntry
 
-LINK_VAR_NAME = "Link"
-BIG_SW_VAR_NAME = "BSWMain"
-BIG_SW_RECV_VAR_NAME = "BSWRecv"
-SW_MAP_VAR_NAME = "Sws"
-CH_VAR_NAME = "CH"
-INDX_VAR_NAME = "I"
-FR_VAR_NAME = "FR"
+_LINK_VAR_NAME = "Link"
+_BIG_SW_VAR_NAME = "BSWMain"
+_BIG_SW_RECV_VAR_NAME = "BSWRecv"
+_SW_MAP_VAR_NAME = "Sws"
+_CH_VAR_NAME = "CH"
+_INDX_VAR_NAME = "I"
+_FR_VAR_NAME = "FR"
 
 
 class ElementType(StrEnum):
@@ -25,14 +24,25 @@ class ElementType(StrEnum):
     SW = "SW"
 
 
-class DNKModelError(Exception, StatsGenerator):
+@dataclass(frozen=True)
+class ElementMetadata:
+    """Data related to a DNK element"""
+
+    # id of the parent network component being modeled, e.g. multiple DNK
+    # elements may model different parts of the same switch
+    pID: int
+    pType: ElementType  # type of parent component
+    name: str = ""
+
+
+class DNKModelError(Exception):
     pass
 
 
-class DNKMaudeModel:
+class DNKMaudeModel(StatsGenerator):
     def __init__(self) -> None:
         self.me = MaudeEncoder()
-        self.elTypeDict: dict[int, ElementType] = {}
+        self.elsMetadata: List[ElementMetadata] = []
         self.elementTerms: List[str] = []
         self.branchCounts: dict[str, int] = {}
 
@@ -55,7 +65,7 @@ class DNKMaudeModel:
 
     def toMaudeModule(self) -> str:
         self.me.addProtImport(mm.DNK_MODEL_UTIL)
-        return self.me.buildAsModule(mm.DNK_MODEL)
+        return self.me.buildAsFuncModule(mm.DNK_MODEL)
 
     def __declareChannels(self, model: jm.DNKNetwork) -> None:
         channels: dict[str, bool] = {}
@@ -72,11 +82,11 @@ class DNKMaudeModel:
                 channels[ru.ResponseChannel] = True
 
         for ch in channels.keys():
-            self.me.addOp(ch, ms.CHANNEL_SORT, [])
+            self.me.addOp(ch, ms.CHANNEL, [])
 
     def __declareInitialSwitches(self, model: jm.DNKNetwork) -> None:
         for name, switch in model.Switches.items():
-            self.me.addOp(name, ms.STRING_SORT, [])
+            self.me.addOp(name, ms.STRING, [])
             initialValue = f"{sym.ZERO}"
             if switch.InitialFlowTable is not None:
                 initialValue = switch.InitialFlowTable
@@ -84,9 +94,9 @@ class DNKMaudeModel:
 
     def __declareControllers(self, model: jm.DNKNetwork) -> None:
         for name, expr in model.Controllers.items():
-            self.me.addOp(name, ms.RECURSIVE_SORT, [])
+            self.me.addOp(name, ms.RECURSIVE, [])
             self.me.addEq(self.me.recPolTerm(name), expr)
-            self.__addBranchCount(name, expr.count(sym.OPLUS))
+            self.__addBranchCount(name, expr.count(sym.OPLUS) + 1)
 
     def __declareLink(self, model: jm.DNKNetwork) -> None:
         """
@@ -98,33 +108,33 @@ class DNKMaudeModel:
         linksValue = sym.ONE.value
         if model.Links is not None:
             linksValue = model.Links
-        self.me.addOp(LINK_VAR_NAME, ms.STRING_SORT, [])
-        self.me.addEq(LINK_VAR_NAME, f'"{linksValue}"')
+        self.me.addOp(_LINK_VAR_NAME, ms.STRING, [])
+        self.me.addEq(_LINK_VAR_NAME, f'"{linksValue}"')
 
     def __declareBigSwitch(self, model: jm.DNKNetwork) -> None:
         # declare variable for the map of switches
-        self.me.addVar(SW_MAP_VAR_NAME, ms.STR_MAP_SORT)
-        self.me.addVar(CH_VAR_NAME, ms.CHANNEL_SORT)
-        self.me.addVar(FR_VAR_NAME, ms.STRING_SORT)
-        self.me.addVar(INDX_VAR_NAME, ms.NAT_SORT)
+        self.me.addVar(_SW_MAP_VAR_NAME, ms.STR_MAP)
+        self.me.addVar(_CH_VAR_NAME, ms.CHANNEL)
+        self.me.addVar(_FR_VAR_NAME, ms.STRING)
+        self.me.addVar(_INDX_VAR_NAME, ms.NAT)
         # Declare the actual operators for the big switch
         # Main part that sends packet in
-        self.me.addOp(BIG_SW_VAR_NAME, ms.RECURSIVE_SORT, [ms.STR_MAP_SORT])
+        self.me.addOp(_BIG_SW_VAR_NAME, ms.RECURSIVE, [ms.STR_MAP])
         # Second part that waits for the corresponding packet out
         self.me.addOp(
-            BIG_SW_RECV_VAR_NAME,
-            ms.RECURSIVE_SORT,
-            [ms.STR_MAP_SORT, ms.CHANNEL_SORT, ms.STRING_SORT, ms.NAT_SORT],
+            _BIG_SW_RECV_VAR_NAME,
+            ms.RECURSIVE,
+            [ms.STR_MAP, ms.CHANNEL, ms.STRING, ms.NAT],
         )
 
         self.me.addEq(
-            self.me.recPolTerm(f"{BIG_SW_VAR_NAME} {SW_MAP_VAR_NAME}"),
+            self.me.recPolTerm(f"{_BIG_SW_VAR_NAME} {_SW_MAP_VAR_NAME}"),
             self.__buildBigSwMainExpr(model),
         )
         self.me.addEq(
             self.me.recPolTerm(
-                f"{BIG_SW_RECV_VAR_NAME} {SW_MAP_VAR_NAME} "
-                + f"{CH_VAR_NAME} {FR_VAR_NAME} {INDX_VAR_NAME}"
+                f"{_BIG_SW_RECV_VAR_NAME} {_SW_MAP_VAR_NAME} "
+                + f"{_CH_VAR_NAME} {_FR_VAR_NAME} {_INDX_VAR_NAME}"
             ),
             self.__buildBigSwRecvExpr(model),
         )
@@ -135,25 +145,25 @@ class DNKMaudeModel:
         # and to re-write everything into head normal form
         # using the KATch hook
         exprs: List[str] = [
-            f"({mo.BIG_SWITCH_OP} {SW_MAP_VAR_NAME} {LINK_VAR_NAME}) "
-            + f"{sym.SEQ} ({BIG_SW_VAR_NAME} {SW_MAP_VAR_NAME})",
+            f"({mo.BIG_SWITCH} {_SW_MAP_VAR_NAME} {_LINK_VAR_NAME}) "
+            + f"{sym.SEQ} ({_BIG_SW_VAR_NAME} {_SW_MAP_VAR_NAME})",
         ]
 
         def recvAndReplace(ch: str, ft: str, i: int) -> str:
-            insExpr = self.me.mapInsert(f"{i}", ft, SW_MAP_VAR_NAME)
-            return f"({ch} {sym.RECV} {ft}) {sym.SEQ} ({BIG_SW_VAR_NAME} {insExpr})"
+            insExpr = self.me.mapInsert(f"{i}", ft, _SW_MAP_VAR_NAME)
+            return f"({ch} {sym.RECV} {ft}) {sym.SEQ} ({_BIG_SW_VAR_NAME} {insExpr})"
 
         def recvAndAppend(ch: str, fr: str, i: int) -> str:
             appExpr = self.me.concatStr(
-                self.me.mapAccess(f"{i}", SW_MAP_VAR_NAME),
+                self.me.mapAccess(f"{i}", _SW_MAP_VAR_NAME),
                 self.me.concatStr(f' " {sym.OR} " ', fr),
             )
-            insExpr = self.me.mapInsert(f"{i}", f"({appExpr})", SW_MAP_VAR_NAME)
-            return f"({ch} {sym.RECV} {fr}) {sym.SEQ} ({BIG_SW_VAR_NAME} {insExpr})"
+            insExpr = self.me.mapInsert(f"{i}", f"({appExpr})", _SW_MAP_VAR_NAME)
+            return f"({ch} {sym.RECV} {fr}) {sym.SEQ} ({_BIG_SW_VAR_NAME} {insExpr})"
 
         def sendAndEnterRecvMode(ru: jm.DNKRequestedUpdate, i: int) -> str:
             bigSwitchTerm = (
-                f"{BIG_SW_RECV_VAR_NAME} {SW_MAP_VAR_NAME} "
+                f"{_BIG_SW_RECV_VAR_NAME} {_SW_MAP_VAR_NAME} "
                 + f'{ru.ResponseChannel} "{ru.ResponsePolicy}" {i}'
             )
             return (
@@ -175,8 +185,8 @@ class DNKMaudeModel:
     def __buildBigSwRecvExpr(self, model: jm.DNKNetwork) -> str:
         def termName(swsMapTerm: str) -> str:
             return (
-                f"{BIG_SW_RECV_VAR_NAME} {swsMapTerm} "
-                + f"{CH_VAR_NAME} {FR_VAR_NAME} {INDX_VAR_NAME}"
+                f"{_BIG_SW_RECV_VAR_NAME} {swsMapTerm} "
+                + f"{_CH_VAR_NAME} {_FR_VAR_NAME} {_INDX_VAR_NAME}"
             )
 
         # Applies the necessary maude operators to
@@ -184,20 +194,20 @@ class DNKMaudeModel:
         # and to re-write everything into head normal form
         # using the KATch hook
         exprs: List[str] = [
-            f"({mo.BIG_SWITCH_OP} {SW_MAP_VAR_NAME} {LINK_VAR_NAME}) "
-            + f"{sym.SEQ} ({termName(SW_MAP_VAR_NAME)})",
+            f"({mo.BIG_SWITCH} {_SW_MAP_VAR_NAME} {_LINK_VAR_NAME}) "
+            + f"{sym.SEQ} ({termName(_SW_MAP_VAR_NAME)})",
         ]
 
         def recvAndReplace(ch: str, ft: str, i: int) -> str:
-            insExpr = self.me.mapInsert(f"{i}", ft, SW_MAP_VAR_NAME)
+            insExpr = self.me.mapInsert(f"{i}", ft, _SW_MAP_VAR_NAME)
             return f"({ch} {sym.RECV} {ft}) {sym.SEQ} ({termName(insExpr)})"
 
         def recvAndAppend(ch: str, fr: str, i: int) -> str:
             appExpr = self.me.concatStr(
-                self.me.mapAccess(f"{i}", SW_MAP_VAR_NAME),
+                self.me.mapAccess(f"{i}", _SW_MAP_VAR_NAME),
                 self.me.concatStr(f' " {sym.OR} " ', fr),
             )
-            insExpr = self.me.mapInsert(f"{i}", f"({appExpr})", SW_MAP_VAR_NAME)
+            insExpr = self.me.mapInsert(f"{i}", f"({appExpr})", _SW_MAP_VAR_NAME)
             return f"({ch} {sym.RECV} {fr}) {sym.SEQ} ({termName(insExpr)})"
 
         for i, (_name, switch) in enumerate(model.Switches.items()):
@@ -206,13 +216,15 @@ class DNKMaudeModel:
                 exprs.append(action(du.Channel, f'"{du.Policy}"', i))
 
         appExpr = self.me.concatStr(
-            self.me.mapAccess(f"{INDX_VAR_NAME}", SW_MAP_VAR_NAME),
-            self.me.concatStr(f' " {sym.OR} " ', FR_VAR_NAME),
+            self.me.mapAccess(f"{_INDX_VAR_NAME}", _SW_MAP_VAR_NAME),
+            self.me.concatStr(f' " {sym.OR} " ', _FR_VAR_NAME),
         )
-        insExpr = self.me.mapInsert(f"{INDX_VAR_NAME}", f"({appExpr})", SW_MAP_VAR_NAME)
-        bigSwTerm = f"{BIG_SW_VAR_NAME} {insExpr}"
+        insExpr = self.me.mapInsert(
+            f"{_INDX_VAR_NAME}", f"({appExpr})", _SW_MAP_VAR_NAME
+        )
+        bigSwTerm = f"{_BIG_SW_VAR_NAME} {insExpr}"
         exprs.append(
-            f"({CH_VAR_NAME} {sym.RECV} {FR_VAR_NAME}) {sym.SEQ} ({bigSwTerm})"
+            f"({_CH_VAR_NAME} {sym.RECV} {_FR_VAR_NAME}) {sym.SEQ} ({bigSwTerm})"
         )
 
         return f" {sym.OPLUS} ".join(exprs)
@@ -221,14 +233,14 @@ class DNKMaudeModel:
         sws: List[str] = []
         for name in model.Switches.keys():
             sws.append(name)
-        return self.me.recPolTerm(f"{BIG_SW_VAR_NAME} {self.me.convertIntoMap(sws)}")
+        return self.me.recPolTerm(f"{_BIG_SW_VAR_NAME} {self.me.convertIntoMap(sws)}")
 
     def __buildElementTerms(self, model: jm.DNKNetwork) -> None:
         elTerms: List[str] = [self.__buildBigSwitchTerm(model)]
-        self.elTypeDict = {0: ElementType.SW}
+        self.elsMetadata = [ElementMetadata(0, ElementType.SW)]
         for i, name in enumerate(model.Controllers.keys()):
             elTerms.append(self.me.recPolTerm(name))
-            self.elTypeDict[i + 1] = ElementType.CT
+            self.elsMetadata.append(ElementMetadata(i + 1, ElementType.CT))
         self.elementTerms = elTerms
 
     def __addBranchCount(self, key: str, count: int) -> None:
@@ -245,8 +257,8 @@ class DNKMaudeModel:
     def getElementTerms(self) -> List[str]:
         return self.elementTerms
 
-    def getMaudeModuleName(self) -> str:
-        return mm.DNK_MODEL
+    def getElementsMetadata(self) -> List[ElementMetadata]:
+        return self.elsMetadata
 
     def getStats(self) -> List[StatsEntry]:
         return [

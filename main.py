@@ -8,7 +8,6 @@ from pydantic import ValidationError
 from src.cli import CLIError, getCLIArgs
 from src.errors import MaudeError
 from src.model.dnk_maude_model import DNKMaudeModel
-from src.model.unsplit_switch_dnk_model import UnsplitSwDNKMaudeModel
 from src.stats import StatsCollector, StatsEntry
 from src.tracer import Tracer
 from src.tracer_config import TracerConfig
@@ -58,9 +57,9 @@ def readDNKModelFromFile(filePath: str) -> DNKMaudeModel:
     if fileExt == "maude":
         return DNKTestModel.fromDebugMaudeFile(fileContent)
     if fileExt == "json":
-        return UnsplitSwDNKMaudeModel.fromJson(fileContent)
+        return DNKMaudeModel.fromJson(fileContent)
     printAndExit(f"Unknown input file extension: '{fileExt}'!")
-    return UnsplitSwDNKMaudeModel()
+    return DNKMaudeModel()
 
 
 def main() -> None:

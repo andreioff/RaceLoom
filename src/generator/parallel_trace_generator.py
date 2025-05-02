@@ -11,7 +11,6 @@ from src.maude_encoder import MaudeEncoder, MaudeModules
 from src.maude_encoder import MaudeOps as mo
 from src.maude_encoder import MaudeSorts as ms
 from src.model.dnk_maude_model import DNKMaudeModel
-from src.model.unsplit_switch_dnk_model import UnsplitSwDNKMaudeModel
 from src.trace.node import TraceNode
 from src.trace.transition import newTraceTransition
 from src.trace.vector_clocks import newVectorClocks
@@ -46,7 +45,7 @@ class ProcessHook(maude.Hook):  # type: ignore
         self.cacheStats = CacheStats(0, 0)
         self.__init = False
         self.traceTree = TraceTree()
-        self.__model: DNKMaudeModel = UnsplitSwDNKMaudeModel()
+        self.__model = DNKMaudeModel()
         self.__state = GeneratorState()
 
     def setModel(self, newModel: DNKMaudeModel) -> None:
@@ -67,7 +66,7 @@ class ProcessHook(maude.Hook):  # type: ignore
     def reset(self) -> None:
         self.__init = False
         self.traceTree = TraceTree()
-        self.__model = UnsplitSwDNKMaudeModel()
+        self.__model = DNKMaudeModel()
         self.__state = GeneratorState()
 
     def run(self, term: maude.Term, data: maude.HookData) -> maude.Term:

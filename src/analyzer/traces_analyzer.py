@@ -1,11 +1,11 @@
 import os
 from typing import List, Tuple
 
+from src.KATch_comm import KATchComm
 from src.analyzer.harmful_trace import HarmfulTrace
 from src.analyzer.trace_analyzer import TraceAnalyzer, TransitionsChecker
 from src.decorators.exec_time import PExecTimes, with_time_execution
 from src.generator.trace_tree import TraceTree
-from src.KATch_comm import KATchComm
 from src.model.dnk_maude_model import ElementMetadata
 from src.stats import StatsEntry, StatsGenerator
 from src.trace.node import TraceNode
@@ -25,7 +25,7 @@ def _hasExistingRace(trace: List[TraceNode]) -> bool:
         for j in range(len(racingNodes)):
             if i >= j:
                 continue
-            if racingNodes[i].isRacingWith(racingNodes[j].id):
+            if racingNodes[i].isRacingWith(racingNodes[j]):
                 return True
     return False
 
@@ -33,9 +33,9 @@ def _hasExistingRace(trace: List[TraceNode]) -> bool:
 def _markRacingNodes(trace: List[TraceNode], nodePos: List[int]) -> None:
     for p1 in nodePos:
         for p2 in nodePos:
-            if p1 == p2:
+            if p1 >= p2:
                 continue
-            trace[p1].addRacingNode(trace[p2].id)
+            trace[p1].addRacingNode(trace[p2])
 
 
 def _getSoonerRace(

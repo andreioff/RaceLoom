@@ -27,11 +27,14 @@ class TraceNode:
     def vectorClocks(self) -> List[List[int]]:
         return self.__vectorClocks
 
-    def addRacingNode(self, otherNodeId: int) -> None:
-        self.__racingNodes.append(otherNodeId)
+    def addRacingNode(self, otherNode: Self) -> None:
+        if self.__id == otherNode.__id:
+            raise ValueError("Cannot add self as racing node")
+        self.__racingNodes.append(otherNode.__id)
+        otherNode.__racingNodes.append(self.__id)
 
-    def isRacingWith(self, otherNodeId: int) -> bool:
-        return otherNodeId in self.__racingNodes
+    def isRacingWith(self, otherNode: Self) -> bool:
+        return otherNode.__id in self.__racingNodes
 
     def isPartOfRace(self) -> bool:
         return len(self.__racingNodes) > 0
@@ -54,11 +57,11 @@ class TraceNode:
                     raise err
         return cast(Tuple[str, List[List[int]]], t)
 
-    def __repr__(self) -> str:
-        return f'(\\"{self.trans}\\",{self.vectorClocks})'
-
     def __str__(self) -> str:
-        return f'(\\"{self.trans}\\",{self.vectorClocks})'
+        return f'("{self.trans}", {self.vectorClocks})'
+
+    def __repr__(self) -> str:
+        return str(self)
 
     def __hash__(self) -> int:
         return self.__id

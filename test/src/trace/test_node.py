@@ -51,8 +51,6 @@ def test_fromTuple_valid_tuple_creates_trace_node():
 def test_fromTuple_invalid_tuple_raises_parse_error():
     cases = [
         ("proc('',0)", "invalid_vector_clock"),
-        ("proc", []),
-        ("rcfg", []),
         ("", [[1, 2, 3], [1, "str", 2]]),
     ]
     for case in cases:

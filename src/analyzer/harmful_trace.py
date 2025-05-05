@@ -4,7 +4,7 @@ from typing import List
 
 from src.model.dnk_maude_model import ElementMetadata
 from src.trace.node import TraceNode
-from src.util import splitIntoLines
+from src.util import splitIntoLines, indexInBounds
 
 
 class RaceType(StrEnum):
@@ -33,6 +33,18 @@ class HarmfulTrace:
         self.elsMetadata = elsMetadata
         self.racingTransToEls = racingTransToEls
         self.raceType = raceType
+        self._validateRacingTransitionsDict()
+
+    def _validateRacingTransitionsDict(self) -> None:
+        for tPos, elPos in self.racingTransToEls.items():
+            if not indexInBounds(tPos, len(self.nodes)):
+                raise ValueError(
+                    f"Racing transition position {tPos} is out of bounds for the given nodes list."
+                )
+            if not indexInBounds(elPos, len(self.nodes[tPos].vectorClocks)):
+                raise ValueError(
+                    f"Element position {elPos} is out of bounds for the given nodes list."
+                )
 
     def toDOT(self) -> str:
         sb: List[str] = ["digraph g {"]
@@ -59,10 +71,11 @@ class HarmfulTrace:
 
     def __getNodeLabel(self, node: TraceNode, nodePos: int) -> str:
         elNames, vcLabel, prefix = "", "", ""
-        for i, vc in enumerate(node.vectorClocks):
-            elName = self.elsMetadata[i].name
+        for i, metadata in enumerate(self.elsMetadata):
+            vc = node.vectorClocks[i]
+            elName = metadata.name
             if not elName:
-                elName = self.elsMetadata[i].pType
+                elName = metadata.pType
             elNames += prefix + elName
             vcLabel += prefix
             if i == self.racingTransToEls.get(nodePos, -1):

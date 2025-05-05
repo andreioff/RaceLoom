@@ -175,3 +175,4 @@ test_runs/
 dump/
 .scannerwork/
 sonar-project.properties
+.idea/

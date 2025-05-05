@@ -77,6 +77,10 @@ class RcfgTrans(ITransition):
             int(res.group(4)),
             str(res.group(1)),
         )
+        if t.srcPos == t.dstPos:
+            raise ParseError(
+                f"Source and destination positions cannot be the same in '{s}'"
+            )
         return t
 
     def updateVC(self, vcs: List[List[int]]) -> List[List[int]]:
@@ -87,8 +91,11 @@ class RcfgTrans(ITransition):
 
 
 def newTraceTransition(transStr: str) -> ITransition:
-    if transStr[:4] == "proc":
-        return PktProcTrans.fromStr(transStr)
-    if transStr[:4] == "rcfg":
-        return RcfgTrans.fromStr(transStr)
+    try:
+        if transStr[:4] == "proc":
+            return PktProcTrans.fromStr(transStr)
+        if transStr[:4] == "rcfg":
+            return RcfgTrans.fromStr(transStr)
+    except ParseError:
+        pass
     return TraceTransition()

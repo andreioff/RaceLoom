@@ -1,10 +1,9 @@
 import os
 import re
 from enum import StrEnum
-from typing import Hashable, List, Tuple
+from typing import List, Tuple
 
-from src.decorators.bool_cache import PBoolCache, with_bool_cache
-from src.decorators.cache_stats import CacheStats
+from src.decorators.bool_cache import BoolCache, with_bool_cache
 from src.decorators.exec_time import with_time_execution, ExecTimes
 from src.stats import StatsEntry, StatsGenerator
 from src.util import DyNetKATSymbols as sym
@@ -66,15 +65,14 @@ def _toolFormat(netkatEncoding: str) -> str:
     return re.sub(r"([a-zA-Z_]\w*)", r"@\1", netkatEncoding)
 
 
-class KATchComm(ExecTimes, PBoolCache, StatsGenerator):
+class KATchComm(ExecTimes, BoolCache, StatsGenerator):
     """Class for running KATch as an OS command."""
 
     def __init__(self, tool_path: str, output_dir: str) -> None:
-        super().__init__()
+        ExecTimes.__init__(self)
+        BoolCache.__init__(self)
         self.tool_path: str = tool_path
         self.output_dir: str = output_dir
-        self.cache: dict[str, dict[Tuple[Hashable, ...], bool]] = {}
-        self.cacheStats: dict[str, CacheStats] = {}
 
     def _runNPKLProgram(self, npklProgram: str) -> Tuple[str, str | None]:
         """

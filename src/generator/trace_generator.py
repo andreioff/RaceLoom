@@ -20,7 +20,8 @@ class TraceGenerator(ExecTimes, StatsGenerator, ABC):
     maudeInitialized: bool = False
 
     def __init__(self, config: TracerConfig) -> None:
-        super().__init__()
+        ExecTimes.__init__(self)
+        StatsGenerator.__init__(self)
         self.config = config
         self.cache: Dict[Tuple[Hashable, ...], List[Tuple[str, str, str]]] = {}
         self.cacheStats = CacheStats(0, 0)

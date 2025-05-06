@@ -5,7 +5,7 @@ from typing import Hashable, List, Tuple
 
 from src.decorators.bool_cache import PBoolCache, with_bool_cache
 from src.decorators.cache_stats import CacheStats
-from src.decorators.exec_time import PExecTimes, with_time_execution
+from src.decorators.exec_time import with_time_execution, ExecTimes
 from src.stats import StatsEntry, StatsGenerator
 from src.util import DyNetKATSymbols as sym
 from src.util import executeCmd, exportFile, getTempFilePath
@@ -66,14 +66,13 @@ def _toolFormat(netkatEncoding: str) -> str:
     return re.sub(r"([a-zA-Z_]\w*)", r"@\1", netkatEncoding)
 
 
-class KATchComm(PBoolCache, PExecTimes, StatsGenerator):
+class KATchComm(ExecTimes, PBoolCache, StatsGenerator):
     """Class for running KATch as an OS command."""
 
     def __init__(self, tool_path: str, output_dir: str) -> None:
         super().__init__()
         self.tool_path: str = tool_path
         self.output_dir: str = output_dir
-        self.execTimes: dict[str, float] = {}
         self.cache: dict[str, dict[Tuple[Hashable, ...], bool]] = {}
         self.cacheStats: dict[str, CacheStats] = {}
 

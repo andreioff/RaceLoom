@@ -1,13 +1,9 @@
-import os
-
 import pytest
 
-import src
 from src.KATch_comm import (
     _StatsKey,
     _processCheckOpResult,
     KATchError,
-    KATchComm,
     _toolFormat,
     NKPL_LARROW,
     NKPL_STAR,
@@ -18,16 +14,7 @@ from src.KATch_comm import (
     NKPL_CHECK,
 )
 from src.util import DyNetKATSymbols as sym
-
-PROJECT_DIR_PATH = os.path.dirname(os.path.realpath(src.__file__))
-KATCH_PATH = os.path.join(PROJECT_DIR_PATH, "..", "bin", "katch", "katch")
-
-
-@pytest.fixture
-def katch(tmp_path) -> KATchComm:
-    outputDir = tmp_path / "katch_test_output"
-    outputDir.mkdir()
-    return KATchComm(KATCH_PATH, str(outputDir))
+from test.src.testfiles.fixtures import katch, flowRule1, flowRule2, flowRule3
 
 
 def test_processCheckOpResult_output_contains_check_passed_returns_true():
@@ -115,34 +102,20 @@ def test_runNPKLProgram_valid_input_but_failed_check_returns_error_with_check_re
     ), "Expected error message to contain 'Check failed'."
 
 
-def test_isNonEmptyDifference_valid_input_returns_true(katch):
-    nkEnc1 = (
-        f"port {sym.EQUAL} 1 {sym.AND} dst {sym.EQUAL} 2 {sym.AND} port {sym.ASSIGN} 3 "
-        + sym.OR
-        + f"port {sym.EQUAL} 3 {sym.AND} dst {sym.EQUAL} 1 {sym.AND} port {sym.ASSIGN} 5 "
-    )
-    nkEnc2 = (
-        f"port {sym.EQUAL} 1 {sym.AND} dst {sym.EQUAL} 2 {sym.AND} port {sym.ASSIGN} 3 "
-        + sym.OR
-        + f"field1 {sym.EQUAL} 50 {sym.AND} field2 {sym.EQUAL} 32 {sym.AND} field3 {sym.ASSIGN} 60 "
-    )
+def test_isNonEmptyDifference_valid_input_returns_true(
+    katch, flowRule1, flowRule2, flowRule3
+):
+    nkEnc1 = flowRule1 + sym.OR + flowRule2
+    nkEnc2 = flowRule1 + sym.OR + flowRule3
     result = katch.isNonEmptyDifference(nkEnc1, nkEnc2)
     assert result is True, "Expected True, got False"
 
 
-def test_isNonEmptyDifference_valid_input_returns_false(katch):
-    nkEnc1 = (
-        f"port {sym.EQUAL} 1 {sym.AND} dst {sym.EQUAL} 2 {sym.AND} port {sym.ASSIGN} 3 "
-        + sym.OR
-        + f"port {sym.EQUAL} 3 {sym.AND} dst {sym.EQUAL} 1 {sym.AND} port {sym.ASSIGN} 5 "
-    )
-    nkEnc2 = (
-        f"port {sym.EQUAL} 1 {sym.AND} dst {sym.EQUAL} 2 {sym.AND} port {sym.ASSIGN} 3 "
-        + sym.OR
-        + f"field1 {sym.EQUAL} 50 {sym.AND} field2 {sym.EQUAL} 32 {sym.AND} field3 {sym.ASSIGN} 60 "
-        + sym.OR
-        + f"port {sym.EQUAL} 3 {sym.AND} dst {sym.EQUAL} 1 {sym.AND} port {sym.ASSIGN} 5 "
-    )
+def test_isNonEmptyDifference_valid_input_returns_false(
+    katch, flowRule1, flowRule2, flowRule3
+):
+    nkEnc1 = flowRule1 + sym.OR + flowRule2
+    nkEnc2 = flowRule1 + sym.OR + flowRule3 + sym.OR + flowRule2
     result = katch.isNonEmptyDifference(nkEnc1, nkEnc2)
     assert result is False, "Expected False, got True"
 
@@ -154,20 +127,16 @@ def test_isNonEmptyDifference_invalid_input_raises_katch_error(katch):
         katch.isNonEmptyDifference(nkEnc1, nkEnc2)
 
 
-def test_isNonEmptyDifference_empty_expression_does_not_raise_error(katch):
-    nkEnc1 = (
-        f"port {sym.EQUAL} 1 {sym.AND} dst {sym.EQUAL} 2 {sym.AND} port {sym.ASSIGN} 3 "
-    )
+def test_isNonEmptyDifference_empty_expression_does_not_raise_error(katch, flowRule1):
+    nkEnc1 = flowRule1
     nkEnc2 = ""
     result = katch.isNonEmptyDifference(nkEnc1, nkEnc2)
     assert result is True, "Expected True, got False"
 
 
-def test_isNonEmptyDifference_empty_expression_does_not_raise_error2(katch):
+def test_isNonEmptyDifference_empty_expression_does_not_raise_error2(katch, flowRule1):
     nkEnc1 = ""
-    nkEnc2 = (
-        f"port {sym.EQUAL} 1 {sym.AND} dst {sym.EQUAL} 2 {sym.AND} port {sym.ASSIGN} 3 "
-    )
+    nkEnc2 = flowRule1
     result = katch.isNonEmptyDifference(nkEnc1, nkEnc2)
     assert result is False, "Expected False, got True"
 
@@ -179,30 +148,16 @@ def test_isNonEmptyDifference_empty_expression_does_not_raise_error3(katch):
     assert result is False, "Expected False, got True"
 
 
-def test_areNotEquiv_valid_input_returns_true(katch):
-    nkEnc1 = (
-        f"port {sym.EQUAL} 1 {sym.AND} dst {sym.EQUAL} 2 {sym.AND} port {sym.ASSIGN} 3 "
-        + sym.OR
-        + f"port {sym.EQUAL} 3 {sym.AND} dst {sym.EQUAL} 1 {sym.AND} port {sym.ASSIGN} 5 "
-    )
-    nkEnc2 = (
-        f"port {sym.EQUAL} 3 {sym.AND} dst {sym.EQUAL} 1 {sym.AND} port {sym.ASSIGN} 5 "
-        + sym.OR
-        + f"port {sym.EQUAL} 1 {sym.AND} dst {sym.EQUAL} 2 {sym.AND} port {sym.ASSIGN} 3 "
-    )
+def test_areNotEquiv_valid_input_returns_true(katch, flowRule1, flowRule2):
+    nkEnc1 = flowRule1 + sym.OR + flowRule2
+    nkEnc2 = flowRule2 + sym.OR + flowRule1
     result = katch.areNotEquiv(nkEnc1, nkEnc2)
     assert result is False, "Expected False, got True"
 
 
-def test_areNotEquiv_valid_input_returns_false(katch):
-    nkEnc1 = (
-        f"port {sym.EQUAL} 1 {sym.AND} dst {sym.EQUAL} 2 {sym.AND} port {sym.ASSIGN} 3 "
-    )
-    nkEnc2 = (
-        f"port {sym.EQUAL} 3 {sym.AND} dst {sym.EQUAL} 1 {sym.AND} port {sym.ASSIGN} 5 "
-        + sym.OR
-        + f"port {sym.EQUAL} 1 {sym.AND} dst {sym.EQUAL} 2 {sym.AND} port {sym.ASSIGN} 3 "
-    )
+def test_areNotEquiv_valid_input_returns_false(katch, flowRule1, flowRule2):
+    nkEnc1 = flowRule1
+    nkEnc2 = flowRule2 + sym.OR + flowRule1
     result = katch.areNotEquiv(nkEnc1, nkEnc2)
     assert result is True, "Expected True, got False"
 
@@ -214,20 +169,16 @@ def test_areNotEquiv_invalid_input_raises_katch_error(katch):
         katch.areNotEquiv(nkEnc1, nkEnc2)
 
 
-def test_areNotEquiv_empty_expression_does_not_raise_error(katch):
-    nkEnc1 = (
-        f"port {sym.EQUAL} 1 {sym.AND} dst {sym.EQUAL} 2 {sym.AND} port {sym.ASSIGN} 3 "
-    )
+def test_areNotEquiv_empty_expression_does_not_raise_error(katch, flowRule1):
+    nkEnc1 = flowRule1
     nkEnc2 = ""
     result = katch.areNotEquiv(nkEnc1, nkEnc2)
     assert result is True, "Expected True, got False"
 
 
-def test_areNotEquiv_empty_expression_does_not_raise_error2(katch):
+def test_areNotEquiv_empty_expression_does_not_raise_error2(katch, flowRule1):
     nkEnc1 = ""
-    nkEnc2 = (
-        f"port {sym.EQUAL} 1 {sym.AND} dst {sym.EQUAL} 2 {sym.AND} port {sym.ASSIGN} 3 "
-    )
+    nkEnc2 = flowRule1
     result = katch.areNotEquiv(nkEnc1, nkEnc2)
     assert result is True, "Expected True, got False"
 
@@ -239,17 +190,11 @@ def test_areNotEquiv_empty_expression_does_not_raise_error3(katch):
     assert result is False, "Expected False, got True"
 
 
-def test_get_stats(katch):
-    nkEnc1 = (
-        f"port {sym.EQUAL} 1 {sym.AND} dst {sym.EQUAL} 2 {sym.AND} port {sym.ASSIGN} 3 "
-        + sym.OR
-        + f"port {sym.EQUAL} 3 {sym.AND} dst {sym.EQUAL} 1 {sym.AND} port {sym.ASSIGN} 5 "
-    )
-    nkEnc2 = (
-        f"port {sym.EQUAL} 1 {sym.AND} dst {sym.EQUAL} 2 {sym.AND} port {sym.ASSIGN} 3 "
-        + sym.OR
-        + f"field1 {sym.EQUAL} 50 {sym.AND} field2 {sym.EQUAL} 32 {sym.AND} field3 {sym.ASSIGN} 60 "
-    )
+def test_get_stats_tracked_methods_produce_non_zero_stats(
+    katch, flowRule1, flowRule2, flowRule3
+):
+    nkEnc1 = flowRule1 + sym.OR + flowRule2
+    nkEnc2 = flowRule1 + sym.OR + flowRule3
     katch.isNonEmptyDifference(nkEnc1, nkEnc2)
     katch.areNotEquiv(nkEnc1, nkEnc2)
     katch.isNonEmptyDifference(nkEnc1, nkEnc2)

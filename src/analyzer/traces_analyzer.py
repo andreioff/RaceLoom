@@ -55,7 +55,8 @@ class TracesAnalyzer(ExecTimes, StatsGenerator):
     def __init__(
         self, katchComm: KATchComm, outputDirRaw: str, outputDirDOT: str
     ) -> None:
-        super().__init__()
+        ExecTimes.__init__(self)
+        StatsGenerator.__init__(self)
         self.katchComm = katchComm
         self.outputDirRaw = outputDirRaw
         self.outputDirDOT = outputDirDOT

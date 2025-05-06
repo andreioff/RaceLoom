@@ -1,8 +1,8 @@
 from os import linesep
 from typing import Callable, List, Protocol, Tuple, TypeVar, cast
 
-from src.analyzer.harmful_trace import HarmfulTrace, RaceType
 from src.KATch_comm import KATchComm
+from src.analyzer.harmful_trace import HarmfulTrace, RaceType
 from src.model.dnk_maude_model import ElementMetadata, ElementType
 from src.trace.node import TraceNode
 from src.trace.transition import ITransition, PktProcTrans, RcfgTrans
@@ -37,19 +37,19 @@ class TransitionsChecker:
     ) -> None:
         self.elsMetadata = elsMetadata
         self.katchComm = katchComm
-        self.__unexpected: dict[str, int] = {}
-        self.__checks: _TransitionCheckers = cast(_TransitionCheckers, {})
-        self.__checks[(PktProcTrans, RcfgTrans)] = self.checkProcRcfg
-        self.__checks[(RcfgTrans, PktProcTrans)] = self.checkRcfgProc
-        self.__checks[(RcfgTrans, RcfgTrans)] = self.checkRcfgRcfg
+        self._unexpected: dict[str, int] = {}
+        self._checks: _TransitionCheckers = cast(_TransitionCheckers, {})
+        self._checks[(PktProcTrans, RcfgTrans)] = self._checkProcRcfg
+        self._checks[(RcfgTrans, PktProcTrans)] = self._checkRcfgProc
+        self._checks[(RcfgTrans, RcfgTrans)] = self._checkRcfgRcfg
 
     def check(self, t1: ITransition, t2: ITransition) -> RaceType | None:
         key = (type(t1), type(t2))
-        if key in self.__checks:
-            return self.__checks[key](t1, t2)
-        return self.checkDefault(t1, t2)
+        if key in self._checks:
+            return self._checks[key](t1, t2)
+        return self._checkDefault(t1, t2)
 
-    def checkRcfgRcfg(self, t1: RcfgTrans, t2: RcfgTrans) -> RaceType | None:
+    def _checkRcfgRcfg(self, t1: RcfgTrans, t2: RcfgTrans) -> RaceType | None:
         src1Type = self.elsMetadata[t1.srcPos].pType
         src2Type = self.elsMetadata[t2.srcPos].pType
         targetSw1Id = self.elsMetadata[t1.dstPos].pID
@@ -64,7 +64,7 @@ class TransitionsChecker:
         res = self.katchComm.areNotEquiv(t1.policy, t2.policy)
         return RaceType.CTCT if res else None
 
-    def checkProcRcfg(self, t1: PktProcTrans, t2: RcfgTrans) -> RaceType | None:
+    def _checkProcRcfg(self, t1: PktProcTrans, t2: RcfgTrans) -> RaceType | None:
         targetSwId = self.elsMetadata[t2.dstPos].pID
         srcSwId = self.elsMetadata[t1.swPos].pID
         if targetSwId != srcSwId:
@@ -73,21 +73,21 @@ class TransitionsChecker:
         res = self.katchComm.isNonEmptyDifference(t1.policy, t2.policy)
         return RaceType.SWCT if res else None
 
-    def checkRcfgProc(self, t1: RcfgTrans, t2: PktProcTrans) -> RaceType | None:
-        return self.checkProcRcfg(t2, t1)
+    def _checkRcfgProc(self, t1: RcfgTrans, t2: PktProcTrans) -> RaceType | None:
+        return self._checkProcRcfg(t2, t1)
 
-    def checkDefault(self, t1: ITransition, t2: ITransition) -> RaceType | None:
+    def _checkDefault(self, t1: ITransition, t2: ITransition) -> RaceType | None:
         key = f"({type(t1).__name__}, {type(t2).__name__})"
-        if key in self.__unexpected:
-            self.__unexpected[key] += 1
+        if key in self._unexpected:
+            self._unexpected[key] += 1
             return None
 
-        self.__unexpected[key] = 1
+        self._unexpected[key] = 1
         return None
 
     def getUnexpectedTransPairsStr(self, prefix: str = "") -> str:
         sb: List[str] = []
-        for key, value in self.__unexpected.items():
+        for key, value in self._unexpected.items():
             sb.append(f"{prefix}{key}: {value} occurrences")
         return linesep.join(sb)
 

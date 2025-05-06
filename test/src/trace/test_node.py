@@ -52,6 +52,7 @@ def test_fromTuple_invalid_tuple_raises_parse_error():
     cases = [
         ("proc('',0)", "invalid_vector_clock"),
         ("", [[1, 2, 3], [1, "str", 2]]),
+        ("", ["str", []]),
     ]
     for case in cases:
         with pytest.raises(ParseError):

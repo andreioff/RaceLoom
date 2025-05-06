@@ -4,7 +4,7 @@ from typing import List, Tuple
 from src.KATch_comm import KATchComm
 from src.analyzer.harmful_trace import HarmfulTrace
 from src.analyzer.trace_analyzer import TraceAnalyzer, TransitionsChecker
-from src.decorators.exec_time import PExecTimes, with_time_execution
+from src.decorators.exec_time import ExecTimes, with_time_execution
 from src.generator.trace_tree import TraceTree
 from src.model.dnk_maude_model import ElementMetadata
 from src.stats import StatsEntry, StatsGenerator
@@ -49,16 +49,16 @@ def _getSoonerRace(
     return htrace2
 
 
-class TracesAnalyzer(PExecTimes, StatsGenerator):
+class TracesAnalyzer(ExecTimes, StatsGenerator):
     """Class analyzing traces"""
 
     def __init__(
         self, katchComm: KATchComm, outputDirRaw: str, outputDirDOT: str
     ) -> None:
+        super().__init__()
         self.katchComm = katchComm
         self.outputDirRaw = outputDirRaw
         self.outputDirDOT = outputDirDOT
-        self.execTimes: dict[str, float] = {}
         self.harmfulRacesCount = 0
 
     @with_time_execution

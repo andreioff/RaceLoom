@@ -5,8 +5,9 @@ from abc import ABC, abstractmethod
 from typing import Dict, Hashable, List, Tuple
 
 import maude
+
 from src.decorators.cache_stats import CacheStats
-from src.decorators.exec_time import PExecTimes, with_time_execution
+from src.decorators.exec_time import ExecTimes, with_time_execution
 from src.errors import MaudeError
 from src.generator.trace_tree import TraceTree
 from src.maude_encoder import MaudeModules as mm
@@ -15,14 +16,14 @@ from src.stats import StatsEntry, StatsGenerator
 from src.tracer_config import TracerConfig
 
 
-class TraceGenerator(PExecTimes, StatsGenerator, ABC):
+class TraceGenerator(ExecTimes, StatsGenerator, ABC):
     maudeInitialized: bool = False
 
     def __init__(self, config: TracerConfig) -> None:
+        super().__init__()
         self.config = config
         self.cache: Dict[Tuple[Hashable, ...], List[Tuple[str, str, str]]] = {}
         self.cacheStats = CacheStats(0, 0)
-        self.execTimes: dict[str, float] = {}
         self.generatedTraces = 0
         self.__initMaude()
 

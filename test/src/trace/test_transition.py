@@ -13,7 +13,7 @@ class TestTraceTransition:
     def test_new_trace_transition_has_empty_fields(self):
         transition = TraceTransition()
         assert transition.policy == ""
-        assert transition.getSource() == -1
+        assert transition.getSource() is None
 
     def test_updateVC_returns_original_vc(self):
         vcs = [[0, 1], [2, 3]]

@@ -4,7 +4,9 @@ from dataclasses import dataclass
 from typing import List, Self
 
 from src.errors import ParseError
+from src.model.dnk_maude_model import ElementMetadata
 from src.trace.vector_clocks import incrementVC, transferVC
+from src.util import indexInBounds
 
 
 @dataclass(frozen=True)
@@ -12,10 +14,13 @@ class ITransition(ABC):
     policy: str
 
     @abstractmethod
-    def getSource(self) -> int: ...
+    def getSource(self) -> int | None: ...
 
     @abstractmethod
     def updateVC(self, vc: List[List[int]]) -> List[List[int]]: ...
+
+    @abstractmethod
+    def hasValidPositions(self, elsMetadata: List[ElementMetadata]) -> bool: ...
 
 
 @dataclass(frozen=True)
@@ -23,11 +28,14 @@ class TraceTransition(ITransition):
     def __init__(self) -> None:
         super().__init__("")
 
-    def getSource(self) -> int:
-        return -1
+    def getSource(self) -> int | None:
+        return None
 
     def updateVC(self, vcs: List[List[int]]) -> List[List[int]]:
         return vcs
+
+    def hasValidPositions(self, elsMetadata: List[ElementMetadata]) -> bool:
+        return False
 
     def __str__(self) -> str:
         return ""
@@ -37,7 +45,7 @@ class TraceTransition(ITransition):
 class PktProcTrans(ITransition):
     swPos: int
 
-    def getSource(self) -> int:
+    def getSource(self) -> int | None:
         return self.swPos
 
     @classmethod
@@ -52,6 +60,9 @@ class PktProcTrans(ITransition):
     def updateVC(self, vcs: List[List[int]]) -> List[List[int]]:
         return incrementVC(vcs, self.swPos)
 
+    def hasValidPositions(self, elsMetadata: List[ElementMetadata]) -> bool:
+        return indexInBounds(self.swPos, len(elsMetadata))
+
     def __str__(self) -> str:
         return f"proc('{self.policy}', {self.swPos})"
 
@@ -62,7 +73,7 @@ class RcfgTrans(ITransition):
     dstPos: int
     channel: str
 
-    def getSource(self) -> int:
+    def getSource(self) -> int | None:
         return self.srcPos
 
     @classmethod
@@ -85,6 +96,11 @@ class RcfgTrans(ITransition):
 
     def updateVC(self, vcs: List[List[int]]) -> List[List[int]]:
         return transferVC(vcs, self.srcPos, self.dstPos)
+
+    def hasValidPositions(self, elsMetadata: List[ElementMetadata]) -> bool:
+        return indexInBounds(self.srcPos, len(elsMetadata)) and indexInBounds(
+            self.dstPos, len(elsMetadata)
+        )
 
     def __str__(self) -> str:
         return f"rcfg({self.channel}, '{self.policy}', {self.srcPos}, {self.dstPos})"

@@ -1,7 +1,6 @@
 import os
 import sys
 import time
-from test.util import DNKTestModel
 
 from pydantic import ValidationError
 
@@ -12,6 +11,7 @@ from src.stats import StatsCollector, StatsEntry
 from src.tracer import Tracer
 from src.tracer_config import TracerConfig
 from src.util import createDir, getFileName, readFile
+from test.src.test_utils.util import DNKTestModel
 
 PROJECT_DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 OUTPUT_DIR_PATH = os.path.join(PROJECT_DIR_PATH, "output")

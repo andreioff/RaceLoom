@@ -47,7 +47,7 @@ class TransitionsChecker:
         key = (type(t1), type(t2))
         if key in self._checks:
             return self._checks[key](t1, t2)
-        return self._checkDefault(t1, t2)
+        return self._addUnexpectedTransPair(t1, t2)
 
     def _checkRcfgRcfg(self, t1: RcfgTrans, t2: RcfgTrans) -> RaceType | None:
         src1Type = self.elsMetadata[t1.srcPos].pType
@@ -67,7 +67,8 @@ class TransitionsChecker:
     def _checkProcRcfg(self, t1: PktProcTrans, t2: RcfgTrans) -> RaceType | None:
         targetSwId = self.elsMetadata[t2.dstPos].pID
         srcSwId = self.elsMetadata[t1.swPos].pID
-        if targetSwId != srcSwId:
+        rcfgSrcType = self.elsMetadata[t2.srcPos].pType
+        if targetSwId != srcSwId or rcfgSrcType == ElementType.SW:
             return None
 
         res = self.katchComm.isNonEmptyDifference(t1.policy, t2.policy)
@@ -76,7 +77,9 @@ class TransitionsChecker:
     def _checkRcfgProc(self, t1: RcfgTrans, t2: PktProcTrans) -> RaceType | None:
         return self._checkProcRcfg(t2, t1)
 
-    def _checkDefault(self, t1: ITransition, t2: ITransition) -> RaceType | None:
+    def _addUnexpectedTransPair(
+        self, t1: ITransition, t2: ITransition
+    ) -> RaceType | None:
         key = f"({type(t1).__name__}, {type(t2).__name__})"
         if key in self._unexpected:
             self._unexpected[key] += 1

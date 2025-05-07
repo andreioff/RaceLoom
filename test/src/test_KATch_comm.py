@@ -14,7 +14,10 @@ from src.KATch_comm import (
     NKPL_CHECK,
 )
 from src.util import DyNetKATSymbols as sym
-from test.src.testfiles.fixtures import katch, flowRule1, flowRule2, flowRule3
+
+pytest_plugins = [
+    "test.src.test_utils.fixtures",
+]
 
 
 def test_processCheckOpResult_output_contains_check_passed_returns_true():

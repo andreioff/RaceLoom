@@ -1,4 +1,5 @@
 # mypy: disable-error-code="import-untyped,no-any-unimported,misc"
+import logging
 from dataclasses import dataclass, field
 from typing import Hashable, List, Tuple
 
@@ -16,6 +17,8 @@ from src.trace.transition import newTraceTransition
 from src.trace.vector_clocks import newVectorClocks
 from src.tracer_config import TracerConfig
 from src.util import uniformSplit
+
+logger = logging.getLogger("Generator")
 
 _HOOK_MAUDE_NAME = "storeOutputGetNextInput"
 _ENTRY_MAUDE_EQUATION = "entry"
@@ -83,21 +86,31 @@ class ProcessHook(maude.Hook):  # type: ignore
             self.__initGen()
             self.__init = True
         else:
+            logger.info("Processing Maude result...")
             s.currLayer = self.__processMaudeResult(module, resultListTerm)
             s.depth -= 1
+            logger.info("---------- Done ----------")
             if s.depth <= 0:
                 return module.parseTerm(MaudeEncoder.emptyTermList())
 
+        logger.info("---------- Calculating depth %d ----------", s.depth)
+        logger.info("Current layer contains: %d nodes", len(s.currLayer))
         self.__setUniqueDNKData()
+        logger.info("Total unique DNK data entries: %d", len(s.uniqueDNKData))
 
         # list of (results, is computed)
         s.results = [([], False) for _ in range(len(s.uniqueDNKData))]
         self.__addCachedResults()
 
+        cachedEntries = sum([1 if computed else 0 for _li, computed in s.results])
+        logger.info("Cached entries: %d", cachedEntries)
+        logger.info("Remaining: %d", len(s.uniqueDNKData) - cachedEntries)
+
         inputTerms = self.__makeMaudeInput()
         inputTerm = module.parseTerm(MaudeEncoder.toTermList(inputTerms))
         if inputTerm is None:
             return module.parseTerm(MaudeEncoder.emptyTermList())
+        logger.info("Passing input to Maude...")
         return inputTerm
 
     def __processMaudeResult(

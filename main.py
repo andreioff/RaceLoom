@@ -1,6 +1,8 @@
+import logging
 import os
 import sys
 import time
+from test.src.test_utils.util import DNKTestModel
 
 from pydantic import ValidationError
 
@@ -11,7 +13,8 @@ from src.stats import StatsCollector, StatsEntry
 from src.tracer import Tracer
 from src.tracer_config import TracerConfig
 from src.util import createDir, getFileName, readFile
-from test.src.test_utils.util import DNKTestModel
+
+logger = logging.getLogger(__name__)
 
 PROJECT_DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 OUTPUT_DIR_PATH = os.path.join(PROJECT_DIR_PATH, "output")
@@ -65,6 +68,11 @@ def readDNKModelFromFile(filePath: str) -> DNKMaudeModel:
 def main() -> None:
     try:
         args = getCLIArgs()
+        logLevel = logging.CRITICAL
+        if args.verbose:
+            logLevel = logging.INFO
+        logging.basicConfig(level=logLevel)
+
         dnkModel = readDNKModelFromFile(args.inputFilePath)
 
         currTime = time.localtime()

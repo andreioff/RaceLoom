@@ -4,7 +4,7 @@ from enum import StrEnum
 from typing import List, Tuple
 
 from src.decorators.bool_cache import BoolCache, with_bool_cache
-from src.decorators.exec_time import with_time_execution, ExecTimes
+from src.decorators.exec_time import ExecTimes, with_time_execution
 from src.stats import StatsEntry, StatsGenerator
 from src.util import DyNetKATSymbols as sym
 from src.util import executeCmd, exportFile, getTempFilePath
@@ -121,7 +121,7 @@ class KATchComm(ExecTimes, BoolCache, StatsGenerator):
             StatsEntry(
                 _StatsKey.execTime,
                 "KATch total execution time",
-                self.getTotalExecTime(),
+                self.getWrapperTotalExecTime(),
             ),
             StatsEntry(
                 _StatsKey.cacheHits, "KATch total cache hits", self.getTotalCacheHits()

@@ -98,6 +98,8 @@ def splitIntoLines(s: str, lineSize: int, charMargin: int = 0) -> str:
 def uniformSplit[T](li: List[T], parts: int) -> List[List[T]]:
     if parts == 0:
         return [li]
+    if len(li) == 0:
+        return []
     parts = len(li) if parts > len(li) else parts
     sublistSize = len(li) // parts
     splitList: List[List[T]] = []

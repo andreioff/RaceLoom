@@ -5,6 +5,7 @@ from typing import Hashable, List, Tuple
 
 import maude
 from src.decorators.cache_stats import CacheStats
+from src.errors import MaudeError
 from src.generator.trace_generator import TraceGenerator
 from src.generator.trace_tree import TraceTree
 from src.generator.util import extractListTerms, extractTransData, getSort
@@ -46,7 +47,7 @@ class ProcessHook(maude.Hook):  # type: ignore
         self.__threads = threads
         self.cache = cache
         self.cacheStats = cacheStats
-        self.__init = False
+        self.__isInit = False
         self.traceTree = TraceTree()
         self.__model = DNKMaudeModel()
         self.__state = GeneratorState()
@@ -65,9 +66,10 @@ class ProcessHook(maude.Hook):  # type: ignore
 
         # currNode to (dnkExpr, previous transition type)
         self.__state.currLayer = {startNode: (startDnkExpr, mo.TRANS_TYPE_NONE)}
+        self.__isInit = True
 
     def reset(self) -> None:
-        self.__init = False
+        self.__isInit = False
         self.traceTree = TraceTree()
         self.__model = DNKMaudeModel()
         self.__state = GeneratorState()
@@ -82,41 +84,43 @@ class ProcessHook(maude.Hook):  # type: ignore
         # result list calculated by Maude
         resultListTerm = term.arguments().argument()
 
-        if not self.__init:
+        if not self.__isInit:
             self.__initGen()
-            self.__init = True
         else:
             logger.info("Processing Maude result...")
-            s.currLayer = self.__processMaudeResult(module, resultListTerm)
-            s.depth -= 1
-            logger.info("---------- Done ----------")
-            if s.depth <= 0:
-                return module.parseTerm(MaudeEncoder.emptyTermList())
+            self.__processMaudeResult(module, resultListTerm)
 
-        logger.info("---------- Calculating depth %d ----------", s.depth)
-        logger.info("Current layer contains: %d nodes", len(s.currLayer))
-        self.__setUniqueDNKData()
-        logger.info("Total unique DNK data entries: %d", len(s.uniqueDNKData))
+        remInputs = 0
+        while remInputs == 0:
+            if s.results:
+                s.currLayer = self.__addNewNodes()
+                s.depth -= 1
+                logger.info("---------- Done ----------")
+                if s.depth <= 0:
+                    return module.parseTerm(MaudeEncoder.emptyTermList())
 
-        # list of (results, is computed)
-        s.results = [([], False) for _ in range(len(s.uniqueDNKData))]
-        self.__addCachedResults()
+            logger.info("---------- Calculating depth %d ----------", s.depth)
+            logger.info("Current layer contains: %d nodes", len(s.currLayer))
+            self.__setUniqueDNKData()
+            logger.info("Total unique DNK data entries: %d", len(s.uniqueDNKData))
 
-        cachedEntries = sum([1 if computed else 0 for _li, computed in s.results])
-        logger.info("Cached entries: %d", cachedEntries)
-        logger.info("Remaining: %d", len(s.uniqueDNKData) - cachedEntries)
+            # list of (results, is computed)
+            s.results = [([], False) for _ in range(len(s.uniqueDNKData))]
+            self.__addCachedResults()
+
+            cachedEntries = sum([1 if computed else 0 for _li, computed in s.results])
+            remInputs = len(s.uniqueDNKData) - cachedEntries
+            logger.info("Cached entries: %d", cachedEntries)
+            logger.info("Remaining inputs for Maude: %d", remInputs)
 
         inputTerms = self.__makeMaudeInput()
         inputTerm = module.parseTerm(MaudeEncoder.toTermList(inputTerms))
         if inputTerm is None:
-            return module.parseTerm(MaudeEncoder.emptyTermList())
+            raise MaudeError("Failed to parse input term list")
         logger.info("Passing input to Maude...")
         return inputTerm
 
-    def __processMaudeResult(
-        self, module: maude.Module, term: maude.Term
-    ) -> dict[TraceNode, Tuple[str, str]]:
-        self.__addNextTransitions(module, term)
+    def __addNewNodes(self) -> dict[TraceNode, Tuple[str, str]]:
         nextLayer: dict[TraceNode, Tuple[str, str]] = {}
         for parentNode, index in self.__state.nodeToIndex.items():
             res = self.__state.results[index][0]
@@ -160,7 +164,7 @@ class ProcessHook(maude.Hook):  # type: ignore
             s.nodeToIndex[node] = i
         s.uniqueDNKData = list(dnkDataToIndex.keys())
 
-    def __addNextTransitions(
+    def __processMaudeResult(
         self,
         mod: maude.Module,
         result: maude.Term,

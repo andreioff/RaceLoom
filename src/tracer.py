@@ -67,5 +67,6 @@ class Tracer:
 
     def getTotalExecTime(self) -> float:
         return (
-            self.__traceGen.getTotalExecTime() + self.__traceAnalyzer.getTotalExecTime()
+            self.__traceGen.getWrapperTotalExecTime()
+            + self.__traceAnalyzer.getWrapperTotalExecTime()
         )

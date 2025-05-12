@@ -2,10 +2,10 @@
 
 import os
 from abc import ABC, abstractmethod
+from time import perf_counter
 from typing import Dict, Hashable, List, Tuple
 
 import maude
-
 from src.decorators.cache_stats import CacheStats
 from src.decorators.exec_time import ExecTimes, with_time_execution
 from src.errors import MaudeError
@@ -14,6 +14,8 @@ from src.maude_encoder import MaudeModules as mm
 from src.model.dnk_maude_model import DNKMaudeModel
 from src.stats import StatsEntry, StatsGenerator
 from src.tracer_config import TracerConfig
+
+_MAUDE_EXEC_TIME_KEY = "maudeExecTime"
 
 
 class TraceGenerator(ExecTimes, StatsGenerator, ABC):
@@ -59,7 +61,7 @@ class TraceGenerator(ExecTimes, StatsGenerator, ABC):
 
     @with_time_execution
     def run(self, model: DNKMaudeModel, depth: int) -> TraceTree:
-        """Returns the number of traces collected during the run"""
+        """Returns the trace tree collected during the run"""
         self.reset()
         self.__declareModelMaudeModule(model)
         mod = self.__declareEntryMaudeModule()
@@ -75,23 +77,31 @@ class TraceGenerator(ExecTimes, StatsGenerator, ABC):
         return mod
 
     def __declareModelMaudeModule(self, model: DNKMaudeModel) -> None:
+        startTime = perf_counter()
         maude.input(model.toMaudeModule())
         mod = maude.getModule(mm.DNK_MODEL)
         if mod is None:
             raise MaudeError("Failed to declare module for given DyNetKAT model!")
+        endTime = perf_counter()
+        self.addExecTime(_MAUDE_EXEC_TIME_KEY, endTime - startTime)
 
     def reset(self) -> None:
         self.cache = {}
         self.cacheStats = CacheStats(0, 0)
-        self.execTimes = {}
         self.generatedTraces = 0
+        self.resetExecTimes()
 
     def getStats(self) -> List[StatsEntry]:
         return [
             StatsEntry(
                 "tracesGenTime",
                 "Trace(s) generation time",
-                self.getTotalExecTime(),
+                self.getWrapperTotalExecTime(),
+            ),
+            StatsEntry(
+                _MAUDE_EXEC_TIME_KEY,
+                "Maude execution time",
+                self.getExecTime(_MAUDE_EXEC_TIME_KEY),
             ),
             StatsEntry(
                 "traceGenCacheHits",

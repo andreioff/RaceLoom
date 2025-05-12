@@ -1,8 +1,9 @@
 # mypy: disable-error-code="import-untyped,no-any-unimported,misc"
+from time import perf_counter
 from typing import List, Tuple
 
 import maude
-from src.generator.trace_generator import TraceGenerator
+from src.generator.trace_generator import _MAUDE_EXEC_TIME_KEY, TraceGenerator
 from src.generator.trace_tree import TraceTree
 from src.generator.util import extractListTerms, extractTransData, getSort
 from src.generator.worklist import Queue, Stack, WorkList
@@ -61,8 +62,11 @@ class SequentialTraceGenerator(TraceGenerator):
             self.cacheStats.hits += 1
             return self.cache[key]
 
+        startTime = perf_counter()
         term = mod.parseTerm(MaudeEncoder.hnfCall(0, dnkExpr, prevTransType))
         term.reduce()
+        endTime = perf_counter()
+        self.addExecTime(_MAUDE_EXEC_TIME_KEY, endTime - startTime)
 
         neighbors = extractListTerms(term, getSort(mod, ms.TDATA))
         result: List[Tuple[str, str, str]] = []

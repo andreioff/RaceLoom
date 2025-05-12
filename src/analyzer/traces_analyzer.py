@@ -1,11 +1,11 @@
 import os
 from typing import List, Tuple
 
-from src.KATch_comm import KATchComm
 from src.analyzer.harmful_trace import HarmfulTrace
 from src.analyzer.trace_analyzer import TraceAnalyzer, TransitionsChecker
 from src.decorators.exec_time import ExecTimes, with_time_execution
 from src.generator.trace_tree import TraceTree
+from src.KATch_comm import KATchComm
 from src.model.dnk_maude_model import ElementMetadata
 from src.stats import StatsEntry, StatsGenerator
 from src.trace.node import TraceNode
@@ -146,6 +146,6 @@ class TracesAnalyzer(ExecTimes, StatsGenerator):
             StatsEntry(
                 "traceAnalyzerExecTime",
                 "Trace Analyzer execution time",
-                self.getTotalExecTime(),
+                self.getWrapperTotalExecTime(),
             ),
         ]

@@ -35,7 +35,6 @@ class GeneratorState:
     )
     nodeToIndex: dict[TraceNode, int] = field(default_factory=lambda: {})
     uniqueDNKData: List[Tuple[str, str]] = field(default_factory=lambda: [])
-    startTime: float = 0.0
 
 
 class ProcessHook(maude.Hook):  # type: ignore
@@ -53,7 +52,7 @@ class ProcessHook(maude.Hook):  # type: ignore
         self.traceTree = TraceTree()
         self.__model = DNKMaudeModel()
         self.__state = GeneratorState()
-        self.maudeExecTime: float = 0.0
+        self.pythonExecTime: float = 0.0
 
     def setModel(self, newModel: DNKMaudeModel) -> None:
         self.__model = newModel
@@ -76,14 +75,14 @@ class ProcessHook(maude.Hook):  # type: ignore
         self.traceTree = TraceTree()
         self.__model = DNKMaudeModel()
         self.__state = GeneratorState()
-        self.maudeExecTime = 0.0
+        self.pythonExecTime = 0.0
 
     def run(self, term: maude.Term, data: maude.HookData) -> maude.Term:
         s = self.__state
         # Reduce arguments first
         for arg in term.arguments():
             arg.reduce()
-        endTime = perf_counter()
+        startTime = perf_counter()
         module = term.symbol().getModule()
         # we assume that the first argument to the operator is the
         # result list calculated by Maude
@@ -92,7 +91,6 @@ class ProcessHook(maude.Hook):  # type: ignore
         if not self.__isInit:
             self.__initGen()
         else:
-            self.maudeExecTime += endTime - s.startTime
             logger.info("Processing Maude result...")
             self.__processMaudeResult(module, resultListTerm)
 
@@ -103,6 +101,8 @@ class ProcessHook(maude.Hook):  # type: ignore
                 s.depth -= 1
                 logger.info("---------- Done ----------")
                 if s.depth <= 0:
+                    endTime = perf_counter()
+                    self.pythonExecTime += endTime - startTime
                     return module.parseTerm(MaudeEncoder.emptyTermList())
 
             logger.info("---------- Calculating depth %d ----------", s.depth)
@@ -119,9 +119,11 @@ class ProcessHook(maude.Hook):  # type: ignore
             logger.info("Cached entries: %d", cachedEntries)
             logger.info("Remaining inputs for Maude: %d", remInputs)
 
-        inputTerms = self.__makeMaudeInput()
-        s.startTime = perf_counter()
-        inputTerm = module.parseTerm(MaudeEncoder.toTermList(inputTerms))
+        termList = MaudeEncoder.toTermList(self.__makeMaudeInput())
+        endTime = perf_counter()
+        self.pythonExecTime += endTime - startTime
+
+        inputTerm = module.parseTerm(termList)
         if inputTerm is None:
             raise MaudeError("Failed to parse input term list")
         logger.info("Passing input to Maude...")
@@ -212,9 +214,14 @@ class ParallelBFSTraceGenerator(TraceGenerator):
         self.maudeHook.setModel(model)
         self.maudeHook.setDepth(depth)
 
+        startTime = perf_counter()
+
         term = mod.parseTerm(_ENTRY_MAUDE_EQUATION)
         (res, _) = term.erewrite()
-        self.addExecTime(_MAUDE_EXEC_TIME_KEY, self.maudeHook.maudeExecTime)
+
+        endTime = perf_counter()
+        maudeExecTime = endTime - startTime - self.maudeHook.pythonExecTime
+        self.addExecTime(_MAUDE_EXEC_TIME_KEY, maudeExecTime)
         return self.maudeHook.traceTree
 
     def _getEntryMaudeModule(self, name: str) -> str:

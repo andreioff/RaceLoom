@@ -1,8 +1,8 @@
 from os import linesep
 from typing import Callable, List, Protocol, Tuple, TypeVar, cast
 
-from src.KATch_comm import KATchComm
 from src.analyzer.harmful_trace import HarmfulTrace, RaceType
+from src.KATch_comm import KATchComm
 from src.model.dnk_maude_model import ElementMetadata, ElementType
 from src.trace.node import TraceNode
 from src.trace.transition import ITransition, PktProcTrans, RcfgTrans
@@ -61,7 +61,7 @@ class TransitionsChecker:
             return None
 
         res = self.katchComm.areNotEquiv(t1.policy, t2.policy)
-        return RaceType.CTCT if res else None
+        return RaceType.CT_SW_CT if res else None
 
     def _checkProcRcfg(self, t1: PktProcTrans, t2: RcfgTrans) -> RaceType | None:
         targetSwId = self.elsMetadata[t2.dstPos].pID
@@ -71,7 +71,7 @@ class TransitionsChecker:
             return None
 
         res = self.katchComm.isNonEmptyDifference(t1.policy, t2.policy)
-        return RaceType.SWCT if res else None
+        return RaceType.CT_SW if res else None
 
     def _checkRcfgProc(self, t1: RcfgTrans, t2: PktProcTrans) -> RaceType | None:
         return self._checkProcRcfg(t2, t1)
@@ -147,6 +147,8 @@ class TraceAnalyzer:
             if i == 0 and not node.trans.policy:
                 continue  # skip empty start node
             el1 = node.trans.getSource()
+            if el1 is None:
+                raise TraceAnalyzerError("Found transition without source")
             # for rcfgs, we don't update the last node of the switch (i.e. the
             # destination of the rcfg) because we are interested in races
             # where the switch processes a packet.
@@ -177,7 +179,7 @@ class TraceAnalyzer:
             self._elsMetadata[el1].pType == ElementType.SW
             and self._elsMetadata[el2].pType == ElementType.SW
         ):
-            self._addSkippedRace(RaceType.SWSW)
+            self._addSkippedRace(RaceType.SW_SW)
             return None
 
         node1Pos = self._elLastNode[el1]

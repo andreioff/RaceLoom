@@ -1,7 +1,6 @@
 from src.analyzer.trace_analyzer import RaceType
-from src.trace.transition import RcfgTrans, PktProcTrans
+from src.trace.transition import PktProcTrans, RcfgTrans
 from src.util import DyNetKATSymbols as sym
-
 
 pytest_plugins = [
     "test.src.test_utils.fixtures",
@@ -48,7 +47,7 @@ def test_checkRcfgRcfg_valid_rcfgs_not_equivalent_policies_returns_race(
     t1 = RcfgTrans(flowRule1, _CT1, _SW1, "ch")
     t2 = RcfgTrans(flowRule2, _CT2, _SW1, "ch")
     result = transChecker2SW2CT._checkRcfgRcfg(t1, t2)
-    assert result is RaceType.CTCT
+    assert result is RaceType.CT_SW_CT
 
 
 def test_checkRcfgRcfg_valid_rcfgs_equivalent_policies_returns_none(
@@ -102,8 +101,8 @@ def test_checkProcRcfg_valid_transitions_non_empty_policy_difference_returns_rac
     t2 = RcfgTrans(flowRule3 + sym.OR + flowRule1, _CT1, _SW1, "ch")
     res1 = transChecker2SW2CT._checkProcRcfg(t1, t2)
     res2 = transChecker2SW2CT._checkRcfgProc(t2, t1)
-    assert res1 is RaceType.SWCT
-    assert res2 is RaceType.SWCT
+    assert res1 is RaceType.CT_SW
+    assert res2 is RaceType.CT_SW
 
 
 def test_unexpected_transition_pairs_are_counted(
@@ -111,7 +110,7 @@ def test_unexpected_transition_pairs_are_counted(
 ):
     t1 = PktProcTrans(flowRule1, _SW1)
     t2 = RcfgTrans(flowRule2, _CT1, _SW1, "ch")
-    for i in range(2):
+    for _i in range(2):
         transChecker2SW2CT._addUnexpectedTransPair(t1, t1)
         transChecker2SW2CT._addUnexpectedTransPair(t1, t2)
         transChecker2SW2CT._addUnexpectedTransPair(t2, t1)
@@ -132,8 +131,8 @@ def test_check_processing_and_rcfg_transitions_returns_race(
     t2 = RcfgTrans(flowRule2, _CT1, _SW1, "ch")
     res1 = transChecker2SW2CT.check(t1, t2)
     res2 = transChecker2SW2CT.check(t2, t1)
-    assert res1 is RaceType.SWCT
-    assert res2 is RaceType.SWCT
+    assert res1 is RaceType.CT_SW
+    assert res2 is RaceType.CT_SW
     assert transChecker2SW2CT.getUnexpectedTransPairsStr() == ""
 
 
@@ -153,7 +152,7 @@ def test_check_rcfg_transitions_returns_race(transChecker2SW2CT, flowRule1, flow
     t1 = RcfgTrans(flowRule1, _CT1, _SW1, "ch")
     t2 = RcfgTrans(flowRule2, _CT2, _SW1, "ch")
     res = transChecker2SW2CT.check(t1, t2)
-    assert res is RaceType.CTCT
+    assert res is RaceType.CT_SW_CT
     assert transChecker2SW2CT.getUnexpectedTransPairsStr() == ""
 
 

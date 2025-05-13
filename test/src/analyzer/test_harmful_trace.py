@@ -54,7 +54,7 @@ def test_constructor_out_of_bound_racing_transition_data_raises_value_error():
     racingTransToEls = {1: 1, 2: 0}  # second key is OUT OF BOUNDS
 
     with pytest.raises(ValueError):
-        HarmfulTrace(nodes, metadata, racingTransToEls, RaceType.SWSW)
+        HarmfulTrace(nodes, metadata, racingTransToEls, RaceType.SW_SW)
 
 
 def test_constructor_out_of_bound_racing_transition_data_raises_value_error2():
@@ -69,11 +69,11 @@ def test_constructor_out_of_bound_racing_transition_data_raises_value_error2():
     racingTransToEls = {1: 1, 0: 3}  # second value is OUT OF BOUNDS
 
     with pytest.raises(ValueError):
-        HarmfulTrace(nodes, metadata, racingTransToEls, RaceType.SWSW)
+        HarmfulTrace(nodes, metadata, racingTransToEls, RaceType.SW_SW)
 
 
 def test_toDOT_no_nodes_returns_empty_DOT_graph():
-    harmful_trace = HarmfulTrace([], [], {}, RaceType.SWSW)
+    harmful_trace = HarmfulTrace([], [], {}, RaceType.SW_SW)
     dot_graph = harmful_trace.toDOT()
     expected = _wrap_in_digraph()
     assert dot_graph == expected
@@ -82,7 +82,7 @@ def test_toDOT_no_nodes_returns_empty_DOT_graph():
 def test_toDOT_one_node_returns_single_node_DOT_graph():
     nodes = [TraceNode(PktProcTrans("", 0), [[0]])]
     harmful_trace = HarmfulTrace(
-        nodes, [ElementMetadata(0, et.SW, "test")], {}, RaceType.SWSW
+        nodes, [ElementMetadata(0, et.SW, "test")], {}, RaceType.SW_SW
     )
     dot_graph = harmful_trace.toDOT()
     expected = _wrap_in_digraph(_dotNode(0, "test<br/>[[0]]"))
@@ -93,7 +93,7 @@ def test_toDOT_one_node_no_metadata_name_returns_single_node_DOT_graph_with_elem
     vcs1 = [[0]]
     nodes = [TraceNode(PktProcTrans("", 0), vcs1)]
     metadata = [ElementMetadata(0, et.SW)]  # NO name provided, should use type
-    harmful_trace = HarmfulTrace(nodes, metadata, {}, RaceType.SWSW)
+    harmful_trace = HarmfulTrace(nodes, metadata, {}, RaceType.SW_SW)
 
     dot_graph = harmful_trace.toDOT()
     expected = _wrap_in_digraph(_dotNode(0, _dotNodeLabel(vcs1, [et.SW])))
@@ -110,7 +110,7 @@ def test_toDOT_two_nodes_returns_connected_graph_in_order():
         ElementMetadata(0, et.SW, "test"),
         ElementMetadata(1, et.SW, "smth"),
     ]
-    harmful_trace = HarmfulTrace(nodes, metadata, {}, RaceType.SWSW)
+    harmful_trace = HarmfulTrace(nodes, metadata, {}, RaceType.SW_SW)
     dot_graph = harmful_trace.toDOT()
     elNames = ["test", "smth"]
     expected = _wrap_in_digraph(
@@ -134,7 +134,7 @@ def test_toDOT_racing_transitions_returns_connected_graph_marked_correctly():
         ElementMetadata(1, et.SW, "smth"),
     ]
     racingTransToEls = {1: 1, 2: 0}
-    harmful_trace = HarmfulTrace(nodes, metadata, racingTransToEls, RaceType.SWSW)
+    harmful_trace = HarmfulTrace(nodes, metadata, racingTransToEls, RaceType.SW_SW)
 
     dot_graph = harmful_trace.toDOT()
     elNames = [et.CT, "smth"]
@@ -163,7 +163,7 @@ def test_toDOT_racing_transitions_returns_connected_graph_marked_correctly2():
         ElementMetadata(1, et.SW, "smth"),
     ]
     racingTransToEls = {2: 0, 3: 1}  # race between the first 2 transitions
-    harmful_trace = HarmfulTrace(nodes, metadata, racingTransToEls, RaceType.SWSW)
+    harmful_trace = HarmfulTrace(nodes, metadata, racingTransToEls, RaceType.SW_SW)
 
     dot_graph = harmful_trace.toDOT()
     elNames = [et.CT, "smth"]

@@ -4,13 +4,13 @@ from typing import List
 
 from src.model.dnk_maude_model import ElementMetadata
 from src.trace.node import TraceNode
-from src.util import splitIntoLines, indexInBounds
+from src.util import indexInBounds, splitIntoLines
 
 
 class RaceType(StrEnum):
-    SWSW = "SW-SW"
-    SWCT = "SW-CT"
-    CTCT = "CT-CT"
+    SW_SW = "SW-SW"
+    CT_SW = "CT->SW"
+    CT_SW_CT = "CT->SW<-CT"
 
 
 class ColorScheme(StrEnum):
@@ -39,11 +39,13 @@ class HarmfulTrace:
         for tPos, elPos in self.racingTransToEls.items():
             if not indexInBounds(tPos, len(self.nodes)):
                 raise ValueError(
-                    f"Racing transition position {tPos} is out of bounds for the given nodes list."
+                    f"Racing transition position {tPos} "
+                    + "is out of bounds for the given nodes list."
                 )
             if not indexInBounds(elPos, len(self.nodes[tPos].vectorClocks)):
                 raise ValueError(
-                    f"Element position {elPos} is out of bounds for the given nodes list."
+                    f"Element position {elPos} is "
+                    + "out of bounds for the given nodes list."
                 )
 
     def toDOT(self) -> str:

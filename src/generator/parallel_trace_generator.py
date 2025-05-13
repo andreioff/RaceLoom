@@ -54,12 +54,6 @@ class ProcessHook(maude.Hook):  # type: ignore
         self.__state = GeneratorState()
         self.pythonExecTime: float = 0.0
 
-    def setModel(self, newModel: DNKMaudeModel) -> None:
-        self.__model = newModel
-
-    def setDepth(self, newDepth: int) -> None:
-        self.__state.depth = newDepth
-
     def __initGen(self) -> None:
         startDnkExpr = MaudeEncoder.parallelSeq(self.__model.getElementTerms())
         startVC = newVectorClocks(len(self.__model.getElementTerms()))
@@ -70,11 +64,20 @@ class ProcessHook(maude.Hook):  # type: ignore
         self.__state.currLayer = {startNode: (startDnkExpr, mo.TRANS_TYPE_NONE)}
         self.__isInit = True
 
-    def reset(self) -> None:
+    def reset(
+        self,
+        newModel: DNKMaudeModel,
+        newDepth: int,
+        cache: dict[Tuple[Hashable, ...], List[Tuple[str, str, str]]],
+        cacheStats: CacheStats,
+    ) -> None:
         self.__isInit = False
         self.traceTree = TraceTree()
-        self.__model = DNKMaudeModel()
+        self.__model = newModel
         self.__state = GeneratorState()
+        self.__state.depth = newDepth
+        self.cache = cache
+        self.cacheStats = cacheStats
         self.pythonExecTime = 0.0
 
     def run(self, term: maude.Term, data: maude.HookData) -> maude.Term:
@@ -210,9 +213,7 @@ class ParallelBFSTraceGenerator(TraceGenerator):
     def _generateTraces(
         self, model: DNKMaudeModel, mod: maude.Module, depth: int
     ) -> TraceTree:
-        self.maudeHook.reset()
-        self.maudeHook.setModel(model)
-        self.maudeHook.setDepth(depth)
+        self.maudeHook.reset(model, depth, self.cache, self.cacheStats)
 
         startTime = perf_counter()
 

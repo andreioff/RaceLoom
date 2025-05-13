@@ -1,14 +1,10 @@
 import pytest
 
-from src.analyzer.trace_analyzer import (
-    _validateTrace,
-    TraceAnalyzerError,
-    TraceAnalyzer,
-    RaceType,
-)
+from src.analyzer.trace_analyzer import (RaceType, TraceAnalyzer,
+                                         TraceAnalyzerError, _validateTrace)
 from src.model.dnk_maude_model import ElementMetadata, ElementType
 from src.trace.node import TraceNode
-from src.trace.transition import PktProcTrans, TraceTransition, RcfgTrans
+from src.trace.transition import PktProcTrans, RcfgTrans, TraceTransition
 from src.util import DyNetKATSymbols as sym
 
 pytest_plugins = [
@@ -102,11 +98,26 @@ def test_validateTrace_empty_metadata_raises_error():
 
 
 def test_analyze_invalid_trace_raises_error(transChecker2SW2CT, metadata2SW2CT):
+    # out of bounds source and vector clocks not matching
+    # the number of elements in the model
     trace = [
         TraceNode(TraceTransition(), [[0, 0], [0, 0]]),
         TraceNode(PktProcTrans("", 5), [[0, 0], [0, 0]]),
     ]
     ta = TraceAnalyzer(transChecker2SW2CT, metadata2SW2CT)
+    with pytest.raises(TraceAnalyzerError):
+        ta.analyze(trace)
+
+
+def test_analyze_invalid_trace_transition_without_source_raises_error(
+    transChecker1SW1CT, metadata1SW1CT
+):
+    trace = [
+        TraceNode(TraceTransition(), [[0, 0], [0, 0]]),
+        TraceNode(PktProcTrans("", 0), [[0, 0], [0, 0]]),
+        TraceNode(TraceTransition(), [[0, 0], [0, 0]]),
+    ]
+    ta = TraceAnalyzer(transChecker1SW1CT, metadata1SW1CT)
     with pytest.raises(TraceAnalyzerError):
         ta.analyze(trace)
 
@@ -176,7 +187,7 @@ def test_analyze_valid_trace_2_elements_harmful_SW_CT_race_beginning_returns_har
     res = ta.analyze(trace)
     skippedTrans = ta.getSkippedRacesStr()
     assert res is not None
-    assert res.raceType == RaceType.SWCT
+    assert res.raceType == RaceType.CT_SW
     assert res.elsMetadata == metadata1SW1CT
     assert res.racingTransToEls == {0: 0, 1: 1}
     assert skippedTrans == ""
@@ -200,7 +211,7 @@ def test_analyze_valid_trace_2_elements_harmful_SW_CT_race_middle_returns_harmfu
     res = ta.analyze(trace)
     skippedTrans = ta.getSkippedRacesStr()
     assert res is not None
-    assert res.raceType == RaceType.SWCT
+    assert res.raceType == RaceType.CT_SW
     assert res.elsMetadata == metadata1SW1CT
     assert res.racingTransToEls == {2: 0, 3: 1}
     assert skippedTrans == ""
@@ -221,7 +232,7 @@ def test_analyze_valid_trace_2_elements_harmful_SW_CT_race_end_returns_harmful_t
     res = ta.analyze(trace)
     skippedTrans = ta.getSkippedRacesStr()
     assert res is not None
-    assert res.raceType == RaceType.SWCT
+    assert res.raceType == RaceType.CT_SW
     assert res.elsMetadata == metadata1SW1CT
     assert res.racingTransToEls == {3: 0, 4: 1}
     assert skippedTrans == ""
@@ -272,7 +283,7 @@ def test_analyze_valid_trace_3_elements_harmful_CT_CT_race_beginning_returns_har
     res = ta.analyze(trace)
     skippedTrans = ta.getSkippedRacesStr()
     assert res is not None
-    assert res.raceType == RaceType.CTCT
+    assert res.raceType == RaceType.CT_SW_CT
     assert res.elsMetadata == metadata1SW2CT
     assert res.racingTransToEls == {0: 1, 1: 2}
     assert skippedTrans == ""
@@ -299,7 +310,7 @@ def test_analyze_valid_trace_3_elements_harmful_CT_CT_race_middle_returns_harmfu
     res = ta.analyze(trace)
     skippedTrans = ta.getSkippedRacesStr()
     assert res is not None
-    assert res.raceType == RaceType.CTCT
+    assert res.raceType == RaceType.CT_SW_CT
     assert res.elsMetadata == metadata1SW2CT
     assert res.racingTransToEls == {2: 2, 3: 1}
     assert skippedTrans == ""
@@ -328,7 +339,7 @@ def test_analyze_valid_trace_3_elements_harmful_CT_CT_race_end_returns_harmful_t
     res = ta.analyze(trace)
     skippedTrans = ta.getSkippedRacesStr()
     assert res is not None
-    assert res.raceType == RaceType.CTCT
+    assert res.raceType == RaceType.CT_SW_CT
     assert res.elsMetadata == metadata1SW2CT
     assert res.racingTransToEls == {3: 1, 4: 2}
     assert skippedTrans == ""

@@ -9,7 +9,7 @@ from src.util import DyNetKATSymbols as sym
 
 pytest_plugins = [
     "test.src.test_utils.fixtures",
-    "test.src.analyzer.trace_analyzer.test_utils.fixtures",
+    "test.src.analyzer.test_utils.fixtures",
 ]
 
 
@@ -145,12 +145,12 @@ def test_analyze_valid_trace_no_race_returns_none(transChecker1SW2CT, metadata1S
     ]
     ta = TraceAnalyzer(transChecker1SW2CT, metadata1SW2CT)
     res = ta.analyze(trace)
-    skippedTrans = ta.getSkippedRacesStr()
+    skippedTrans = transChecker1SW2CT.getSkippedRacesStr()
     assert res is None
     assert skippedTrans == ""
 
 
-def test_analyze_valid_trace_2_elements_unharmful_SW_CT_race_returns_none(
+def test_analyze_valid_trace_2_elements_unharmful_CT_SW_race_returns_none(
     transChecker1SW1CT, metadata1SW1CT, flowRule1, flowRule2
 ):
     SW1, CT1 = 0, 1
@@ -165,12 +165,12 @@ def test_analyze_valid_trace_2_elements_unharmful_SW_CT_race_returns_none(
     ]
     ta = TraceAnalyzer(transChecker1SW1CT, metadata1SW1CT)
     res = ta.analyze(trace)
-    skippedTrans = ta.getSkippedRacesStr()
+    skippedTrans = transChecker1SW1CT.getSkippedRacesStr()
     assert res is None
     assert skippedTrans == ""
 
 
-def test_analyze_valid_trace_2_elements_harmful_SW_CT_race_beginning_returns_harmful_trace(
+def test_analyze_valid_trace_2_elements_harmful_CT_SW_race_beginning_returns_harmful_trace(
     transChecker1SW1CT, metadata1SW1CT, flowRule1, flowRule2
 ):
     SW1, CT1 = 0, 1
@@ -185,7 +185,7 @@ def test_analyze_valid_trace_2_elements_harmful_SW_CT_race_beginning_returns_har
     ]
     ta = TraceAnalyzer(transChecker1SW1CT, metadata1SW1CT)
     res = ta.analyze(trace)
-    skippedTrans = ta.getSkippedRacesStr()
+    skippedTrans = transChecker1SW1CT.getSkippedRacesStr()
     assert res is not None
     assert res.raceType == RaceType.CT_SW
     assert res.elsMetadata == metadata1SW1CT
@@ -193,7 +193,7 @@ def test_analyze_valid_trace_2_elements_harmful_SW_CT_race_beginning_returns_har
     assert skippedTrans == ""
 
 
-def test_analyze_valid_trace_2_elements_harmful_SW_CT_race_middle_returns_harmful_trace(
+def test_analyze_valid_trace_2_elements_harmful_CT_SW_race_middle_returns_harmful_trace(
     transChecker1SW1CT, metadata1SW1CT, flowRule1, flowRule2
 ):
     SW1, CT1 = 0, 1
@@ -209,7 +209,7 @@ def test_analyze_valid_trace_2_elements_harmful_SW_CT_race_middle_returns_harmfu
     ]
     ta = TraceAnalyzer(transChecker1SW1CT, metadata1SW1CT)
     res = ta.analyze(trace)
-    skippedTrans = ta.getSkippedRacesStr()
+    skippedTrans = transChecker1SW1CT.getSkippedRacesStr()
     assert res is not None
     assert res.raceType == RaceType.CT_SW
     assert res.elsMetadata == metadata1SW1CT
@@ -217,7 +217,7 @@ def test_analyze_valid_trace_2_elements_harmful_SW_CT_race_middle_returns_harmfu
     assert skippedTrans == ""
 
 
-def test_analyze_valid_trace_2_elements_harmful_SW_CT_race_end_returns_harmful_trace(
+def test_analyze_valid_trace_2_elements_harmful_CT_SW_race_end_returns_harmful_trace(
     transChecker1SW1CT, metadata1SW1CT, flowRule1, flowRule2, flowRule3
 ):
     SW1, CT1 = 0, 1
@@ -230,7 +230,7 @@ def test_analyze_valid_trace_2_elements_harmful_SW_CT_race_end_returns_harmful_t
     ]
     ta = TraceAnalyzer(transChecker1SW1CT, metadata1SW1CT)
     res = ta.analyze(trace)
-    skippedTrans = ta.getSkippedRacesStr()
+    skippedTrans = transChecker1SW1CT.getSkippedRacesStr()
     assert res is not None
     assert res.raceType == RaceType.CT_SW
     assert res.elsMetadata == metadata1SW1CT
@@ -238,7 +238,7 @@ def test_analyze_valid_trace_2_elements_harmful_SW_CT_race_end_returns_harmful_t
     assert skippedTrans == ""
 
 
-def test_analyze_valid_trace_3_elements_unharmful_CT_CT_race_returns_harmful_trace(
+def test_analyze_valid_trace_3_elements_unharmful_CT_SW_CT_race_returns_none(
     transChecker1SW2CT, metadata1SW2CT, flowRule1
 ):
     SW1, CT1, CT2 = 0, 1, 2
@@ -260,12 +260,12 @@ def test_analyze_valid_trace_3_elements_unharmful_CT_CT_race_returns_harmful_tra
     ]
     ta = TraceAnalyzer(transChecker1SW2CT, metadata1SW2CT)
     res = ta.analyze(trace)
-    skippedTrans = ta.getSkippedRacesStr()
+    skippedTrans = transChecker1SW2CT.getSkippedRacesStr()
     assert res is None
     assert skippedTrans == ""
 
 
-def test_analyze_valid_trace_3_elements_harmful_CT_CT_race_beginning_returns_harmful_trace(
+def test_analyze_valid_trace_3_elements_harmful_CT_SW_CT_race_beginning_returns_harmful_trace(
     transChecker1SW2CT, metadata1SW2CT, flowRule1, flowRule2
 ):
     SW1, CT1, CT2 = 0, 1, 2
@@ -281,7 +281,7 @@ def test_analyze_valid_trace_3_elements_harmful_CT_CT_race_beginning_returns_har
     ]
     ta = TraceAnalyzer(transChecker1SW2CT, metadata1SW2CT)
     res = ta.analyze(trace)
-    skippedTrans = ta.getSkippedRacesStr()
+    skippedTrans = transChecker1SW2CT.getSkippedRacesStr()
     assert res is not None
     assert res.raceType == RaceType.CT_SW_CT
     assert res.elsMetadata == metadata1SW2CT
@@ -289,7 +289,7 @@ def test_analyze_valid_trace_3_elements_harmful_CT_CT_race_beginning_returns_har
     assert skippedTrans == ""
 
 
-def test_analyze_valid_trace_3_elements_harmful_CT_CT_race_middle_returns_harmful_trace(
+def test_analyze_valid_trace_3_elements_harmful_CT_SW_CT_race_middle_returns_harmful_trace(
     transChecker1SW2CT, metadata1SW2CT, flowRule1, flowRule2
 ):
     SW1, CT1, CT2 = 0, 1, 2
@@ -297,7 +297,7 @@ def test_analyze_valid_trace_3_elements_harmful_CT_CT_race_middle_returns_harmfu
         TraceNode(TraceTransition(), [[0, 0, 0], [0, 0, 0], [0, 0, 0]]),
         TraceNode(
             RcfgTrans("policy1", CT2, SW1, "up2"), [[1, 0, 1], [0, 0, 0], [0, 0, 1]]
-        ),  # racing
+        ),
         TraceNode(
             RcfgTrans(flowRule2, CT2, SW1, "up2"), [[2, 0, 2], [0, 0, 0], [0, 0, 2]]
         ),  # racing
@@ -308,7 +308,7 @@ def test_analyze_valid_trace_3_elements_harmful_CT_CT_race_middle_returns_harmfu
     ]
     ta = TraceAnalyzer(transChecker1SW2CT, metadata1SW2CT)
     res = ta.analyze(trace)
-    skippedTrans = ta.getSkippedRacesStr()
+    skippedTrans = transChecker1SW2CT.getSkippedRacesStr()
     assert res is not None
     assert res.raceType == RaceType.CT_SW_CT
     assert res.elsMetadata == metadata1SW2CT
@@ -316,7 +316,7 @@ def test_analyze_valid_trace_3_elements_harmful_CT_CT_race_middle_returns_harmfu
     assert skippedTrans == ""
 
 
-def test_analyze_valid_trace_3_elements_harmful_CT_CT_race_end_returns_harmful_trace(
+def test_analyze_valid_trace_3_elements_harmful_CT_SW_CT_race_end_returns_harmful_trace(
     transChecker1SW2CT, metadata1SW2CT, flowRule1, flowRule2
 ):
     SW1, CT1, CT2 = 0, 1, 2
@@ -337,9 +337,124 @@ def test_analyze_valid_trace_3_elements_harmful_CT_CT_race_end_returns_harmful_t
     ]
     ta = TraceAnalyzer(transChecker1SW2CT, metadata1SW2CT)
     res = ta.analyze(trace)
-    skippedTrans = ta.getSkippedRacesStr()
+    skippedTrans = transChecker1SW2CT.getSkippedRacesStr()
     assert res is not None
     assert res.raceType == RaceType.CT_SW_CT
+    assert res.elsMetadata == metadata1SW2CT
+    assert res.racingTransToEls == {3: 1, 4: 2}
+    assert skippedTrans == ""
+
+
+def test_analyze_valid_trace_3_elements_unharmful_CT_CT_SW_race_returns_none(
+    transChecker1SW2CT, metadata1SW2CT, flowRule1, flowRule2
+):
+    SW1, CT1, CT2 = 0, 1, 2
+    trace = [
+        TraceNode(TraceTransition(), [[0, 0, 0], [0, 0, 0], [0, 0, 0]]),
+        TraceNode(
+            RcfgTrans("policy1", CT1, SW1, "up1"), [[1, 1, 0], [0, 1, 0], [0, 0, 0]]
+        ),
+        TraceNode(
+            RcfgTrans("policy2", CT1, SW1, "up1"), [[2, 2, 0], [0, 2, 0], [0, 0, 0]]
+        ),
+        TraceNode(
+            RcfgTrans(flowRule1, CT1, SW1, "up1"), [[3, 3, 0], [0, 3, 0], [0, 0, 0]]
+        ),
+        TraceNode(
+            RcfgTrans(flowRule1 + sym.OR + flowRule2, CT2, CT1, "up2"),
+            [[3, 3, 0], [0, 4, 1], [0, 0, 1]]
+        ),  # not racing with previous RCFG because they install the same policy
+        TraceNode(
+            RcfgTrans(flowRule1 + sym.OR + flowRule2, CT1, SW1, "up2"),
+            [[4, 5, 1], [0, 5, 1], [0, 0, 1]]
+        ),
+    ]
+    ta = TraceAnalyzer(transChecker1SW2CT, metadata1SW2CT)
+    res = ta.analyze(trace)
+    skippedTrans = transChecker1SW2CT.getSkippedRacesStr()
+    assert res is None
+    assert skippedTrans == ""
+
+
+def test_analyze_valid_trace_3_elements_harmful_CT_CT_SW_race_beginning_returns_harmful_trace(
+    transChecker1SW2CT, metadata1SW2CT, flowRule1, flowRule2
+):
+    SW1, CT1, CT2 = 0, 1, 2
+    trace = [
+        TraceNode(
+            RcfgTrans(flowRule1, CT2, SW1, "up1"), [[1, 0, 1], [0, 0, 0], [0, 0, 1]]
+        ),  # racing
+        TraceNode(
+            RcfgTrans(flowRule2, CT1, CT2, "up2"), [[1, 0, 1], [0, 1, 0], [0, 1, 2]]
+        ),  # racing
+        TraceNode(
+            RcfgTrans(flowRule2, CT2, SW1, "up1"), [[2, 1, 3], [0, 1, 0], [0, 1, 3]]
+        ),
+        TraceNode(PktProcTrans(flowRule1, SW1), [[3, 1, 3], [0, 1, 0], [0, 1, 3]]),
+        TraceNode(PktProcTrans(flowRule1, SW1), [[4, 1, 3], [0, 1, 0], [0, 1, 3]]),
+    ]
+    ta = TraceAnalyzer(transChecker1SW2CT, metadata1SW2CT)
+    res = ta.analyze(trace)
+    skippedTrans = transChecker1SW2CT.getSkippedRacesStr()
+    assert res is not None
+    assert res.raceType == RaceType.CT_CT_SW
+    assert res.elsMetadata == metadata1SW2CT
+    assert res.racingTransToEls == {0: 2, 1: 1}
+    assert skippedTrans == ""
+
+
+def test_analyze_valid_trace_3_elements_harmful_CT_CT_SW_race_middle_returns_harmful_trace(
+    transChecker1SW2CTSkipCTSW, metadata1SW2CT, flowRule1, flowRule2
+):
+    SW1, CT1, CT2 = 0, 1, 2
+    trace = [
+        TraceNode(TraceTransition(), [[0, 0, 0], [0, 0, 0], [0, 0, 0]]),
+        TraceNode(
+            RcfgTrans("policy1", CT2, SW1, "up2"), [[1, 0, 1], [0, 0, 0], [0, 0, 1]]
+        ),
+        TraceNode(
+            RcfgTrans(flowRule2, CT2, SW1, "up2"), [[2, 0, 2], [0, 0, 0], [0, 0, 2]]
+        ),  # racing
+        TraceNode(
+            RcfgTrans(flowRule1, CT1, CT2, "up1"), [[2, 0, 2], [0, 1, 0], [0, 1, 3]]
+        ),  # racing
+        TraceNode(PktProcTrans(flowRule2, SW1), [[3, 0, 2], [0, 1, 0], [0, 1, 3]]),
+        # also racing, but the CT_CT_SW race should be found first
+    ]
+    ta = TraceAnalyzer(transChecker1SW2CTSkipCTSW, metadata1SW2CT)
+    res = ta.analyze(trace)
+    skippedTrans = transChecker1SW2CTSkipCTSW.getSkippedRacesStr()
+    assert res is not None
+    assert res.raceType == RaceType.CT_CT_SW
+    assert res.elsMetadata == metadata1SW2CT
+    assert res.racingTransToEls == {2: 2, 3: 1}
+    assert skippedTrans == ""
+
+
+def test_analyze_valid_trace_3_elements_harmful_CT_CT_SW_race_end_returns_harmful_trace(
+    transChecker1SW2CT, metadata1SW2CT, flowRule1, flowRule2
+):
+    SW1, CT1, CT2 = 0, 1, 2
+    trace = [
+        TraceNode(TraceTransition(), [[0, 0, 0], [0, 0, 0], [0, 0, 0]]),
+        TraceNode(
+            RcfgTrans("policy1", CT1, SW1, "up1"), [[1, 1, 0], [0, 1, 0], [0, 0, 0]]
+        ),
+        TraceNode(
+            RcfgTrans("policy2", CT1, SW1, "up1"), [[2, 2, 0], [0, 2, 0], [0, 0, 0]]
+        ),
+        TraceNode(
+            RcfgTrans(flowRule1, CT1, SW1, "up1"), [[3, 3, 0], [0, 3, 0], [0, 0, 0]]
+        ),  # racing
+        TraceNode(
+            RcfgTrans(flowRule2, CT2, CT1, "up2"), [[3, 3, 0], [0, 4, 1], [0, 0, 1]]
+        ),  # racing
+    ]
+    ta = TraceAnalyzer(transChecker1SW2CT, metadata1SW2CT)
+    res = ta.analyze(trace)
+    skippedTrans = transChecker1SW2CT.getSkippedRacesStr()
+    assert res is not None
+    assert res.raceType == RaceType.CT_CT_SW
     assert res.elsMetadata == metadata1SW2CT
     assert res.racingTransToEls == {3: 1, 4: 2}
     assert skippedTrans == ""
@@ -372,7 +487,7 @@ def test_analyze_valid_trace_4_elements_SW_SW_race_is_skipped_once_returns_none(
     ]
     ta = TraceAnalyzer(transChecker2SW2CT, metadata2SW2CT)
     res = ta.analyze(trace)
-    skippedTrans = ta.getSkippedRacesStr("\t")
+    skippedTrans = transChecker2SW2CT.getSkippedRacesStr("\t")
     assert res is None
     assert skippedTrans == "\tSW-SW: 1 times"
 
@@ -408,15 +523,45 @@ def test_analyze_valid_trace_4_elements_SW_SW_race_is_skipped_twice_returns_none
     ]
     ta = TraceAnalyzer(transChecker2SW2CT, metadata2SW2CT)
     res = ta.analyze(trace)
-    skippedTrans = ta.getSkippedRacesStr()
+    skippedTrans = transChecker2SW2CT.getSkippedRacesStr()
     assert res is None
     assert skippedTrans == "SW-SW: 2 times"
 
 
-def test_analyze_valid_trace_4_elements_unharmful_SW_CT_race_different_rcfg_target_returns_none(
+def test_analyze_valid_trace_3_elements_CT_SW_race_is_skipped_returns_CT_SW_CT_race(
+    transChecker1SW2CTSkipCTSW, metadata1SW2CT, flowRule1, flowRule2
+):
+    SW1, CT1, CT2 = 0, 1, 2
+    trace = [
+        TraceNode(TraceTransition(), [[0, 0, 0], [0, 0, 0], [0, 0, 0]]),
+        TraceNode(
+            PktProcTrans(flowRule1, SW1),
+            [[1, 0, 0], [0, 0, 0], [0, 0, 0]],
+        ),  # racing with all upcoming rcfgs (3 times in total)
+        TraceNode(
+            RcfgTrans("policy1", CT1, SW1, "up1"), [[2, 1, 0], [0, 1, 0], [0, 0, 0]]
+        ),
+        TraceNode(
+            RcfgTrans(flowRule1, CT1, SW1, "up1"), [[3, 2, 0], [0, 2, 0], [0, 0, 0]]
+        ),  # racing
+        TraceNode(
+            RcfgTrans(flowRule2, CT2, SW1, "up2"), [[4, 2, 1], [0, 2, 0], [0, 0, 1]]
+        ),  # racing
+    ]
+    ta = TraceAnalyzer(transChecker1SW2CTSkipCTSW, metadata1SW2CT)
+    res = ta.analyze(trace)
+    skippedTrans = transChecker1SW2CTSkipCTSW.getSkippedRacesStr()
+    assert res is not None
+    assert res.raceType == RaceType.CT_SW_CT
+    assert res.elsMetadata == metadata1SW2CT
+    assert res.racingTransToEls == {3: 1, 4: 2}
+    assert skippedTrans == f"{RaceType.CT_SW}: 3 times"
+
+
+def test_analyze_valid_trace_4_elements_unharmful_CT_SW_race_different_rcfg_target_returns_none(
     transChecker2SW2CT, metadata2SW2CT, flowRule1, flowRule2
 ):
-    SW1, SW2, CT1, CT2 = 0, 1, 2, 3
+    SW1, SW2, CT1 = 0, 1, 2
     trace = [
         TraceNode(
             TraceTransition(), [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
@@ -436,15 +581,15 @@ def test_analyze_valid_trace_4_elements_unharmful_SW_CT_race_different_rcfg_targ
     ]
     ta = TraceAnalyzer(transChecker2SW2CT, metadata2SW2CT)
     res = ta.analyze(trace)
-    skippedTrans = ta.getSkippedRacesStr()
+    skippedTrans = transChecker2SW2CT.getSkippedRacesStr()
     assert res is None
     assert skippedTrans == ""
 
 
-def test_analyze_valid_trace_4_elements_unharmful_SW_CT_race_different_rcfg_target_returns_none2(
+def test_analyze_valid_trace_4_elements_unharmful_CT_SW_race_different_rcfg_target_returns_none2(
     transChecker2SW2CT, metadata2SW2CT, flowRule1, flowRule2
 ):
-    SW1, SW2, CT1, CT2 = 0, 1, 2, 3
+    SW1, SW2, CT1 = 0, 1, 2
     trace = [
         TraceNode(
             TraceTransition(), [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
@@ -460,6 +605,6 @@ def test_analyze_valid_trace_4_elements_unharmful_SW_CT_race_different_rcfg_targ
     ]
     ta = TraceAnalyzer(transChecker2SW2CT, metadata2SW2CT)
     res = ta.analyze(trace)
-    skippedTrans = ta.getSkippedRacesStr()
+    skippedTrans = transChecker2SW2CT.getSkippedRacesStr()
     assert res is None
     assert skippedTrans == ""

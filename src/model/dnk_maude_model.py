@@ -233,7 +233,9 @@ class DNKMaudeModel(StatsGenerator):
         sws: List[str] = []
         for name in model.Switches.keys():
             sws.append(name)
-        return MaudeEncoder.recPolTerm(f"{_BIG_SW_VAR_NAME} {MaudeEncoder.convertIntoMap(sws)}")
+        return MaudeEncoder.recPolTerm(
+            f"{_BIG_SW_VAR_NAME} {MaudeEncoder.convertIntoMap(sws)}"
+        )
 
     def __buildElementTerms(self, model: jm.DNKNetwork) -> None:
         elTerms: List[str] = [self.__buildBigSwitchTerm(model)]

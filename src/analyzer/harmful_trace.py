@@ -11,6 +11,7 @@ class RaceType(StrEnum):
     SW_SW = "SW-SW"
     CT_SW = "CT->SW"
     CT_SW_CT = "CT->SW<-CT"
+    CT_CT_SW = "CT->CT->SW"
 
 
 class ColorScheme(StrEnum):

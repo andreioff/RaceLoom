@@ -1,103 +1,19 @@
-from os import linesep
-from typing import Callable, List, Protocol, Tuple, TypeVar, cast
+from typing import List, Tuple
 
 from src.analyzer.harmful_trace import HarmfulTrace, RaceType
-from src.KATch_comm import KATchComm
-from src.model.dnk_maude_model import ElementMetadata, ElementType
+from src.analyzer.transition_checker import TransitionsChecker
+from src.model.dnk_maude_model import ElementMetadata
 from src.trace.node import TraceNode
-from src.trace.transition import ITransition, PktProcTrans, RcfgTrans
 
 
 class TraceAnalyzerError(Exception):
     pass
 
 
-_T1 = TypeVar("_T1", bound=ITransition)
-_T2 = TypeVar("_T2", bound=ITransition)
-
-
-class _TransitionCheckers(Protocol):
-    def __getitem__(
-        self, item: tuple[type[_T1], type[_T2]]
-    ) -> Callable[[_T1, _T2], RaceType | None]: ...
-
-    def __setitem__(
-        self,
-        key: tuple[type[_T1], type[_T2]],
-        value: Callable[[_T1, _T2], RaceType | None],
-    ) -> None: ...
-
-    def __contains__(self, key: tuple[type[_T1], type[_T2]]) -> bool: ...
-
-
-class TransitionsChecker:
-    def __init__(
-        self, katchComm: KATchComm, elsMetadata: List[ElementMetadata]
-    ) -> None:
-        self.elsMetadata = elsMetadata
-        self.katchComm = katchComm
-        self._unexpected: dict[str, int] = {}
-        self._checks: _TransitionCheckers = cast(_TransitionCheckers, {})
-        self._checks[(PktProcTrans, RcfgTrans)] = self._checkProcRcfg
-        self._checks[(RcfgTrans, PktProcTrans)] = self._checkRcfgProc
-        self._checks[(RcfgTrans, RcfgTrans)] = self._checkRcfgRcfg
-
-    def check(self, t1: ITransition, t2: ITransition) -> RaceType | None:
-        key = (type(t1), type(t2))
-        if key in self._checks:
-            return self._checks[key](t1, t2)
-        return self._addUnexpectedTransPair(t1, t2)
-
-    def _checkRcfgRcfg(self, t1: RcfgTrans, t2: RcfgTrans) -> RaceType | None:
-        src1Type = self.elsMetadata[t1.srcPos].pType
-        src2Type = self.elsMetadata[t2.srcPos].pType
-        targetSw1Id = self.elsMetadata[t1.dstPos].pID
-        targetSw2Id = self.elsMetadata[t2.dstPos].pID
-        if (
-            targetSw1Id != targetSw2Id
-            or src1Type == ElementType.SW
-            or src2Type == ElementType.SW
-        ):
-            return None
-
-        res = self.katchComm.areNotEquiv(t1.policy, t2.policy)
-        return RaceType.CT_SW_CT if res else None
-
-    def _checkProcRcfg(self, t1: PktProcTrans, t2: RcfgTrans) -> RaceType | None:
-        targetSwId = self.elsMetadata[t2.dstPos].pID
-        srcSwId = self.elsMetadata[t1.swPos].pID
-        rcfgSrcType = self.elsMetadata[t2.srcPos].pType
-        if targetSwId != srcSwId or rcfgSrcType == ElementType.SW:
-            return None
-
-        res = self.katchComm.isNonEmptyDifference(t1.policy, t2.policy)
-        return RaceType.CT_SW if res else None
-
-    def _checkRcfgProc(self, t1: RcfgTrans, t2: PktProcTrans) -> RaceType | None:
-        return self._checkProcRcfg(t2, t1)
-
-    def _addUnexpectedTransPair(
-        self, t1: ITransition, t2: ITransition
-    ) -> RaceType | None:
-        key = f"({type(t1).__name__}, {type(t2).__name__})"
-        if key in self._unexpected:
-            self._unexpected[key] += 1
-            return None
-
-        self._unexpected[key] = 1
-        return None
-
-    def getUnexpectedTransPairsStr(self, prefix: str = "") -> str:
-        sb: List[str] = []
-        for key, value in self._unexpected.items():
-            sb.append(f"{prefix}{key}: {value} occurrences")
-        return linesep.join(sb)
-
-
 def _validateTrace(trace: List[TraceNode], elsMetadata: List[ElementMetadata]) -> None:
     """Raises TraceAnalyzerError if the vector clocks of any nodes in
     the given trace does not match the number of elements of
-    the elements' metadata list."""
+    the metadata list."""
     elsNr = len(elsMetadata)
     for i, node in enumerate(trace):
         if i > 0 and node.trans.getSource() is None:
@@ -175,13 +91,6 @@ class TraceAnalyzer:
         return racingElements
 
     def _checkRace(self, el1: int, el2: int) -> Tuple[dict[int, int], RaceType] | None:
-        if (
-            self._elsMetadata[el1].pType == ElementType.SW
-            and self._elsMetadata[el2].pType == ElementType.SW
-        ):
-            self._addSkippedRace(RaceType.SW_SW)
-            return None
-
         node1Pos = self._elLastNode[el1]
         node2Pos = self._elLastNode[el2]
         raceType = self._transChecker.check(
@@ -190,15 +99,3 @@ class TraceAnalyzer:
         if raceType is not None:
             return {node1Pos: el1, node2Pos: el2}, raceType
         return None
-
-    def _addSkippedRace(self, rt: RaceType) -> None:
-        if rt not in self.__skippedRaces:
-            self.__skippedRaces[rt] = 1
-            return
-        self.__skippedRaces[rt] += 1
-
-    def getSkippedRacesStr(self, prefix: str = "") -> str:
-        sb: List[str] = []
-        for key, value in self.__skippedRaces.items():
-            sb.append(f"{prefix}{key}: {value} times")
-        return linesep.join(sb)

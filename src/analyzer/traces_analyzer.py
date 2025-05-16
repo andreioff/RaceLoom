@@ -2,7 +2,8 @@ import os
 from typing import List, Tuple
 
 from src.analyzer.harmful_trace import HarmfulTrace
-from src.analyzer.trace_analyzer import TraceAnalyzer, TransitionsChecker
+from src.analyzer.trace_analyzer import TraceAnalyzer
+from src.analyzer.transition_checker import TransitionsChecker
 from src.decorators.exec_time import ExecTimes, with_time_execution
 from src.generator.trace_tree import TraceTree
 from src.KATch_comm import KATchComm
@@ -81,8 +82,7 @@ class TracesAnalyzer(ExecTimes, StatsGenerator):
         htraces = self.__filterHarmfulRaces(htraces)
         self.harmfulRacesCount = len(htraces)
         self.__writeHarmfulTracesToFile(htraces)
-        self.__printUnexpTransMsg(transChecker)
-        self.__printSkippedRaces(ta)
+        self.__printSkippedRaces(transChecker)
 
     def __filterHarmfulRaces(
         self, harmfulTraces: List[HarmfulTrace]
@@ -118,23 +118,8 @@ class TracesAnalyzer(ExecTimes, StatsGenerator):
         fileName = f"{HARMFUL_TRACE_FILE_NAME}_{traceNumber}_{raceType}.gv"
         exportFile(os.path.join(self.outputDirDOT, fileName), traceDOT)
 
-    def __printUnexpTransMsg(self, transChecker: TransitionsChecker) -> None:
-        unexpTransPairs = transChecker.getUnexpectedTransPairsStr("\t")
-        if not unexpTransPairs:
-            return
-        print(
-            "WARNING! Pairs of unexpected transition "
-            + "types were found during analysis:"
-        )
-        print(unexpTransPairs)
-        print(
-            "This means a race occured between 2 transition types for which "
-            + "no analysis behavior was programed."
-        )
-        print("Note: the order of the transitions matters!")
-
-    def __printSkippedRaces(self, ta: TraceAnalyzer) -> None:
-        skippedRaces = ta.getSkippedRacesStr("\t")
+    def __printSkippedRaces(self, transChecker: TransitionsChecker) -> None:
+        skippedRaces = transChecker.getSkippedRacesStr("\t")
         if not skippedRaces:
             return
         print("Skipped races:")

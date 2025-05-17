@@ -93,9 +93,7 @@ class TraceAnalyzer:
     def _checkRace(self, el1: int, el2: int) -> Tuple[dict[int, int], RaceType] | None:
         node1Pos = self._elLastNode[el1]
         node2Pos = self._elLastNode[el2]
-        raceType = self._transChecker.check(
-            self._trace[node1Pos].trans, self._trace[node2Pos].trans
-        )
+        raceType = self._transChecker.check(self._trace, node1Pos, node2Pos)
         if raceType is not None:
             return {node1Pos: el1, node2Pos: el2}, raceType
         return None

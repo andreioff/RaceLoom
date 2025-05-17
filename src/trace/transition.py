@@ -14,6 +14,11 @@ class ITransition(ABC):
     policy: str
 
     @abstractmethod
+    def targetsElement(self, elPos: int) -> bool:
+        """Whether the given element is the destination element of this transition"""
+        ...
+
+    @abstractmethod
     def getSource(self) -> int | None: ...
 
     @abstractmethod
@@ -27,6 +32,9 @@ class ITransition(ABC):
 class TraceTransition(ITransition):
     def __init__(self) -> None:
         super().__init__("")
+
+    def targetsElement(self, elPos: int) -> bool:
+        return False
 
     def getSource(self) -> int | None:
         return None
@@ -44,6 +52,9 @@ class TraceTransition(ITransition):
 @dataclass(frozen=True)
 class PktProcTrans(ITransition):
     swPos: int
+
+    def targetsElement(self, elPos: int) -> bool:
+        return False
 
     def getSource(self) -> int | None:
         return self.swPos
@@ -72,6 +83,9 @@ class RcfgTrans(ITransition):
     srcPos: int
     dstPos: int
     channel: str
+
+    def targetsElement(self, elPos: int) -> bool:
+        return elPos == self.dstPos
 
     def getSource(self) -> int | None:
         return self.srcPos

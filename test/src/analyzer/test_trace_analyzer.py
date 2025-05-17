@@ -1,7 +1,11 @@
 import pytest
 
-from src.analyzer.trace_analyzer import (RaceType, TraceAnalyzer,
-                                         TraceAnalyzerError, _validateTrace)
+from src.analyzer.trace_analyzer import (
+    RaceType,
+    TraceAnalyzer,
+    TraceAnalyzerError,
+    _validateTrace,
+)
 from src.model.dnk_maude_model import ElementMetadata, ElementType
 from src.trace.node import TraceNode
 from src.trace.transition import PktProcTrans, RcfgTrans, TraceTransition
@@ -362,11 +366,11 @@ def test_analyze_valid_trace_3_elements_unharmful_CT_CT_SW_race_returns_none(
         ),
         TraceNode(
             RcfgTrans(flowRule1 + sym.OR + flowRule2, CT2, CT1, "up2"),
-            [[3, 3, 0], [0, 4, 1], [0, 0, 1]]
+            [[3, 3, 0], [0, 4, 1], [0, 0, 1]],
         ),  # not racing with previous RCFG because they install the same policy
         TraceNode(
             RcfgTrans(flowRule1 + sym.OR + flowRule2, CT1, SW1, "up2"),
-            [[4, 5, 1], [0, 5, 1], [0, 0, 1]]
+            [[4, 5, 1], [0, 5, 1], [0, 0, 1]],
         ),
     ]
     ta = TraceAnalyzer(transChecker1SW2CT, metadata1SW2CT)
@@ -537,7 +541,7 @@ def test_analyze_valid_trace_3_elements_CT_SW_race_is_skipped_returns_CT_SW_CT_r
         TraceNode(
             PktProcTrans(flowRule1, SW1),
             [[1, 0, 0], [0, 0, 0], [0, 0, 0]],
-        ),  # racing with all upcoming rcfgs (3 times in total)
+        ),  # racing with the next rcfg
         TraceNode(
             RcfgTrans("policy1", CT1, SW1, "up1"), [[2, 1, 0], [0, 1, 0], [0, 0, 0]]
         ),
@@ -555,7 +559,7 @@ def test_analyze_valid_trace_3_elements_CT_SW_race_is_skipped_returns_CT_SW_CT_r
     assert res.raceType == RaceType.CT_SW_CT
     assert res.elsMetadata == metadata1SW2CT
     assert res.racingTransToEls == {3: 1, 4: 2}
-    assert skippedTrans == f"{RaceType.CT_SW}: 3 times"
+    assert skippedTrans == f"{RaceType.CT_SW}: 1 times"
 
 
 def test_analyze_valid_trace_4_elements_unharmful_CT_SW_race_different_rcfg_target_returns_none(

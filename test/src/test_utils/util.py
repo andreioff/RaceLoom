@@ -1,11 +1,12 @@
 import inspect
 import os
+import test.src
 from typing import List, Self
 
 import src
-import test.src
 from src.maude_encoder import MaudeModules as mm
-from src.model.dnk_maude_model import DNKMaudeModel, ElementMetadata, ElementType
+from src.model.dnk_maude_model import (DNKMaudeModel, ElementMetadata,
+                                       ElementType)
 
 PROJECT_DIR = os.path.dirname(inspect.getabsfile(src))
 TEST_DIR = os.path.dirname(inspect.getabsfile(test.src))
@@ -35,10 +36,10 @@ class DNKTestModel(DNKMaudeModel):
 
     def toMaudeModule(self) -> str:
         return f"""
-            mod {mm.DNK_MODEL} is
+            fmod {mm.DNK_MODEL} is
             protecting {mm.DNK_MODEL_UTIL} .
             {self.maudeModuleContent}
-            endm
+            endfm
         """
 
     def getElementTerms(self) -> List[str]:

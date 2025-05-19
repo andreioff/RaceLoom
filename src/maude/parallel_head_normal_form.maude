@@ -226,5 +226,6 @@ mod PARALLEL-HEAD-NORMAL-FORM is
   ---- ensures that the input list is actually processed before the result is passed back to the hook
   ---- (notice the pattern matching: it uses a list constructor instead of a list variable)
   eq waitToFinish{WorkersConfig}(TD TDL) = $generate{WorkersConfig}(storeOutputGetNextInput(TD TDL)) .
+  eq waitToFinish{WorkersConfig}(nil) = $generate{WorkersConfig}(storeOutputGetNextInput(nil)) .
 
 endm

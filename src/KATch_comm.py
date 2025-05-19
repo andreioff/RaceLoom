@@ -19,6 +19,7 @@ NKPL_EQUIV = b"\xe2\x89\xa1".decode()  # ≡
 NKPL_NOT_EQUIV = b"\xe2\x89\xa2".decode()  # ≢
 # the following character is not a regular backslash
 NKPL_DIFF = b"\xe2\x88\x96".decode()  # ∖
+NKPL_NOT_EQUAL = b"\xe2\x89\xa0".decode()  # ≠
 NKPL_CHECK = "check"
 NKPL_INOUTMAP = "inoutmap"
 KATCH_TRUE = "True"
@@ -56,6 +57,7 @@ def _toolFormat(netkatEncoding: str) -> str:
         .replace(sym.ZERO, NKPL_FALSE)
         .replace(sym.ONE, NKPL_TRUE)
         .replace(sym.AND, NKPL_AND)
+        .replace(sym.NOT_EQUAL, NKPL_NOT_EQUAL)
         .replace('"', "")
     )
 

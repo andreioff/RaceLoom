@@ -10,6 +10,7 @@ TMP_FILE_NAME = "_tmp"
 class DyNetKATSymbols(StrEnum):
     ASSIGN = "<-"
     EQUAL = "="
+    NOT_EQUAL = "!="
     AND = "."
     OR = "+"
     OR_ALT = "n+"  # netkat or alternative

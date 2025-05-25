@@ -36,7 +36,7 @@ class SequentialTraceGenerator(TraceGenerator):
         startDnkExpr = MaudeEncoder.parallelSeq(model.getElementTerms())
         startVC = newVectorClocks(len(model.getElementTerms()))
         startNode = TraceNode.fromTuple(("", startVC))
-        traceTree = TraceTree()
+        traceTree = TraceTree(model)
         traceTree.addNode(startNode)
 
         self.workList.reset()

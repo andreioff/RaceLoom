@@ -23,7 +23,7 @@ class Tracer:
         self.config = config
         self.dnkModel = dnkModel
         self.__traceGen = newTraceGenerator(genStrategy, config)
-        self.__traceTree: TraceTree = TraceTree()
+        self.__traceTree: TraceTree = TraceTree(self.dnkModel)
         self.__initTraceAnalyzer()
 
     def __initTraceAnalyzer(self) -> None:

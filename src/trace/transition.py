@@ -9,9 +9,12 @@ from src.trace.vector_clocks import incrementVC, transferVC
 from src.util import indexInBounds
 
 
-@dataclass(frozen=True)
+@dataclass
 class ITransition(ABC):
     policy: str
+
+    def setPolicy(self, newPolicy: str) -> None:
+        self.policy = newPolicy
 
     @abstractmethod
     def targetsElement(self, elPos: int) -> bool:
@@ -28,7 +31,7 @@ class ITransition(ABC):
     def hasValidPositions(self, elsMetadata: List[ElementMetadata]) -> bool: ...
 
 
-@dataclass(frozen=True)
+@dataclass
 class TraceTransition(ITransition):
     def __init__(self) -> None:
         super().__init__("")
@@ -49,7 +52,7 @@ class TraceTransition(ITransition):
         return ""
 
 
-@dataclass(frozen=True)
+@dataclass
 class PktProcTrans(ITransition):
     swPos: int
 
@@ -78,7 +81,7 @@ class PktProcTrans(ITransition):
         return f"proc('{self.policy}', {self.swPos})"
 
 
-@dataclass(frozen=True)
+@dataclass
 class RcfgTrans(ITransition):
     srcPos: int
     dstPos: int

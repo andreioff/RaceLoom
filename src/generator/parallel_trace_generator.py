@@ -49,8 +49,8 @@ class ProcessHook(maude.Hook):  # type: ignore
         self.cache = cache
         self.cacheStats = cacheStats
         self.__isInit = False
-        self.traceTree = TraceTree()
         self.__model = DNKMaudeModel()
+        self.traceTree = TraceTree(self.__model)
         self.__state = GeneratorState()
         self.pythonExecTime: float = 0.0
 
@@ -72,8 +72,8 @@ class ProcessHook(maude.Hook):  # type: ignore
         cacheStats: CacheStats,
     ) -> None:
         self.__isInit = False
-        self.traceTree = TraceTree()
         self.__model = newModel
+        self.traceTree = TraceTree(self.__model)
         self.__state = GeneratorState()
         self.__state.depth = newDepth
         self.cache = cache

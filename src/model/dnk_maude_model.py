@@ -7,6 +7,7 @@ from src.maude_encoder import MaudeBuilder, MaudeEncoder
 from src.maude_encoder import MaudeModules as mm
 from src.maude_encoder import MaudeOps as mo
 from src.maude_encoder import MaudeSorts as ms
+from src.model.util import NetKATReplacer
 from src.stats import StatsEntry, StatsGenerator
 from src.util import DyNetKATSymbols as sym
 
@@ -45,6 +46,7 @@ class DNKMaudeModel(StatsGenerator):
         self.elsMetadata: List[ElementMetadata] = []
         self.elementTerms: List[str] = []
         self.branchCounts: dict[str, int] = {}
+        self.netkatRepl = NetKATReplacer()
 
     @classmethod
     def fromJson(cls, jsonStr: str) -> Self:
@@ -54,6 +56,7 @@ class DNKMaudeModel(StatsGenerator):
         jsonModel = jm.DNKNetwork.model_validate_json(jsonStr)
 
         m = cls()
+        m.netkatRepl = NetKATReplacer(jsonModel)
         m.__declareLink(jsonModel)
         m.__declareChannels(jsonModel)
         m.__declareInitialSwitches(jsonModel)

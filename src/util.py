@@ -21,6 +21,7 @@ class DyNetKATSymbols(StrEnum):
     RECV = "?"
     SEND = "!"
     OPLUS = "o+"
+    BOT = "bot"
 
 
 def getTempFilePath(dirPath: str, ext: str) -> str:

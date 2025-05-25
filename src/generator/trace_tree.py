@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import List, Tuple
 
+from src.model.dnk_maude_model import DNKMaudeModel
 from src.trace.node import TraceNode
 from src.util import indexInBounds
 
@@ -12,7 +13,8 @@ class TracesBuilderError(Exception):
 
 
 class TraceTree:
-    def __init__(self) -> None:
+    def __init__(self, dnkModel: DNKMaudeModel) -> None:
+        self.dnkModel = dnkModel
         self._nodes: List[Tuple[TraceNode, int]] = []
         self._nodeIdToIndex: dict[int, int] = {}
         self._isLeaf: List[bool] = []
@@ -24,6 +26,8 @@ class TraceTree:
             raise TracesBuilderError(
                 "Nodes added to the trace tree must have unique IDs"
             )
+        # restore any netkat policies replaced when loading the DNK model
+        node.trans.policy = self.dnkModel.netkatRepl.restore(node.trans.policy)
         parentIndex = -1
         if parentId is not None:
             parentIndex = self._nodeIdToIndex.get(parentId, -1)

@@ -33,11 +33,31 @@ class ElementMetadata:
     # elements may model different parts of the same switch
     pID: int
     pType: ElementType  # type of parent component
+    # list of channels for every switch (ordered by the position found
+    # in the JSON model)
+    switchChannels: List[List[str]]
     name: str = ""
 
 
 class DNKModelError(Exception):
     pass
+
+
+def _collectSwitchChannels(model: jm.DNKNetwork) -> List[List[List[str]]]:
+    # Every network has a list of switches. Every switch has a list of channels.
+    res: List[List[List[str]]] = []
+
+    switchChannels: List[List[str]] = []
+    for sw in model.Switches.values():
+        channels: List[str] = []
+        for du in sw.DirectUpdates:
+            channels.append(du.Channel)
+        for ru in sw.RequestedUpdates:
+            channels.append(ru.RequestChannel)
+            channels.append(ru.ResponseChannel)
+        switchChannels.append(channels)
+    res.append(switchChannels)
+    return res
 
 
 class DNKMaudeModel(StatsGenerator):
@@ -47,6 +67,7 @@ class DNKMaudeModel(StatsGenerator):
         self.elementTerms: List[str] = []
         self.branchCounts: dict[str, int] = {}
         self.netkatRepl = NetKATReplacer()
+        self._networkChannels: List[List[List[str]]] = []
 
     @classmethod
     def fromJson(cls, jsonStr: str) -> Self:
@@ -58,6 +79,7 @@ class DNKMaudeModel(StatsGenerator):
 
         m = cls()
         m.netkatRepl = NetKATReplacer(jsonModel)
+        m._networkChannels = _collectSwitchChannels(jsonModel)
         m.__declareLink(jsonModel)
         m.__declareChannels(jsonModel)
         m.__declareInitialSwitches(jsonModel)
@@ -72,20 +94,18 @@ class DNKMaudeModel(StatsGenerator):
         return self.me.buildAsFuncModule(mm.DNK_MODEL)
 
     def __declareChannels(self, model: jm.DNKNetwork) -> None:
-        channels: dict[str, bool] = {}
+        chDict: dict[str, bool] = {}
 
         if model.OtherChannels is not None:
             for ch in model.OtherChannels:
-                channels[ch] = True
+                chDict[ch] = True
 
-        for sw in model.Switches.values():
-            for du in sw.DirectUpdates:
-                channels[du.Channel] = True
-            for ru in sw.RequestedUpdates:
-                channels[ru.RequestChannel] = True
-                channels[ru.ResponseChannel] = True
+        channels = list(chDict.keys())
+        for netChannels in self._networkChannels:
+            for swChannels in netChannels:
+                channels.extend(swChannels)
 
-        for ch in channels.keys():
+        for ch in channels:
             self.me.addOp(ch, ms.CHANNEL, [])
 
     def __declareInitialSwitches(self, model: jm.DNKNetwork) -> None:
@@ -242,11 +262,17 @@ class DNKMaudeModel(StatsGenerator):
         )
 
     def __buildElementTerms(self, model: jm.DNKNetwork) -> None:
-        elTerms: List[str] = [self.__buildBigSwitchTerm(model)]
-        self.elsMetadata = [ElementMetadata(0, ElementType.SW)]
-        for i, name in enumerate(model.Controllers.keys()):
+        elId: int = 0
+        elTerms: List[str] = []
+        for net in [model]:
+            mdata = ElementMetadata(elId, ElementType.SW, self._networkChannels[elId])
+            elTerms.append(self.__buildBigSwitchTerm(net))
+            self.elsMetadata.append(mdata)
+            elId += 1
+        for name in model.Controllers.keys():
             elTerms.append(MaudeEncoder.recPolTerm(name))
-            self.elsMetadata.append(ElementMetadata(i + 1, ElementType.CT))
+            self.elsMetadata.append(ElementMetadata(elId, ElementType.CT, []))
+            elId += 1
         self.elementTerms = elTerms
 
     def __addBranchCount(self, key: str, count: int) -> None:

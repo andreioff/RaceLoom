@@ -29,12 +29,10 @@ _ENTRY_MAUDE_EQUATION = "entry"
 @dataclass
 class GeneratorState:
     depth: int = 0
-    currLayer: dict[TraceNode, Tuple[str, str]] = field(default_factory=lambda: {})
-    results: List[Tuple[List[Tuple[str, str, str]], bool]] = field(
-        default_factory=lambda: []
-    )
-    nodeToIndex: dict[TraceNode, int] = field(default_factory=lambda: {})
-    uniqueDNKData: List[Tuple[str, str]] = field(default_factory=lambda: [])
+    currLayer: dict[TraceNode, Tuple[str, str]] = field(default_factory=dict)
+    results: List[Tuple[List[Tuple[str, str, str]], bool]] = field(default_factory=list)
+    nodeToIndex: dict[TraceNode, int] = field(default_factory=dict)
+    uniqueDNKData: List[Tuple[str, str]] = field(default_factory=list)
 
 
 class ProcessHook(maude.Hook):  # type: ignore

@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import List, Self
 
@@ -33,10 +33,21 @@ class ElementMetadata:
     # elements may model different parts of the same switch
     pID: int
     pType: ElementType  # type of parent component
+    name: str = ""
     # list of channels for every switch (ordered by the position found
     # in the JSON model)
-    switchChannels: List[List[str]]
-    name: str = ""
+    switchChannels: List[List[str]] = field(default_factory=list)
+    link: str = sym.ZERO
+    initialFTs: List[str] = field(default_factory=list)
+
+    def findSwitchIndex(self, ch: str) -> int:
+        """Returns the index of the switch that uses the given channel
+        or -1 if the channel is not used by any switch.
+        """
+        for i, channels in enumerate(self.switchChannels):
+            if ch in channels:
+                return i
+        return -1
 
 
 class DNKModelError(Exception):
@@ -265,13 +276,24 @@ class DNKMaudeModel(StatsGenerator):
         elId: int = 0
         elTerms: List[str] = []
         for net in [model]:
-            mdata = ElementMetadata(elId, ElementType.SW, self._networkChannels[elId])
+            link = net.Links if net.Links else sym.ZERO
+            initialFTs = [
+                sw.InitialFlowTable if sw.InitialFlowTable is not None else sym.ZERO
+                for sw in net.Switches.values()
+            ]
+            mdata = ElementMetadata(
+                elId,
+                ElementType.SW,
+                switchChannels=self._networkChannels[elId],
+                link=link,
+                initialFTs=initialFTs,
+            )
             elTerms.append(self.__buildBigSwitchTerm(net))
             self.elsMetadata.append(mdata)
             elId += 1
         for name in model.Controllers.keys():
             elTerms.append(MaudeEncoder.recPolTerm(name))
-            self.elsMetadata.append(ElementMetadata(elId, ElementType.CT, []))
+            self.elsMetadata.append(ElementMetadata(elId, ElementType.CT))
             elId += 1
         self.elementTerms = elTerms
 

@@ -54,6 +54,7 @@ class DNKMaudeModel(StatsGenerator):
         Raises: ValidationError if `jsonStr` does not correspond to the expected model
         """
         jsonModel = jm.DNKNetwork.model_validate_json(jsonStr)
+        jm.validateSwitchChannels(jsonModel)
 
         m = cls()
         m.netkatRepl = NetKATReplacer(jsonModel)

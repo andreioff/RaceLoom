@@ -5,6 +5,7 @@ import time
 from test.src.test_utils.util import DNKTestModel
 
 from pydantic import ValidationError
+from pydantic_core import PydanticCustomError
 
 from src.cli import CLIError, getCLIArgs
 from src.errors import MaudeError
@@ -133,7 +134,7 @@ def main() -> None:
         printAndExit(e.__str__())
     except MaudeError as e:
         print(f"Error encountered while executing Maude:\n\t{e}")
-    except ValidationError as e:
+    except (ValidationError, PydanticCustomError) as e:
         print(f"Invalid JSON file!\n{e}")
 
 

@@ -276,9 +276,13 @@ class DNKMaudeModel(StatsGenerator):
         elId: int = 0
         elTerms: List[str] = []
         for net in [model]:
-            link = net.Links if net.Links else sym.ZERO
+            link = self.netkatRepl.restore(net.Links) if net.Links else sym.ZERO
             initialFTs = [
-                sw.InitialFlowTable if sw.InitialFlowTable is not None else sym.ZERO
+                (
+                    self.netkatRepl.restore(sw.InitialFlowTable)
+                    if sw.InitialFlowTable is not None
+                    else sym.ZERO
+                )
                 for sw in net.Switches.values()
             ]
             mdata = ElementMetadata(

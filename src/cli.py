@@ -16,6 +16,7 @@ class CLIError(Exception):
 class CLIArguments(StatsGenerator):
     katchPath: str
     inputFilePath: str
+    safetyPropsFilePath: str
     depth: int
     threads: int
     debug: bool
@@ -25,6 +26,11 @@ class CLIArguments(StatsGenerator):
     def getStats(self) -> List[StatsEntry]:
         return [
             StatsEntry("inputFile", "Input file", os.path.basename(self.inputFilePath)),
+            StatsEntry(
+                "safetyPropsFilePath",
+                "Safety properties file",
+                os.path.basename(self.safetyPropsFilePath),
+            ),
             StatsEntry("strategy", "Trace generation strategy", self.strategy),
             StatsEntry("depth", "Depth", self.depth),
         ]
@@ -34,6 +40,7 @@ def buildArgsParser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument("katchPath")
     parser.add_argument("inputFilePath")
+    parser.add_argument("safetyPropsFilePath")
     parser.add_argument(
         "-d",
         "--depth",
@@ -74,7 +81,8 @@ def buildArgsParser() -> argparse.ArgumentParser:
         choices=list(TraceGenOption),
         dest="strategy",
         default=TraceGenOption.BFS,
-        help=f"Strategy used to generate the traces (default is '{TraceGenOption.BFS}')",
+        help=f"Strategy used to generate the traces (default is "
+        + "'{TraceGenOption.BFS}')",
     )
     return parser
 
@@ -82,8 +90,11 @@ def buildArgsParser() -> argparse.ArgumentParser:
 def validateArgs(args: CLIArguments) -> None:
     """Validates the command line arguments and returns the paths to the KATch
     executable and the input JSON file."""
-    if not args.katchPath or not args.inputFilePath:
-        raise CLIError("Error: provide the arguments <path_to_katch> <input_file>.")
+    if not args.katchPath or not args.inputFilePath or not args.safetyPropsFilePath:
+        raise CLIError(
+            "Error: provide the arguments <path_to_katch> <input_file> "
+            + "<safety_properties_file>."
+        )
 
     if not os.path.exists(args.katchPath) or not isExe(args.katchPath):
         raise CLIError("KATch tool could not be found in the given path!")
@@ -95,6 +106,8 @@ def validateArgs(args: CLIArguments) -> None:
         or (fileExt == "maude" and not args.debug)
     ):
         raise CLIError("Please provide a .json input file!")
+    if not os.path.isfile(args.safetyPropsFilePath) or fileExt != "json":
+        raise CLIError("Please provide a .json safety properties file!")
     if args.depth < 0:
         raise CLIError("Depth cannot be negative")
     if args.threads < 1:

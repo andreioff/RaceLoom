@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from pydantic import BaseModel, ValidationError, field_validator
+from pydantic import BaseModel, field_validator
 from pydantic.types import StringConstraints
 from pydantic_core import PydanticCustomError
 from typing_extensions import Annotated
@@ -37,8 +37,8 @@ class DNKNetwork(BaseModel):  # type: ignore
     @field_validator("Switches", "Controllers")
     @classmethod
     def ensure_non_empty(
-        cls, v: dict[VarNameString, NonEmptyString]
-    ) -> dict[VarNameString, NonEmptyString]:
+        cls, v: dict[VarNameString, NonEmptyString] | dict[VarNameString, DNKSwitch]
+    ) -> dict[VarNameString, NonEmptyString] | dict[VarNameString, DNKSwitch]:
         if len(v) == 0:
             raise ValueError(
                 "DyNetKAT Network must contain at least 1 switch and 1 controller"

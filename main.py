@@ -7,8 +7,10 @@ from test.src.test_utils.util import DNKTestModel
 from pydantic import ValidationError
 from pydantic_core import PydanticCustomError
 
+from src.analyzer.harmful_trace import RaceType
 from src.cli import CLIError, getCLIArgs
 from src.errors import MaudeError
+from src.json_safety_property import SafetyProperties
 from src.model.dnk_maude_model import DNKMaudeModel
 from src.stats import StatsCollector, StatsEntry
 from src.tracer import Tracer
@@ -66,6 +68,15 @@ def readDNKModelFromFile(filePath: str) -> DNKMaudeModel:
     return DNKMaudeModel()
 
 
+def readSafetyPropertiesFromFile(filePath: str) -> dict[RaceType, str]:
+    fileExt = filePath.split(".")[-1]
+    fileContent = readFile(filePath)
+    if fileExt == "json":
+        return SafetyProperties.model_validate_json(fileContent).convertToNetKAT()
+    printAndExit(f"Unknown input file extension: '{fileExt}'!")
+    return SafetyProperties(Properties={}).convertToNetKAT()
+
+
 def main() -> None:
     try:
         args = getCLIArgs()
@@ -75,6 +86,7 @@ def main() -> None:
         logging.basicConfig(level=logLevel)
 
         dnkModel = readDNKModelFromFile(args.inputFilePath)
+        safetyProps = readSafetyPropertiesFromFile(args.safetyPropsFilePath)
 
         currTime = time.localtime()
         fmtTime = time.strftime("%Y-%m-%d;%H:%M:%S", currTime)
@@ -89,7 +101,7 @@ def main() -> None:
             getFileName(args.inputFilePath),
         )
 
-        tracer = Tracer(config, args.strategy, dnkModel)
+        tracer = Tracer(config, args.strategy, dnkModel, safetyProps)
         print("Generating traces...")
         ok = tracer.generateTraces(args.depth)
 

@@ -9,6 +9,7 @@ from src.stats import StatsEntry, StatsGenerator
 from src.util import DyNetKATSymbols as sym
 from src.util import executeCmd, exportFile, getTempFilePath
 
+_SAFETY_PROPERTY_PLACEHOLDER_NAME = "@Network"
 KATCH_FILE_EXT = "nkpl"
 NKPL_LARROW = b"\xe2\x86\x90".decode()  # ←
 NKPL_STAR = b"\xe2\x8b\x86".decode()  # ⋆
@@ -113,6 +114,17 @@ class KATchComm(ExecTimes, BoolCache, StatsGenerator):
         fmtNKEnc1 = _toolFormat(nkEnc1)
         fmtNKEnc2 = _toolFormat(nkEnc2)
         npklProgram = f"{NKPL_CHECK} ({fmtNKEnc1}) {NKPL_NOT_EQUIV} ({fmtNKEnc2})"
+
+        output, error = self._runNPKLProgram(npklProgram)
+
+        return _processCheckOpResult(output, error)
+
+    @with_time_execution
+    @with_bool_cache
+    def checkProperty(self, prop: str, expr: str) -> bool:
+        finalProp = re.sub(_SAFETY_PROPERTY_PLACEHOLDER_NAME, "(" + expr + ")", prop)
+        fmtFinalProp = _toolFormat(finalProp)
+        npklProgram = f"{NKPL_CHECK} {fmtFinalProp}"
 
         output, error = self._runNPKLProgram(npklProgram)
 

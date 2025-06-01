@@ -1,16 +1,15 @@
 import os
 from typing import List
 
+from src.analyzer.harmful_trace import RaceType
 from src.analyzer.traces_analyzer import TracesAnalyzer
 from src.generator.trace_generator_factory import (TraceGenOption,
                                                    newTraceGenerator)
 from src.generator.trace_tree import TraceTree
 from src.KATch_comm import KATchComm
-from src.model.dnk_maude_model import DNKMaudeModel, ElementType
+from src.model.dnk_maude_model import DNKMaudeModel
 from src.stats import StatsEntry
-from src.trace.transition import RcfgTrans
 from src.tracer_config import TracerConfig
-from src.util import DyNetKATSymbols as sym
 from src.util import createDir, exportFile
 
 _TRACES_FILE_NAME = "traces"
@@ -20,10 +19,15 @@ _HARMFUL_TRACES_RAW_DIR_NAME = "harmful_traces_raw"
 
 class Tracer:
     def __init__(
-        self, config: TracerConfig, genStrategy: TraceGenOption, dnkModel: DNKMaudeModel
+        self,
+        config: TracerConfig,
+        genStrategy: TraceGenOption,
+        dnkModel: DNKMaudeModel,
+        safetyProps: dict[RaceType, str],
     ) -> None:
         self.config = config
         self.dnkModel = dnkModel
+        self.safetyProps = safetyProps
         self._traceGen = newTraceGenerator(genStrategy, config)
         self._traceTree: TraceTree = TraceTree(self.dnkModel)
         self._initTraceAnalyzer()
@@ -37,7 +41,7 @@ class Tracer:
         createDir(outputDirDOT)
         self._katchComm = KATchComm(self.config.katchPath, self.config.outputDirPath)
         self._traceAnalyzer = TracesAnalyzer(
-            self._katchComm, outputDirRaw, outputDirDOT
+            self._katchComm, self.safetyProps, outputDirRaw, outputDirDOT
         )
 
     def generateTraces(self, depth: int) -> bool:

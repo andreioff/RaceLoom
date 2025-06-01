@@ -1,7 +1,7 @@
 import os
 from typing import List, Tuple
 
-from src.analyzer.harmful_trace import HarmfulTrace
+from src.analyzer.harmful_trace import HarmfulTrace, RaceType
 from src.analyzer.trace_analyzer import TraceAnalyzer
 from src.analyzer.transition_checker import TransitionsChecker
 from src.decorators.exec_time import ExecTimes, with_time_execution
@@ -54,11 +54,16 @@ class TracesAnalyzer(ExecTimes, StatsGenerator):
     """Class analyzing traces"""
 
     def __init__(
-        self, katchComm: KATchComm, outputDirRaw: str, outputDirDOT: str
+        self,
+        katchComm: KATchComm,
+        safetyProps: dict[RaceType, str],
+        outputDirRaw: str,
+        outputDirDOT: str,
     ) -> None:
         ExecTimes.__init__(self)
         StatsGenerator.__init__(self)
         self.katchComm = katchComm
+        self.safetyProps = safetyProps
         self.outputDirRaw = outputDirRaw
         self.outputDirDOT = outputDirDOT
         self.harmfulRacesCount = 0
@@ -68,7 +73,7 @@ class TracesAnalyzer(ExecTimes, StatsGenerator):
         """Analyzes each trace in the given list, and outputs every trace posing
         a harmful race in 2 ways: once as a file containing the raw trace and the
         information about the harmful race, and once as a DOT file."""
-        transChecker = TransitionsChecker(self.katchComm, elsMetadata)
+        transChecker = TransitionsChecker(self.katchComm, self.safetyProps, elsMetadata)
         ta = TraceAnalyzer(transChecker, elsMetadata)
         htraces: List[HarmfulTrace] = []
         for trace in traceTree.getTraceIterator():

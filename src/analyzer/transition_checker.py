@@ -110,11 +110,13 @@ class TransitionsChecker:
     def __init__(
         self,
         katchComm: KATchComm,
+        safetyProps: dict[RaceType, str],
         elsMetadata: List[ElementMetadata],
         skippedRaces: List[RaceType] | None = None,
     ) -> None:
         self.elsMetadata = elsMetadata
         self.katchComm = katchComm
+        self.safetyProps = safetyProps
         self._skipped: dict[str, int] = {}
         self._skippedRaces: List[RaceType] = (
             [] if skippedRaces is None else skippedRaces
@@ -156,6 +158,8 @@ class TransitionsChecker:
         t1: Tuple[RcfgTrans, int],
         t2: Tuple[RcfgTrans, int],
     ) -> Tuple[TransCheckResult | None, bool]:
+        if RaceType.CT_SW_CT not in self.safetyProps:
+            return None, False
         src1Type = self.elsMetadata[t1[0].srcPos].pType
         src2Type = self.elsMetadata[t2[0].srcPos].pType
         targetSw1Id = self.elsMetadata[t1[0].dstPos].pID
@@ -180,9 +184,11 @@ class TransitionsChecker:
         pol1 = self._reconstructRcfg(swFts, t1[0].policy, t1[0].dstPos, t1[0].channel)
         swFts = _reconstructElementFTs(trace, self.elsMetadata, t2[1], t2[0].dstPos)
         pol2 = self._reconstructRcfg(swFts, t2[0].policy, t2[0].dstPos, t2[0].channel)
+
         # harmful if the new policy of CT1 is not equivalent to the new policy from CT2
-        res = self.katchComm.areNotEquiv(pol1, pol2)
-        if not res:
+        res1 = self.katchComm.checkProperty(self.safetyProps[RaceType.CT_SW_CT], pol1)
+        res2 = self.katchComm.checkProperty(self.safetyProps[RaceType.CT_SW_CT], pol2)
+        if not (res1 ^ res2):
             return None, True
         return TransCheckResult(RaceType.CT_SW_CT, pol1, pol2), True
 
@@ -192,6 +198,8 @@ class TransitionsChecker:
         t1: Tuple[RcfgTrans, int],
         t2: Tuple[RcfgTrans, int],
     ) -> Tuple[TransCheckResult | None, bool]:
+        if RaceType.CT_CT_SW not in self.safetyProps:
+            return None, False
         swapped = False
         if t1[1] > t2[1]:
             t1, t2 = t2, t1
@@ -225,8 +233,9 @@ class TransitionsChecker:
         # harmful if the new policy of the updating controller (t2) does not cover
         # the same packets as the new policy installed on the switch by the
         # updated controller (t1)
-        res = self.katchComm.isNonEmptyDifference(pol1, pol2)
-        if not res:
+        res1 = self.katchComm.checkProperty(self.safetyProps[RaceType.CT_CT_SW], pol1)
+        res2 = self.katchComm.checkProperty(self.safetyProps[RaceType.CT_CT_SW], pol2)
+        if not (res1 and (not res2)):
             return None, True
         if swapped:
             return TransCheckResult(RaceType.CT_CT_SW, pol2, pol1), True
@@ -250,6 +259,8 @@ class TransitionsChecker:
         t1: Tuple[RcfgTrans, int],
         t2: Tuple[PktProcTrans, int],
     ) -> Tuple[TransCheckResult | None, bool]:
+        if RaceType.CT_SW not in self.safetyProps:
+            return None, False
         targetSwId = self.elsMetadata[t1[0].dstPos].pID
         srcSwId = self.elsMetadata[t2[0].swPos].pID
         rcfgSrcType = self.elsMetadata[t1[0].srcPos].pType
@@ -268,8 +279,11 @@ class TransitionsChecker:
         pol1 = self._reconstructRcfg(swFts, t1[0].policy, t1[0].dstPos, t1[0].channel)
         # harmful if the new policy does not cover the same packets
         # covered by the current policy of the switch
-        res = self.katchComm.isNonEmptyDifference(t2[0].policy, pol1)
-        if not res:
+        res1 = self.katchComm.checkProperty(self.safetyProps[RaceType.CT_SW], pol1)
+        res2 = self.katchComm.checkProperty(
+            self.safetyProps[RaceType.CT_SW], t2[0].policy
+        )
+        if not ((not res1) and res2):
             return None, True
         return TransCheckResult(RaceType.CT_SW, pol1, t2[0].policy), True
 

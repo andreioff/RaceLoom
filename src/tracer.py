@@ -18,50 +18,6 @@ _HARMFUL_TRACES_DIR_NAME = "harmful_traces"
 _HARMFUL_TRACES_RAW_DIR_NAME = "harmful_traces_raw"
 
 
-class TracerError(Exception):
-    pass
-
-
-def _buildNetworkPolicy(fts: List[str], link: str) -> str:
-    if not fts:
-        return sym.ZERO
-    ftsStr = f" {sym.OR} ".join(fts)
-    oneStepStr = f"({ftsStr}) {sym.AND} ({link})"
-    return f"({oneStepStr}) {sym.AND} ({oneStepStr}){sym.STAR}"
-
-
-def _reconstructRcfgs(traceTree: TraceTree) -> None:
-    """Iterates through all traces in the tree and applies the update of any
-    switch reconfiguration to the flow table of the target switch up until that
-    point, then assigns the policy of the reconfiguration to the result"""
-    dm = traceTree.dnkModel
-    nodeIdToOldPolicy: dict[int, str] = {}
-    for trace in traceTree.getTraceIterator():
-        # tracks the flow tables of all elements throughout the trace
-        currNet = [metad.initialFTs.copy() for metad in dm.elsMetadata]
-        for node in trace:
-            # anything that is not a reconfiguration to a switch is skipped
-            if not isinstance(node.trans, RcfgTrans):
-                continue
-            metad = dm.elsMetadata[node.trans.dstPos]
-            if metad.pType != ElementType.SW:
-                continue
-            fts = currNet[node.trans.dstPos]
-            swToModify = metad.findSwitchIndex(node.trans.channel)
-            if swToModify == -1:
-                raise TracerError(
-                    "Could not match network switch based on rcfg channel"
-                )
-            # apply the reconfiguration to the target element and store the result
-            oldPolicy = nodeIdToOldPolicy.get(node.id, None)
-            if oldPolicy is not None:
-                fts[swToModify] = oldPolicy
-                continue
-            fts[swToModify] = node.trans.policy
-            nodeIdToOldPolicy[node.id] = node.trans.policy
-            node.trans.setPolicy(_buildNetworkPolicy(fts, metad.link))
-
-
 class Tracer:
     def __init__(
         self, config: TracerConfig, genStrategy: TraceGenOption, dnkModel: DNKMaudeModel
@@ -86,7 +42,6 @@ class Tracer:
 
     def generateTraces(self, depth: int) -> bool:
         self._traceTree = self._traceGen.run(self.dnkModel, depth)
-        _reconstructRcfgs(self._traceTree)
 
         if self._traceTree.traceCount() == 0:
             return False

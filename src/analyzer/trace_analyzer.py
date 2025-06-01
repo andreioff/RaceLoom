@@ -1,6 +1,6 @@
 from typing import List, Tuple
 
-from src.analyzer.harmful_trace import HarmfulTrace, RaceType
+from src.analyzer.harmful_trace import HarmfulTrace, RaceType, RacingNode
 from src.analyzer.transition_checker import TransitionsChecker
 from src.model.dnk_maude_model import ElementMetadata
 from src.trace.node import TraceNode
@@ -90,10 +90,15 @@ class TraceAnalyzer:
             racingElements.append(el2)
         return racingElements
 
-    def _checkRace(self, el1: int, el2: int) -> Tuple[dict[int, int], RaceType] | None:
+    def _checkRace(
+        self, el1: int, el2: int
+    ) -> Tuple[List[RacingNode], RaceType] | None:
         node1Pos = self._elLastNode[el1]
         node2Pos = self._elLastNode[el2]
-        raceType = self._transChecker.check(self._trace, node1Pos, node2Pos)
-        if raceType is not None:
-            return {node1Pos: el1, node2Pos: el2}, raceType
+        transCheckResult = self._transChecker.check(self._trace, node1Pos, node2Pos)
+        if transCheckResult is not None:
+            return [
+                RacingNode(node1Pos, el1, transCheckResult.netPolicy1),
+                RacingNode(node2Pos, el2, transCheckResult.netPolicy2),
+            ], transCheckResult.raceType
         return None

@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import StrEnum
 from os import linesep
 from typing import List
@@ -14,6 +15,13 @@ class RaceType(StrEnum):
     CT_CT_SW = "CT->CT->SW"
 
 
+@dataclass(frozen=True)
+class RacingNode:
+    pos: int  # position of the node in its corresponding trace
+    elPos: int  # which DNK element was part of the race
+    netPolicy: str  # the re-constructed network policy of this node
+
+
 class ColorScheme(StrEnum):
     ERR_PRIMARY = "#FF2400"
     ERR_SECONDARY = "#FF9280"
@@ -27,44 +35,51 @@ class HarmfulTrace:
         self,
         nodes: List[TraceNode],
         elsMetadata: List[ElementMetadata],
-        racingTransToEls: dict[int, int],
+        racingNodes: List[RacingNode],
         raceType: RaceType,
     ) -> None:
         self.nodes = nodes
         self.elsMetadata = elsMetadata
-        self.racingTransToEls = racingTransToEls
+        self.racingNodes = racingNodes
         self.raceType = raceType
         self._validateRacingTransitionsDict()
 
     def _validateRacingTransitionsDict(self) -> None:
-        for tPos, elPos in self.racingTransToEls.items():
-            if not indexInBounds(tPos, len(self.nodes)):
+        for racingNode in self.racingNodes:
+            if not indexInBounds(racingNode.pos, len(self.nodes)):
                 raise ValueError(
-                    f"Racing transition position {tPos} "
+                    f"Racing transition position {racingNode.pos} "
                     + "is out of bounds for the given nodes list."
                 )
-            if not indexInBounds(elPos, len(self.nodes[tPos].vectorClocks)):
+            if not indexInBounds(
+                racingNode.elPos, len(self.nodes[racingNode.pos].vectorClocks)
+            ):
                 raise ValueError(
-                    f"Element position {elPos} is "
+                    f"Element position {racingNode.elPos} is "
                     + "out of bounds for the given nodes list."
                 )
 
     def toDOT(self) -> str:
         sb: List[str] = ["digraph g {"]
+        racingNodePositions = [rn.pos for rn in self.racingNodes]
         for nodePos, node in enumerate(self.nodes):
             sb.append(
-                f"n{nodePos} [label=<{self.__getNodeLabel(node, nodePos)}>, "
+                f"n{nodePos} [label=<{self._getNodeLabel(node, nodePos)}>, "
                 + f'shape=rectangle, style=filled, fillcolor="{ColorScheme.NODE_BG}"];'
             )
             if nodePos == 0:  # first node does not have a transition
                 continue
             label = splitIntoLines(str(node.trans), 50, 10)
+            racingNode = self._findRacingNode(nodePos)
+            if racingNode is not None:
+                label += linesep * 2 + "Re-constructed network policy:" + linesep
+                label += splitIntoLines(racingNode.netPolicy, 50, 10)
             edgeColor = (
                 ColorScheme.ERR_PRIMARY
-                if nodePos in self.racingTransToEls
+                if nodePos in racingNodePositions
                 else ColorScheme.EDGE
             )
-            penwidth = 2.0 if nodePos in self.racingTransToEls else 1.0
+            penwidth = 2.0 if nodePos in racingNodePositions else 1.0
             sb.append(
                 f'n{nodePos-1} -> n{nodePos} [label="{label}", '
                 + f'color="{edgeColor}", penwidth={penwidth}];'
@@ -72,8 +87,9 @@ class HarmfulTrace:
         sb.append("}")  # close digraph
         return linesep.join(sb)
 
-    def __getNodeLabel(self, node: TraceNode, nodePos: int) -> str:
+    def _getNodeLabel(self, node: TraceNode, nodePos: int) -> str:
         elNames, vcLabel, prefix = "", "", ""
+        racingNode = self._findRacingNode(nodePos)
         for i, metadata in enumerate(self.elsMetadata):
             vc = node.vectorClocks[i]
             elName = metadata.name
@@ -81,9 +97,15 @@ class HarmfulTrace:
                 elName = metadata.pType
             elNames += prefix + elName
             vcLabel += prefix
-            if i == self.racingTransToEls.get(nodePos, -1):
+            if racingNode is not None and i == racingNode.elPos:
                 vcLabel += f'<font color="{ColorScheme.ERR_PRIMARY}">{vc}</font>'
             else:
                 vcLabel += f"{vc}"
             prefix = ", "
         return elNames + "<br/>[" + vcLabel + "]"
+
+    def _findRacingNode(self, nodePos: int) -> RacingNode | None:
+        for rn in self.racingNodes:
+            if rn.pos == nodePos:
+                return rn
+        return None

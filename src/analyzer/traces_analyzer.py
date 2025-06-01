@@ -43,8 +43,8 @@ def _getSoonerRace(
     htrace1: HarmfulTrace,
     htrace2: HarmfulTrace,
 ) -> HarmfulTrace:
-    transIndicies1 = tuple(htrace1.racingTransToEls.keys())
-    transIndicies2 = tuple(htrace2.racingTransToEls.keys())
+    transIndicies1 = tuple(rn.pos for rn in htrace1.racingNodes)
+    transIndicies2 = tuple(rn.pos for rn in htrace2.racingNodes)
     if transIndicies1 <= transIndicies2:
         return htrace1
     return htrace2
@@ -78,7 +78,7 @@ class TracesAnalyzer(ExecTimes, StatsGenerator):
             if htrace is None:
                 continue
             htraces.append(htrace)
-            _markRacingNodes(trace, list(htrace.racingTransToEls.keys()))
+            _markRacingNodes(trace, [rn.pos for rn in htrace.racingNodes])
         htraces = self.__filterHarmfulRaces(htraces)
         self.harmfulRacesCount = len(htraces)
         self.__writeHarmfulTracesToFile(htraces)
@@ -90,7 +90,7 @@ class TracesAnalyzer(ExecTimes, StatsGenerator):
         # transition strings tuple to HarmfulTrace
         filtered: dict[Tuple[str, ...], HarmfulTrace] = {}
         for htrace in harmfulTraces:
-            transIndicies = htrace.racingTransToEls.keys()
+            transIndicies = [rn.pos for rn in htrace.racingNodes]
             key = tuple(str(htrace.nodes[i].trans) for i in transIndicies)
             currBest = filtered.get(key, None)
             if currBest is None:
@@ -106,8 +106,11 @@ class TracesAnalyzer(ExecTimes, StatsGenerator):
             self.__writeDOTTraceToFile(htrace.toDOT(), htrace.raceType, i)
 
     def __writeRawTraceToFile(self, htrace: HarmfulTrace, traceNumber: int) -> None:
-        content = f"{htrace.nodes}\n{htrace.raceType}\n" + ",".join(
-            [f"(trans: {t}, el: {el})" for t, el in htrace.racingTransToEls.items()]
+        content = f"{htrace.nodes}\n{htrace.raceType}\n" + os.linesep.join(
+            [
+                f'(trans: {rn.pos}, el: {rn.elPos}, networkPolicy: "{rn.netPolicy}")'
+                for rn in htrace.racingNodes
+            ]
         )
         fileName = f"{RAW_HARMFUL_TRACE_FILE_NAME}_{traceNumber}_{htrace.raceType}.txt"
         exportFile(os.path.join(self.outputDirRaw, fileName), content)

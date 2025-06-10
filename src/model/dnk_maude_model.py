@@ -18,6 +18,7 @@ _SW_MAP_VAR_NAME = "Sws"
 _CH_VAR_NAME = "CH"
 _INDX_VAR_NAME = "I"
 _FR_VAR_NAME = "FR"
+_APPEND_VAR_NAME = "AP"
 
 
 class ElementType(StrEnum):
@@ -152,6 +153,7 @@ class DNKMaudeModel(StatsGenerator):
         self.me.addVar(_CH_VAR_NAME, ms.CHANNEL)
         self.me.addVar(_FR_VAR_NAME, ms.STRING)
         self.me.addVar(_INDX_VAR_NAME, ms.NAT)
+        self.me.addVar(_APPEND_VAR_NAME, ms.BOOL)
         # Declare the actual operators for the big switch
         # Main part that sends packet in
         self.me.addOp(_BIG_SW_VAR_NAME, ms.RECURSIVE, [ms.STR_MAP])
@@ -159,7 +161,7 @@ class DNKMaudeModel(StatsGenerator):
         self.me.addOp(
             _BIG_SW_RECV_VAR_NAME,
             ms.RECURSIVE,
-            [ms.STR_MAP, ms.CHANNEL, ms.STRING, ms.NAT],
+            [ms.STR_MAP, ms.CHANNEL, ms.STRING, ms.NAT, ms.BOOL],
         )
 
         self.me.addEq(
@@ -169,7 +171,7 @@ class DNKMaudeModel(StatsGenerator):
         self.me.addEq(
             MaudeEncoder.recPolTerm(
                 f"{_BIG_SW_RECV_VAR_NAME} {_SW_MAP_VAR_NAME} "
-                + f"{_CH_VAR_NAME} {_FR_VAR_NAME} {_INDX_VAR_NAME}"
+                + f"{_CH_VAR_NAME} {_FR_VAR_NAME} {_INDX_VAR_NAME} {_APPEND_VAR_NAME}"
             ),
             self.__buildBigSwRecvExpr(model),
         )
@@ -196,10 +198,13 @@ class DNKMaudeModel(StatsGenerator):
             insExpr = MaudeEncoder.mapInsert(f"{i}", f"({appExpr})", _SW_MAP_VAR_NAME)
             return f"({ch} {sym.RECV} {fr}) {sym.SEQ} ({_BIG_SW_VAR_NAME} {insExpr})"
 
-        def sendAndEnterRecvMode(ru: jm.DNKRequestedUpdate, i: int) -> str:
+        def sendAndEnterRecvMode(
+            ru: jm.DNKRequestedUpdate, i: int, append: bool
+        ) -> str:
+            appStr = mo.TRUE if append else mo.FALSE
             bigSwitchTerm = (
                 f"{_BIG_SW_RECV_VAR_NAME} {_SW_MAP_VAR_NAME} "
-                + f'{ru.ResponseChannel} "{ru.ResponsePolicy}" {i}'
+                + f'{ru.ResponseChannel} "{ru.ResponsePolicy}" {i} {appStr}'
             )
             return (
                 f'({ru.RequestChannel} {sym.SEND} "{ru.RequestPolicy}") '
@@ -212,7 +217,7 @@ class DNKMaudeModel(StatsGenerator):
                 exprs.append(action(du.Channel, f'"{du.Policy}"', i))
 
             for ru in switch.RequestedUpdates:
-                exprs.append(sendAndEnterRecvMode(ru, i))
+                exprs.append(sendAndEnterRecvMode(ru, i, ru.Append))
 
         self.__addBranchCount("BSw", len(exprs))
         return f" {sym.OPLUS} ".join(exprs)
@@ -221,7 +226,7 @@ class DNKMaudeModel(StatsGenerator):
         def termName(swsMapTerm: str) -> str:
             return (
                 f"{_BIG_SW_RECV_VAR_NAME} {swsMapTerm} "
-                + f"{_CH_VAR_NAME} {_FR_VAR_NAME} {_INDX_VAR_NAME}"
+                + f"{_CH_VAR_NAME} {_FR_VAR_NAME} {_INDX_VAR_NAME} {_APPEND_VAR_NAME}"
             )
 
         # Applies the necessary maude operators to
@@ -251,16 +256,25 @@ class DNKMaudeModel(StatsGenerator):
                 exprs.append(action(du.Channel, f'"{du.Policy}"', i))
 
         appExpr = MaudeEncoder.concatStr(
-            MaudeEncoder.mapAccess(f"{_INDX_VAR_NAME}", _SW_MAP_VAR_NAME),
+            MaudeEncoder.mapAccess(_INDX_VAR_NAME, _SW_MAP_VAR_NAME),
             MaudeEncoder.concatStr(f' " {sym.OR} " ', _FR_VAR_NAME),
         )
-        insExpr = MaudeEncoder.mapInsert(
-            f"{_INDX_VAR_NAME}", f"({appExpr})", _SW_MAP_VAR_NAME
+        insAppendExpr = MaudeEncoder.mapInsert(
+            _INDX_VAR_NAME, f"({appExpr})", _SW_MAP_VAR_NAME
         )
-        bigSwTerm = f"{_BIG_SW_VAR_NAME} {insExpr}"
-        exprs.append(
-            f"({_CH_VAR_NAME} {sym.RECV} {_FR_VAR_NAME}) {sym.SEQ} ({bigSwTerm})"
+        bigSwTermAppend = f"{_BIG_SW_VAR_NAME} {insAppendExpr}"
+
+        insReplExpr = MaudeEncoder.mapInsert(
+            _INDX_VAR_NAME, _FR_VAR_NAME, _SW_MAP_VAR_NAME
         )
+        bigSwTermRepl = f"{_BIG_SW_VAR_NAME} {insReplExpr}"
+
+        ifStmt = MaudeEncoder.ifStatement(
+            MaudeEncoder.eqCond(_APPEND_VAR_NAME, mo.TRUE),
+            bigSwTermAppend,
+            bigSwTermRepl,
+        )
+        exprs.append(f"({_CH_VAR_NAME} {sym.RECV} {_FR_VAR_NAME}) {sym.SEQ} ({ifStmt})")
 
         return f" {sym.OPLUS} ".join(exprs)
 

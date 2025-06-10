@@ -1,3 +1,4 @@
+import sys
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import List, Self
@@ -87,7 +88,6 @@ class DNKMaudeModel(StatsGenerator):
         Raises: ValidationError if `jsonStr` does not correspond to the expected model
         """
         jsonModel = jm.DNKNetwork.model_validate_json(jsonStr)
-        jm.validateSwitchChannels(jsonModel)
 
         m = cls()
         m.netkatRepl = NetKATReplacer(jsonModel)
@@ -95,7 +95,7 @@ class DNKMaudeModel(StatsGenerator):
         m.__declareLink(jsonModel)
         m.__declareChannels(jsonModel)
         m.__declareInitialSwitches(jsonModel)
-        m.__declareControllers(jsonModel)
+        m.__declareRecursiveVariables(jsonModel)
         m.__declareBigSwitch(jsonModel)
         m.__buildElementTerms(jsonModel)
 
@@ -128,8 +128,8 @@ class DNKMaudeModel(StatsGenerator):
                 initialValue = switch.InitialFlowTable
             self.me.addEq(name, f'"{initialValue}"')
 
-    def __declareControllers(self, model: jm.DNKNetwork) -> None:
-        for name, expr in model.Controllers.items():
+    def __declareRecursiveVariables(self, model: jm.DNKNetwork) -> None:
+        for name, expr in model.RecursiveVariables.items():
             self.me.addOp(name, ms.RECURSIVE, [])
             self.me.addEq(MaudeEncoder.recPolTerm(name), expr)
             self.__addBranchCount(name, expr.count(sym.OPLUS) + 1)
@@ -309,8 +309,8 @@ class DNKMaudeModel(StatsGenerator):
             elTerms.append(self.__buildBigSwitchTerm(net))
             self.elsMetadata.append(mdata)
             elId += 1
-        for name in model.Controllers.keys():
-            elTerms.append(MaudeEncoder.recPolTerm(name))
+        for varName in model.Controllers:
+            elTerms.append(MaudeEncoder.recPolTerm(varName))
             self.elsMetadata.append(ElementMetadata(elId, ElementType.CT))
             elId += 1
         self.elementTerms = elTerms

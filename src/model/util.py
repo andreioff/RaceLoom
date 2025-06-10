@@ -19,7 +19,8 @@ class NetKATReplacer:
         if model is None:
             model = jm.DNKNetwork(
                 Switches={"sw": jm.DNKSwitch(DirectUpdates=[], RequestedUpdates=[])},
-                Controllers={"ct": sym.BOT},
+                RecursiveVariables={"ct": sym.BOT},
+                Controllers=["ct"],
             )
         self.policies: List[str] = []
         self.policyToId: dict[str, int] = {}
@@ -72,19 +73,21 @@ class NetKATReplacer:
 
     def _replaceNetKATInControllers(self) -> None:
         regex = re.compile(r'"[^"]*"')
-        for key, ct in self.model.Controllers.items():
-            newCt = ct
-            res = regex.search(newCt)
+        for key, expr in self.model.RecursiveVariables.items():
+            newExpr = expr
+            res = regex.search(newExpr)
             while res is not None:
                 # exclude double quotes " from the ends of the string
-                policy = newCt[res.start() + 1 : res.end() - 1]
+                policy = newExpr[res.start() + 1 : res.end() - 1]
                 strId = self._addPolicyAndReturnId(policy)
-                newCt = (
-                    newCt[: res.start() + 1]  # include '"' from the start of the string
+                newExpr = (
+                    # include '"' from the start of the string
+                    newExpr[: res.start() + 1]
                     + strId
-                    + newCt[res.end() - 1 :]
-                )  # include '"' from the start of the string
+                    # include '"' from the start of the string
+                    + newExpr[res.end() - 1 :]
+                )
                 res = regex.search(
-                    newCt, res.start() + len(strId) + 2
+                    newExpr, res.start() + len(strId) + 2
                 )  # skip the id str
-            self.model.Controllers[key] = newCt
+            self.model.RecursiveVariables[key] = newExpr

@@ -18,6 +18,8 @@ class MaudeOps(StrEnum):
     P_INIT = "p-init"
     PROCESS_HNF_INPUTS = "processHNFInputs"
     GENERATE = "generate"
+    TRUE = "true"
+    FALSE = "false"
 
 
 class MaudeSorts(StrEnum):
@@ -30,6 +32,7 @@ class MaudeSorts(StrEnum):
     TDATA = "TData"
     TTYPE = "TType"
     DNK_COMP = "DNKComp"
+    BOOL = "Bool"
 
 
 class MaudeModules(StrEnum):
@@ -255,3 +258,12 @@ class MaudeEncoder:
     @staticmethod
     def parallelGeneratorEntryCall(workersConfig: str) -> str:
         return f"{MaudeOps.GENERATE}{{<> {workersConfig}}}"
+
+    @staticmethod
+    def ifStatement(cond: str, trueBranch: str, falseBranch: str) -> str:
+        return f"if ({cond}) then ({trueBranch}) else ({falseBranch}) fi"
+
+    @staticmethod
+    def eqCond(leftSide: str, rightSide: str, diff: bool = False) -> str:
+        sign = "=/=" if diff else "=="
+        return f"{leftSide} {sign} {rightSide}"

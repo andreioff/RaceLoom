@@ -20,6 +20,7 @@ class DNKRequestedUpdate(BaseModel):  # type: ignore
     RequestPolicy: NonEmptyString
     ResponseChannel: VarNameString
     ResponsePolicy: NonEmptyString
+    Append: bool
 
 
 class DNKSwitch(BaseModel):  # type: ignore

@@ -110,6 +110,10 @@ class ProcessHook(maude.Hook):  # type: ignore
             logger.info("Current layer contains: %d nodes", len(s.currLayer))
             self.__setUniqueDNKData()
             logger.info("Total unique DNK data entries: %d", len(s.uniqueDNKData))
+            if not s.uniqueDNKData:
+                logger.info("Stopping...")
+                logger.info("---------- Done ----------")
+                return module.parseTerm(MaudeEncoder.emptyTermList())
 
             # list of (results, is computed)
             s.results = [([], False) for _ in range(len(s.uniqueDNKData))]

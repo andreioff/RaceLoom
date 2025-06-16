@@ -1,4 +1,3 @@
-import sys
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import List, Self
@@ -20,6 +19,7 @@ _CH_VAR_NAME = "CH"
 _INDX_VAR_NAME = "I"
 _FR_VAR_NAME = "FR"
 _APPEND_VAR_NAME = "AP"
+_DEFAULT_LINK_VALUE = sym.ONE.value
 
 
 class ElementType(StrEnum):
@@ -141,7 +141,7 @@ class DNKMaudeModel(StatsGenerator):
         to prevent NetKAT expressions using the link operator in
         conjunctions from breaking.
         """
-        linksValue = sym.ONE.value
+        linksValue = _DEFAULT_LINK_VALUE
         if model.Links is not None:
             linksValue = model.Links
         self.me.addOp(_LINK_VAR_NAME, ms.STRING, [])
@@ -290,7 +290,9 @@ class DNKMaudeModel(StatsGenerator):
         elId: int = 0
         elTerms: List[str] = []
         for net in [model]:
-            link = self.netkatRepl.restore(net.Links) if net.Links else sym.ZERO
+            link = (
+                self.netkatRepl.restore(net.Links) if net.Links else _DEFAULT_LINK_VALUE
+            )
             initialFTs = [
                 (
                     self.netkatRepl.restore(sw.InitialFlowTable)

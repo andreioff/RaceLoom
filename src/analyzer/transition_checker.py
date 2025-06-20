@@ -188,7 +188,7 @@ class TransitionsChecker:
         # harmful if the new policy of CT1 is not equivalent to the new policy from CT2
         res1 = self.katchComm.checkProperty(self.safetyProps[RaceType.CT_SW_CT], pol1)
         res2 = self.katchComm.checkProperty(self.safetyProps[RaceType.CT_SW_CT], pol2)
-        if not (res1 ^ res2):
+        if res1 == res2:
             return None, True
         return TransCheckResult(RaceType.CT_SW_CT, pol1, pol2), True
 
@@ -235,7 +235,7 @@ class TransitionsChecker:
         # updated controller (t1)
         res1 = self.katchComm.checkProperty(self.safetyProps[RaceType.CT_CT_SW], pol1)
         res2 = self.katchComm.checkProperty(self.safetyProps[RaceType.CT_CT_SW], pol2)
-        if not (res1 and (not res2)):
+        if res1 == res2:
             return None, True
         if swapped:
             return TransCheckResult(RaceType.CT_CT_SW, pol2, pol1), True
@@ -283,7 +283,7 @@ class TransitionsChecker:
         res2 = self.katchComm.checkProperty(
             self.safetyProps[RaceType.CT_SW], t2[0].policy
         )
-        if not ((not res1) and res2):
+        if res1 == res2:
             return None, True
         return TransCheckResult(RaceType.CT_SW, pol1, t2[0].policy), True
 

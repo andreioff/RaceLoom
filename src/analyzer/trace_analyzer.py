@@ -95,6 +95,9 @@ class TraceAnalyzer:
     ) -> Tuple[List[RacingNode], RaceType] | None:
         node1Pos = self._elLastNode[el1]
         node2Pos = self._elLastNode[el2]
+        if node1Pos > node2Pos:
+            node1Pos, node2Pos = node2Pos, node1Pos
+            el1, el2 = el2, el1
         transCheckResult = self._transChecker.check(self._trace, node1Pos, node2Pos)
         if transCheckResult is not None:
             return [

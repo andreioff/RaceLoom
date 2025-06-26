@@ -39,7 +39,7 @@ class ElementMetadata:
     # list of channels for every switch (ordered by the position found
     # in the JSON model)
     switchChannels: List[List[str]] = field(default_factory=list)
-    link: str = sym.ZERO
+    link: str = _DEFAULT_LINK_VALUE
     initialFTs: List[str] = field(default_factory=list)
 
     def findSwitchIndex(self, ch: str) -> int:

@@ -1,8 +1,9 @@
+from test.src.test_utils.util import KATCH_PATH
+
 import pytest
 
 from src.KATch_comm import KATchComm
 from src.util import DyNetKATSymbols as sym
-from test.src.test_utils.util import KATCH_PATH
 
 
 @pytest.fixture

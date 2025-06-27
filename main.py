@@ -2,7 +2,6 @@ import logging
 import os
 import sys
 import time
-from test.src.test_utils.util import DNKTestModel
 
 from pydantic import ValidationError
 from pydantic_core import PydanticCustomError
@@ -60,8 +59,6 @@ def logRunStats(stats: StatsCollector, fileName: str) -> None:
 def readDNKModelFromFile(filePath: str) -> DNKMaudeModel:
     fileExt = filePath.split(".")[-1]
     fileContent = readFile(filePath)
-    if fileExt == "maude":
-        return DNKTestModel.fromDebugMaudeFile(fileContent)
     if fileExt == "json":
         return DNKMaudeModel.fromJson(fileContent)
     printAndExit(f"Unknown input file extension: '{fileExt}'!")

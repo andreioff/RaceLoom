@@ -1,5 +1,5 @@
 [project]
-name = "Tracer"
+name = "RaceLoom"
 version = "0.0.1"
 authors = [
   { name = "Andrei Covaci", email = "covaci_andrei_i@yahoo.com" }
@@ -19,7 +19,6 @@ test = [
   # make sure your system has the `graphviz-dev` package installed. 
   # For Debian based Linux systems, `sudo apt install graphviz-dev` should suffice.
   "pygraphviz==1.14",
-  "networkx==3.4.2"
 ]
 
 [tool.pylsp-mypy]

@@ -19,7 +19,6 @@ class CLIArguments(StatsGenerator):
     safetyPropsFilePath: str
     depth: int
     threads: int
-    debug: bool
     verbose: bool
     strategy: TraceGenOption
 
@@ -58,21 +57,13 @@ def buildArgsParser() -> argparse.ArgumentParser:
         help="Number of threads to use when generating traces",
     )
     parser.add_argument(
-        "-g",
-        "--debug",
-        dest="debug",
-        default=False,
-        action="store_true",
-        help="Passing this option enables the tool to accept specifically formated "
-        + ".maude files containing DNK network models for testing or debugging",
-    )
-    parser.add_argument(
         "-v",
         "--verbose",
         dest="verbose",
         default=False,
         action="store_true",
-        help="Print log messages during execution",
+        help="Print log messages during execution "
+        + "(only supported by some generation strategies)",
     )
     parser.add_argument(
         "-s",
@@ -81,8 +72,8 @@ def buildArgsParser() -> argparse.ArgumentParser:
         choices=list(TraceGenOption),
         dest="strategy",
         default=TraceGenOption.BFS,
-        help=f"Strategy used to generate the traces (default is "
-        + "'{TraceGenOption.BFS}')",
+        help="Strategy used to generate the traces (default is "
+        + f"'{TraceGenOption.BFS}')",
     )
     return parser
 
@@ -100,11 +91,7 @@ def validateArgs(args: CLIArguments) -> None:
         raise CLIError("KATch tool could not be found in the given path!")
 
     fileExt = args.inputFilePath.split(".")[-1]
-    if (
-        not os.path.isfile(args.inputFilePath)
-        or fileExt not in ["json", "maude"]
-        or (fileExt == "maude" and not args.debug)
-    ):
+    if not os.path.isfile(args.inputFilePath) or fileExt != "json":
         raise CLIError("Please provide a .json input file!")
     if not os.path.isfile(args.safetyPropsFilePath) or fileExt != "json":
         raise CLIError("Please provide a .json safety properties file!")

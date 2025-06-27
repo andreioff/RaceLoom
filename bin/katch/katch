@@ -5,7 +5,7 @@ if [[ -n `type -p java` ]]; then
 elif [[ -n "$JAVA_HOME" ]] && [[ -x "$JAVA_HOME/bin/java" ]];  then
   _java="$JAVA_HOME/bin/java"
 else
-  echo "No Java installation found in PATH or JAVA_HOME. Please install Java 18.0.2 or higher!"
+  echo "No Java installation found in PATH or JAVA_HOME. Please install Java 8 or higher!"
   exit 1
 fi
 

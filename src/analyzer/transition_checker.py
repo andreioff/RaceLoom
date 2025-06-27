@@ -305,12 +305,13 @@ class TransitionsChecker:
             return None
         handlers = self._handlers[key]
         for handler in handlers:
+            args = (trace, (t1, t1Pos), (t2, t2Pos))
+            if not handler.validate(*args):
+                continue
             if handler.raceType in self._skippedRaces:
                 self._addSkippedRace(handler.raceType)
                 return None
-            args = (trace, (t1, t1Pos), (t2, t2Pos))
-            if handler.validate(*args):
-                return handler.check(*args)
+            return handler.check(*args)
         return None
 
     def _addSkippedRace(self, rt: RaceType) -> None:

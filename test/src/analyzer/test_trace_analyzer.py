@@ -240,7 +240,7 @@ def test_analysis_skips_CT_SW_races_and_detects_harmful_CT_SW_CT_race_correctly(
     assert res.raceType == RaceType.CT_SW_CT
     assert res.elsMetadata == td.metadata
     assert res.racingNodes == td.racingNodes[2:]
-    assert skippedTrans == f"{RaceType.CT_SW}: 3 times"
+    assert skippedTrans == f"{RaceType.CT_SW}: 1 times"
 
 
 def test_analysis_skips_SW_SW_race_correctly(katch, trace_2SW_2CT_SW_SW_race):

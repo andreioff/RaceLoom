@@ -3,7 +3,7 @@ from typing import List
 import pytest
 
 from src.analyzer.harmful_trace import ColorScheme as cs
-from src.analyzer.harmful_trace import HarmfulTrace, RaceType
+from src.analyzer.harmful_trace import HarmfulTrace, RaceType, RacingNode
 from src.model.dnk_maude_model import ElementMetadata
 from src.model.dnk_maude_model import ElementType as et
 from src.trace.node import TraceNode
@@ -51,10 +51,13 @@ def test_constructor_out_of_bound_racing_transition_data_raises_value_error():
         ElementMetadata(0, et.CT),
         ElementMetadata(1, et.SW, "smth"),
     ]
-    racingTransToEls = {1: 1, 2: 0}  # second key is OUT OF BOUNDS
+    racingNodes = [
+        RacingNode(1, 1, ""),
+        RacingNode(2, 0, ""),
+    ]  # position of second node is OUT OF BOUNDS
 
     with pytest.raises(ValueError):
-        HarmfulTrace(nodes, metadata, racingTransToEls, RaceType.SW_SW)
+        HarmfulTrace(nodes, metadata, racingNodes, RaceType.SW_SW)
 
 
 def test_constructor_out_of_bound_racing_transition_data_raises_value_error2():
@@ -66,10 +69,13 @@ def test_constructor_out_of_bound_racing_transition_data_raises_value_error2():
         ElementMetadata(0, et.CT),
         ElementMetadata(1, et.SW, "smth"),
     ]
-    racingTransToEls = {1: 1, 0: 3}  # second value is OUT OF BOUNDS
+    racingNodes = [
+        RacingNode(1, 1, ""),
+        RacingNode(0, 3, ""),
+    ]  # element position of second node is OUT OF BOUNDS
 
     with pytest.raises(ValueError):
-        HarmfulTrace(nodes, metadata, racingTransToEls, RaceType.SW_SW)
+        HarmfulTrace(nodes, metadata, racingNodes, RaceType.SW_SW)
 
 
 def test_toDOT_no_nodes_returns_empty_DOT_graph():
@@ -133,17 +139,30 @@ def test_toDOT_racing_transitions_returns_connected_graph_marked_correctly():
         ElementMetadata(0, et.CT),
         ElementMetadata(1, et.SW, "smth"),
     ]
-    racingTransToEls = {1: 1, 2: 0}
-    harmful_trace = HarmfulTrace(nodes, metadata, racingTransToEls, RaceType.SW_SW)
+    racingNodes = [
+        RacingNode(1, 1, "bigger policy"),
+        RacingNode(2, 0, "bigger other policy"),
+    ]
+    harmful_trace = HarmfulTrace(nodes, metadata, racingNodes, RaceType.SW_SW)
 
     dot_graph = harmful_trace.toDOT()
     elNames = [et.CT, "smth"]
     expected = _wrap_in_digraph(
         _dotNode(0, _dotNodeLabel(vcs[0], elNames)),
         _dotNode(1, _dotNodeLabel(vcs[1], elNames, 1)),
-        _dotEdge(0, 1, "proc('policy', 1)", True),
+        _dotEdge(
+            0,
+            1,
+            "proc('policy', 1)\n\nReconstructed network policy:\nbigger policy",
+            True,
+        ),
         _dotNode(2, _dotNodeLabel(vcs[2], elNames, 0)),
-        _dotEdge(1, 2, "rcfg(ch, 'other policy', 0, 1)", True),
+        _dotEdge(
+            1,
+            2,
+            "rcfg(ch, 'other policy', 0, 1)\n\nReconstructed network policy:\nbigger other policy",
+            True,
+        ),
     )
     assert dot_graph == expected
 
@@ -162,8 +181,11 @@ def test_toDOT_racing_transitions_returns_connected_graph_marked_correctly2():
         ElementMetadata(0, et.CT),
         ElementMetadata(1, et.SW, "smth"),
     ]
-    racingTransToEls = {2: 0, 3: 1}  # race between the first 2 transitions
-    harmful_trace = HarmfulTrace(nodes, metadata, racingTransToEls, RaceType.SW_SW)
+    racingNodes = [
+        RacingNode(2, 0, "bigger other policy"),
+        RacingNode(3, 1, "bigger policy"),
+    ]  # race between the first 2 transitions
+    harmful_trace = HarmfulTrace(nodes, metadata, racingNodes, RaceType.SW_SW)
 
     dot_graph = harmful_trace.toDOT()
     elNames = [et.CT, "smth"]
@@ -172,9 +194,19 @@ def test_toDOT_racing_transitions_returns_connected_graph_marked_correctly2():
         _dotNode(1, _dotNodeLabel(vcs[1], elNames)),
         _dotEdge(0, 1, "proc('policy', 1)", False),
         _dotNode(2, _dotNodeLabel(vcs[2], elNames, 0)),
-        _dotEdge(1, 2, "rcfg(ch, 'other policy', 0, 1)", True),
+        _dotEdge(
+            1,
+            2,
+            "rcfg(ch, 'other policy', 0, 1)\n\nReconstructed network policy:\nbigger other policy",
+            True,
+        ),
         _dotNode(3, _dotNodeLabel(vcs[1], elNames, 1)),
-        _dotEdge(2, 3, "proc('policy', 1)", True),
+        _dotEdge(
+            2,
+            3,
+            "proc('policy', 1)\n\nReconstructed network policy:\nbigger policy",
+            True,
+        ),
         _dotNode(4, _dotNodeLabel(vcs[2], elNames)),
         _dotEdge(3, 4, "rcfg(ch, 'other policy', 0, 1)", False),
     )

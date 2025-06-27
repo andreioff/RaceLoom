@@ -72,7 +72,7 @@ class HarmfulTrace:
             label = splitIntoLines(str(node.trans), 50, 10)
             racingNode = self._findRacingNode(nodePos)
             if racingNode is not None:
-                label += linesep * 2 + "Re-constructed network policy:" + linesep
+                label += linesep * 2 + "Reconstructed network policy:" + linesep
                 label += splitIntoLines(racingNode.netPolicy, 50, 10)
             edgeColor = (
                 ColorScheme.ERR_PRIMARY

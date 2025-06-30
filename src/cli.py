@@ -5,7 +5,6 @@ from typing import List
 
 from src.generator.trace_generator_factory import TraceGenOption
 from src.stats import StatsEntry, StatsGenerator
-from src.util import isExe
 
 
 class CLIError(Exception):
@@ -14,7 +13,6 @@ class CLIError(Exception):
 
 @dataclass
 class CLIArguments(StatsGenerator):
-    katchPath: str
     sdnModelFilePath: str
     forwardingPropsFilePath: str
     depth: int
@@ -41,7 +39,6 @@ class CLIArguments(StatsGenerator):
 
 def buildArgsParser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
-    parser.add_argument("katchPath")
     parser.add_argument("sdnModelFilePath")
     parser.add_argument("forwardingPropsFilePath")
     parser.add_argument(
@@ -59,7 +56,7 @@ def buildArgsParser() -> argparse.ArgumentParser:
         dest="threads",
         default=1,
         help="Number of threads to use when generating traces "
-        + f"(only used for the '{TraceGenOption.PBFS}') generation strategy)",
+        + f"(only used for the '{TraceGenOption.PBFS}' generation strategy)",
     )
     parser.add_argument(
         "-v",
@@ -85,18 +82,11 @@ def buildArgsParser() -> argparse.ArgumentParser:
 
 def validateArgs(args: CLIArguments) -> None:
     """Validates the command line arguments"""
-    if (
-        not args.katchPath
-        or not args.sdnModelFilePath
-        or not args.forwardingPropsFilePath
-    ):
+    if not args.sdnModelFilePath or not args.forwardingPropsFilePath:
         raise CLIError(
-            "Error: provide the arguments <path_to_katch> <sdn_model_file> "
+            "Error: provide the arguments <sdn_model_file> "
             + "<forwarding_properties_file>."
         )
-
-    if not os.path.exists(args.katchPath) or not isExe(args.katchPath):
-        raise CLIError("KATch tool could not be found in the given path!")
 
     fileExt = args.sdnModelFilePath.split(".")[-1]
     if not os.path.isfile(args.sdnModelFilePath) or fileExt != "json":

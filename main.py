@@ -14,13 +14,14 @@ from src.model.dnk_maude_model import DNKMaudeModel
 from src.stats import StatsCollector, StatsEntry
 from src.tracer import Tracer
 from src.tracer_config import TracerConfig
-from src.util import createDir, getFileName, readFile
+from src.util import createDir, getFileName, isExe, readFile
 
 logger = logging.getLogger(__name__)
 
 PROJECT_DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 OUTPUT_DIR_PATH = os.path.join(PROJECT_DIR_PATH, "output")
 MAUDE_FILES_DIR_PATH = os.path.join(PROJECT_DIR_PATH, "src", "maude")
+KATCH_EXEC_PATH = os.path.join(PROJECT_DIR_PATH, "bin", "katch", "katch.sh")
 RUN_DIR_NAME = "run"
 
 TRACES_GEN_STATS_FILE_NAME = "trace_generation_stats"
@@ -75,6 +76,11 @@ def readSafetyPropertiesFromFile(filePath: str) -> dict[RaceType, str]:
 
 
 def main() -> None:
+    if not os.path.exists(KATCH_EXEC_PATH) or not isExe(KATCH_EXEC_PATH):
+        printAndExit(
+            "KATch executable could not be found at "
+            + f"{KATCH_EXEC_PATH} or it is not runnable!"
+        )
     try:
         args = getCLIArgs()
         logLevel = logging.CRITICAL
@@ -91,7 +97,7 @@ def main() -> None:
 
         config = TracerConfig(
             runOutputDir,
-            args.katchPath,
+            KATCH_EXEC_PATH,
             MAUDE_FILES_DIR_PATH,
             args.threads,
             args.verbose,

@@ -15,7 +15,7 @@ class CLIError(Exception):
 @dataclass
 class CLIArguments(StatsGenerator):
     katchPath: str
-    inputFilePath: str
+    sdnModelFilePath: str
     safetyPropsFilePath: str
     depth: int
     threads: int
@@ -24,7 +24,11 @@ class CLIArguments(StatsGenerator):
 
     def getStats(self) -> List[StatsEntry]:
         return [
-            StatsEntry("inputFile", "Input file", os.path.basename(self.inputFilePath)),
+            StatsEntry(
+                "sdnModelFile",
+                "SDN model file",
+                os.path.basename(self.sdnModelFilePath),
+            ),
             StatsEntry(
                 "safetyPropsFilePath",
                 "Safety properties file",
@@ -38,7 +42,7 @@ class CLIArguments(StatsGenerator):
 def buildArgsParser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument("katchPath")
-    parser.add_argument("inputFilePath")
+    parser.add_argument("sdnModelFilePath")
     parser.add_argument("safetyPropsFilePath")
     parser.add_argument(
         "-d",
@@ -54,7 +58,8 @@ def buildArgsParser() -> argparse.ArgumentParser:
         type=int,
         dest="threads",
         default=1,
-        help="Number of threads to use when generating traces",
+        help="Number of threads to use when generating traces "
+        + f"(only used for the '{TraceGenOption.PBFS})' generation strategy)",
     )
     parser.add_argument(
         "-v",
@@ -79,20 +84,19 @@ def buildArgsParser() -> argparse.ArgumentParser:
 
 
 def validateArgs(args: CLIArguments) -> None:
-    """Validates the command line arguments and returns the paths to the KATch
-    executable and the input JSON file."""
-    if not args.katchPath or not args.inputFilePath or not args.safetyPropsFilePath:
+    """Validates the command line arguments"""
+    if not args.katchPath or not args.sdnModelFilePath or not args.safetyPropsFilePath:
         raise CLIError(
-            "Error: provide the arguments <path_to_katch> <input_file> "
+            "Error: provide the arguments <path_to_katch> <sdn_model_file> "
             + "<safety_properties_file>."
         )
 
     if not os.path.exists(args.katchPath) or not isExe(args.katchPath):
         raise CLIError("KATch tool could not be found in the given path!")
 
-    fileExt = args.inputFilePath.split(".")[-1]
-    if not os.path.isfile(args.inputFilePath) or fileExt != "json":
-        raise CLIError("Please provide a .json input file!")
+    fileExt = args.sdnModelFilePath.split(".")[-1]
+    if not os.path.isfile(args.sdnModelFilePath) or fileExt != "json":
+        raise CLIError("Please provide a .json sdn model file!")
     if not os.path.isfile(args.safetyPropsFilePath) or fileExt != "json":
         raise CLIError("Please provide a .json safety properties file!")
     if args.depth < 0:

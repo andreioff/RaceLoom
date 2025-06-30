@@ -82,7 +82,7 @@ def main() -> None:
             logLevel = logging.INFO
         logging.basicConfig(level=logLevel)
 
-        dnkModel = readDNKModelFromFile(args.inputFilePath)
+        dnkModel = readDNKModelFromFile(args.sdnModelFilePath)
         safetyProps = readSafetyPropertiesFromFile(args.safetyPropsFilePath)
 
         currTime = time.localtime()
@@ -95,7 +95,7 @@ def main() -> None:
             MAUDE_FILES_DIR_PATH,
             args.threads,
             args.verbose,
-            getFileName(args.inputFilePath),
+            getFileName(args.sdnModelFilePath),
         )
 
         tracer = Tracer(config, args.strategy, dnkModel, safetyProps)

@@ -83,7 +83,7 @@ def main() -> None:
         logging.basicConfig(level=logLevel)
 
         dnkModel = readDNKModelFromFile(args.sdnModelFilePath)
-        safetyProps = readSafetyPropertiesFromFile(args.safetyPropsFilePath)
+        safetyProps = readSafetyPropertiesFromFile(args.forwardingPropsFilePath)
 
         currTime = time.localtime()
         fmtTime = time.strftime("%Y-%m-%d;%H:%M:%S", currTime)

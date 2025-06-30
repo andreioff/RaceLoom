@@ -16,7 +16,7 @@ class CLIError(Exception):
 class CLIArguments(StatsGenerator):
     katchPath: str
     sdnModelFilePath: str
-    safetyPropsFilePath: str
+    forwardingPropsFilePath: str
     depth: int
     threads: int
     verbose: bool
@@ -30,9 +30,9 @@ class CLIArguments(StatsGenerator):
                 os.path.basename(self.sdnModelFilePath),
             ),
             StatsEntry(
-                "safetyPropsFilePath",
-                "Safety properties file",
-                os.path.basename(self.safetyPropsFilePath),
+                "forwardingPropsFilePath",
+                "Forwarding properties file",
+                os.path.basename(self.forwardingPropsFilePath),
             ),
             StatsEntry("strategy", "Trace generation strategy", self.strategy),
             StatsEntry("depth", "Depth", self.depth),
@@ -43,7 +43,7 @@ def buildArgsParser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument("katchPath")
     parser.add_argument("sdnModelFilePath")
-    parser.add_argument("safetyPropsFilePath")
+    parser.add_argument("forwardingPropsFilePath")
     parser.add_argument(
         "-d",
         "--depth",
@@ -59,7 +59,7 @@ def buildArgsParser() -> argparse.ArgumentParser:
         dest="threads",
         default=1,
         help="Number of threads to use when generating traces "
-        + f"(only used for the '{TraceGenOption.PBFS})' generation strategy)",
+        + f"(only used for the '{TraceGenOption.PBFS}') generation strategy)",
     )
     parser.add_argument(
         "-v",
@@ -85,10 +85,14 @@ def buildArgsParser() -> argparse.ArgumentParser:
 
 def validateArgs(args: CLIArguments) -> None:
     """Validates the command line arguments"""
-    if not args.katchPath or not args.sdnModelFilePath or not args.safetyPropsFilePath:
+    if (
+        not args.katchPath
+        or not args.sdnModelFilePath
+        or not args.forwardingPropsFilePath
+    ):
         raise CLIError(
             "Error: provide the arguments <path_to_katch> <sdn_model_file> "
-            + "<safety_properties_file>."
+            + "<forwarding_properties_file>."
         )
 
     if not os.path.exists(args.katchPath) or not isExe(args.katchPath):
@@ -97,8 +101,8 @@ def validateArgs(args: CLIArguments) -> None:
     fileExt = args.sdnModelFilePath.split(".")[-1]
     if not os.path.isfile(args.sdnModelFilePath) or fileExt != "json":
         raise CLIError("Please provide a .json sdn model file!")
-    if not os.path.isfile(args.safetyPropsFilePath) or fileExt != "json":
-        raise CLIError("Please provide a .json safety properties file!")
+    if not os.path.isfile(args.forwardingPropsFilePath) or fileExt != "json":
+        raise CLIError("Please provide a .json forwarding properties file!")
     if args.depth < 0:
         raise CLIError("Depth cannot be negative")
     if args.threads < 1:

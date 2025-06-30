@@ -12,7 +12,7 @@ dependencies = [
 
 [project.optional-dependencies]
 test = [ 
-  "pytest==8.3.4",
+  "pytest==8.4.1",
   "pytest_cov==6.0.0",
   "pydot==3.0.4",
   # If the installation of pygraphviz fails with "...fatal error: graphviz/cgraph.h: No such file or directory",

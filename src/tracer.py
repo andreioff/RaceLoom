@@ -49,18 +49,7 @@ class Tracer:
 
         if self._traceTree.traceCount() == 0:
             return False
-        self._writeTracesToFile()
         return True
-
-    def _writeTracesToFile(self) -> None:
-        tracesFilePath = os.path.join(
-            self.config.outputDirPath,
-            f"{_TRACES_FILE_NAME}_{self.config.inputFileName}.txt",
-        )
-        exportFile(
-            tracesFilePath,
-            os.linesep.join([str(t) for t in self._traceTree.getTraceIterator()]),
-        )
 
     def analyzeTraces(self) -> None:
         self._traceAnalyzer.run(self._traceTree, self.dnkModel.getElementsMetadata())

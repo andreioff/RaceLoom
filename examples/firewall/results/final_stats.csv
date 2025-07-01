@@ -1,0 +1,3 @@
+date,sdnModelFile,forwardingPropsFilePath,strategy,depth,modelBranchCounts,tracesGenTime,maudeExecTime,traceGenCacheHits,traceGenCacheMisses,generatedTraces,katchExecTime,katchCacheHits,katchCacheMisses,harmfulRaces,traceAnalyzerExecTime,totalExecTime
+2025-06-30;16:19:54,firewall.json,forwarding_props.json,pbfs,10,C:2;C-SSH:1;C-UDP:1;BSw:5,0.19485930199880386,0.1797299669997301,36,36,52,2.0486652409999806,46,6,2,2.051059858997178,2.2459191609959817
+2025-06-30;16:20:00,firewall.json,forwarding_props.json,bfs,10,C:2;C-SSH:1;C-UDP:1;BSw:5,0.01739536600143765,0.006114280000474537,138,24,52,2.0188869100093143,46,6,2,2.021208148002188,2.0386035140036256

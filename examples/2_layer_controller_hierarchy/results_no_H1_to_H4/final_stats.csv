@@ -1,0 +1,3 @@
+date,sdnModelFile,forwardingPropsFilePath,strategy,depth,modelBranchCounts,tracesGenTime,maudeExecTime,traceGenCacheHits,traceGenCacheMisses,generatedTraces,katchExecTime,katchCacheHits,katchCacheMisses,harmfulRaces,traceAnalyzerExecTime,totalExecTime
+2025-07-01;17:18:32,2_layer_controllers.json,forwarding_props_no_H1_to_H4.json,pbfs,10,C1:2;C2:2;CM:2;BSw:5,7.526583670000036,0.25262130300143326,316,65,219642,9.092752913045842,1512136,16,8,29.84162313699926,37.3682068069993
+2025-07-01;17:19:28,2_layer_controllers.json,forwarding_props_no_H1_to_H4.json,bfs,10,C1:2;C2:2;CM:2;BSw:5,7.088826319000873,0.052495396997983335,119619,61,219642,8.868178844162685,1512136,16,8,29.364191717999347,36.45301803700022

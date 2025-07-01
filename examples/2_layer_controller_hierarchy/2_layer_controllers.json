@@ -1,0 +1,42 @@
+{
+  "Switches": {
+    "SW1": {
+      "DirectUpdates": [
+        {
+          "Channel": "upS1",
+          "Policy": "(port = 1) . (port <- 2)",
+          "Append": false
+        },
+        {
+          "Channel": "upS1",
+          "Policy": "(port = 5) . (port <- 2)",
+          "Append": false
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW2": {
+      "DirectUpdates": [
+        {
+          "Channel": "upS2",
+          "Policy": "(port = 3) . (port <- 4)",
+          "Append": false
+        },
+        {
+          "Channel": "upS2",
+          "Policy": "(port = 3) . (port <- 6)",
+          "Append": false
+        }
+      ],
+      "RequestedUpdates": []
+    }
+  },
+  "Links": "(port = 2) . (port <- 3) + (port = 6) . (port <- 8) + (port = 4) . (port <- 7)",
+  "RecursiveVariables": {
+    "C1": "(upS1 ! \"(port = 1) . (port <- 2)\") ; C1 o+ (upC1 ? \"(port = 5) . (port <- 2)\") ; ((upS1 ! \"(port = 5) . (port <- 2)\") ; bot)",
+    "C2": "(upS2 ! \"(port = 3) . (port <- 4)\") ; C2 o+ (upC2 ? \"(port = 3) . (port <- 6)\") ; ((upS2 ! \"(port = 3) . (port <- 6)\") ; bot)",
+    "CM": "(upC1 ! \"(port = 5) . (port <- 2)\") ; CM o+ (upC2 ! \"(port = 3) . (port <- 6)\") ; CM"
+  },
+  "OtherChannels": ["upC1", "upC2"],
+  "Controllers": ["C1", "C2", "CM"]
+}

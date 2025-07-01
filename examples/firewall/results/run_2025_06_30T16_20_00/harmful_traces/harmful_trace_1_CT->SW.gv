@@ -1,0 +1,32 @@
+digraph g {
+n0 [label=<SW, CT<br/>[[0, 0], [0, 0]]>, shape=rectangle, style=filled, fillcolor="#F2F4FB"];
+n1 [label=<SW, CT<br/>[[1, 0], [1, 1]]>, shape=rectangle, style=filled, fillcolor="#F2F4FB"];
+n0 -> n1 [label="rcfg(UDP, '(flag = 2)', 0, 1)", color="#000000", penwidth=1.0];
+n2 [label=<SW, CT<br/>[[2, 2], [1, 2]]>, shape=rectangle, style=filled, fillcolor="#F2F4FB"];
+n1 -> n2 [label="rcfg(Up, '(flag = 0) . (type != 4) . (pt = 1) . (p
+t <- 2)', 1, 0)", color="#000000", penwidth=1.0];
+n3 [label=<SW, CT<br/>[[3, 2], [3, 3]]>, shape=rectangle, style=filled, fillcolor="#F2F4FB"];
+n2 -> n3 [label="rcfg(SSH, '(flag = 1)', 0, 1)", color="#000000", penwidth=1.0];
+n4 [label=<SW, CT<br/>[<font color="#FF2400">[4, 2]</font>, [3, 3]]>, shape=rectangle, style=filled, fillcolor="#F2F4FB"];
+n3 -> n4 [label="proc('((flag = 0) . (type != 4) . (pt = 1) . (pt <
+- 2)) . (one) . (((flag = 0) . (type != 4) . (pt =
+ 1) . (pt <- 2)) . (one))*', 0)
+
+Reconstructed network policy:
+((flag = 0) . (type != 4) . (pt = 1) . (pt <- 2)) 
+. (one) . (((flag = 0) . (type != 4) . (pt = 1) . 
+(pt <- 2)) . (one))*", color="#FF2400", penwidth=2.0];
+n5 [label=<SW, CT<br/>[[5, 4], <font color="#FF2400">[3, 4]</font>]>, shape=rectangle, style=filled, fillcolor="#F2F4FB"];
+n4 -> n5 [label="rcfg(Up, '(flag = 0) . (type != 3) . (type != 4) .
+ (pt = 1) . (pt <- 2)', 1, 0)
+
+Reconstructed network policy:
+(((flag = 0) . (type != 3) . (type != 4) . (pt = 1
+) . (pt <- 2)) . (one)) . (((flag = 0) . (type != 
+3) . (type != 4) . (pt = 1) . (pt <- 2)) . (one))*", color="#FF2400", penwidth=2.0];
+n6 [label=<SW, CT<br/>[[6, 4], [3, 4]]>, shape=rectangle, style=filled, fillcolor="#F2F4FB"];
+n5 -> n6 [label="proc('((flag = 0) . (type != 3) . (type != 4) . (p
+t = 1) . (pt <- 2)) . (one) . (((flag = 0) . (type
+ != 3) . (type != 4) . (pt = 1) . (pt <- 2)) . (on
+e))*', 0)", color="#000000", penwidth=1.0];
+}

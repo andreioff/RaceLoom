@@ -1,0 +1,44 @@
+{
+  "Switches": {
+    "SW": {
+      "InitialFlowTable": "(flag = 0) . (pt = 1) . (pt <- 2)",
+      "DirectUpdates": [],
+      "RequestedUpdates": [
+        {
+          "RequestChannel": "SSH",
+          "RequestPolicy": "(flag = 1)",
+          "ResponseChannel": "Up",
+          "ResponsePolicy": "(flag = 0) . (type != 3) . (pt = 1) . (pt <- 2)",
+          "Append": false
+        },
+        {
+          "RequestChannel": "UDP",
+          "RequestPolicy": "(flag = 2)",
+          "ResponseChannel": "Up",
+          "ResponsePolicy": "(flag = 0) . (type != 4) . (pt = 1) . (pt <- 2)",
+          "Append": false
+        },
+        {
+          "RequestChannel": "SSH",
+          "RequestPolicy": "(flag = 1)",
+          "ResponseChannel": "Up",
+          "ResponsePolicy": "(flag = 0) . (type != 3) . (type != 4) . (pt = 1) . (pt <- 2)",
+          "Append": false
+        },
+        {
+          "RequestChannel": "UDP",
+          "RequestPolicy": "(flag = 2)",
+          "ResponseChannel": "Up",
+          "ResponsePolicy": "(flag = 0) . (type != 3) . (type != 4) . (pt = 1) . (pt <- 2)",
+          "Append": false
+        }
+      ]
+    }
+  },
+  "RecursiveVariables": {
+    "C": "(SSH ? \"(flag = 1)\") ; ((Up !  \"(flag = 0) . (type != 3) . (pt = 1) . (pt <- 2)\") ; C-SSH) o+ (UDP ? \"(flag = 2)\") ; ((Up ! \"(flag = 0) . (type != 4) . (pt = 1) . (pt <- 2)\") ; C-UDP)",
+    "C-SSH": "(UDP ? \"(flag = 2)\") ; ((Up ! \"(flag = 0) . (type != 3) . (type != 4) . (pt = 1) . (pt <- 2)\") ; bot)",
+    "C-UDP": "(SSH ? \"(flag = 1)\") ; ((Up ! \"(flag = 0) . (type != 3) . (type != 4) . (pt = 1) . (pt <- 2)\") ; bot)"
+  },
+  "Controllers": ["C"]
+}

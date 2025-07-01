@@ -1,0 +1,76 @@
+{
+  "Switches": {
+    "SW1": {
+      "InitialFlowTable": "(port = 2) . (port <- 4)",
+      "DirectUpdates": [
+        {
+          "Channel": "upS1",
+          "Policy": "zero",
+          "Append": false
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW2": {
+      "InitialFlowTable": "(port = 12) . (port <- 14)",
+      "DirectUpdates": [
+        {
+          "Channel": "upS2",
+          "Policy": "zero",
+          "Append": false
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW3": {
+      "InitialFlowTable": "zero",
+      "DirectUpdates": [
+        {
+          "Channel": "upS3",
+          "Policy": "(port = 1) . (port <- 3)",
+          "Append": false
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW4": {
+      "InitialFlowTable": "zero",
+      "DirectUpdates": [
+        {
+          "Channel": "upS4",
+          "Policy": "(port = 11) . (port <- 13)",
+          "Append": false
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW5": {
+      "InitialFlowTable": "(port = 6) . (port <- 7)",
+      "DirectUpdates": [
+        {
+          "Channel": "upS5",
+          "Policy": "(port = 5) . (port <- 7)",
+          "Append": false
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW6": {
+      "InitialFlowTable": "(port = 8) . (port <- 10)",
+      "DirectUpdates": [
+        {
+          "Channel": "upS6",
+          "Policy": "(port = 8) . (port <- 9)",
+          "Append": false
+        }
+      ],
+      "RequestedUpdates": []
+    }
+  },
+  "Links": "(((port = 3) . (port <- 5)) + ((port = 4) . (port <- 6)) + ((port = 7) . (port <- 8)) + ((port = 9) . (port <- 11)) + ((port = 10) . (port <- 12)) + ((port = 13) . (port <- 15)) + ((port = 14) . (port <- 16)))",
+  "RecursiveVariables": {
+    "C1": "(upS1 ! \"zero\") ; C1 o+ (upS3 ! \"(port = 1) . (port <- 3)\") ; C1 o+ (upS5 ! \"(port = 5) . (port <- 7)\") ; C1",
+    "C2": "(upS2 ! \"zero\") ; C2 o+ (upS4 ! \"(port = 11) . (port <- 13)\") ; C2 o+ (upS6 ! \"(port = 8) . (port <- 9)\") ; C2"
+  },
+  "Controllers": ["C1", "C2"]
+}

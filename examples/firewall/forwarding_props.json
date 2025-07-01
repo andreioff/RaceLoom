@@ -1,0 +1,8 @@
+{
+  "Properties": {
+    "CT->SW": {
+      "Expression": "(flag=0) . (type=3) . (pt=1) . @Network . (flag=0) . (type=3)",
+      "MustBe": false
+    }
+  }
+}

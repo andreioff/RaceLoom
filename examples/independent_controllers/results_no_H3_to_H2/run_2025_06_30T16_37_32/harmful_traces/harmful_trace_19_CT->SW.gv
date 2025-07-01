@@ -1,0 +1,92 @@
+digraph g {
+n0 [label=<SW, CT, CT<br/>[[0, 0, 0], [0, 0, 0], [0, 0, 0]]>, shape=rectangle, style=filled, fillcolor="#F2F4FB"];
+n1 [label=<SW, CT, CT<br/>[[1, 0, 0], [0, 0, 0], [0, 0, 0]]>, shape=rectangle, style=filled, fillcolor="#F2F4FB"];
+n0 -> n1 [label="proc('((port = 2) . (port <- 4)+(port = 12) . (por
+t <- 14)+zero+zero+(port = 6) . (port <- 7)+(port 
+= 8) . (port <- 10)) . ((((port = 3) . (port <- 5)
+) + ((port = 4) . (port <- 6)) + ((port = 7) . (po
+rt <- 8)) + ((port = 9) . (port <- 11)) + ((port =
+ 10) . (port <- 12)) + ((port = 13) . (port <- 15)
+) + ((port = 14) . (port <- 16)))) . (((port = 2) 
+. (port <- 4)+(port = 12) . (port <- 14)+zero+zero
++(port = 6) . (port <- 7)+(port = 8) . (port <- 10
+)) . ((((port = 3) . (port <- 5)) + ((port = 4) . 
+(port <- 6)) + ((port = 7) . (port <- 8)) + ((port
+ = 9) . (port <- 11)) + ((port = 10) . (port <- 12
+)) + ((port = 13) . (port <- 15)) + ((port = 14) .
+ (port <- 16)))))*', 0)", color="#000000", penwidth=1.0];
+n2 [label=<SW, CT, CT<br/>[[2, 1, 0], [0, 1, 0], [0, 0, 0]]>, shape=rectangle, style=filled, fillcolor="#F2F4FB"];
+n1 -> n2 [label="rcfg(upS3, '(port = 1) . (port <- 3)', 1, 0)", color="#000000", penwidth=1.0];
+n3 [label=<SW, CT, CT<br/>[[3, 2, 0], [0, 2, 0], [0, 0, 0]]>, shape=rectangle, style=filled, fillcolor="#F2F4FB"];
+n2 -> n3 [label="rcfg(upS5, '(port = 5) . (port <- 7)', 1, 0)", color="#000000", penwidth=1.0];
+n4 [label=<SW, CT, CT<br/>[<font color="#FF2400">[4, 2, 0]</font>, [0, 2, 0], [0, 0, 0]]>, shape=rectangle, style=filled, fillcolor="#F2F4FB"];
+n3 -> n4 [label="proc('((port = 2) . (port <- 4)+(port = 12) . (por
+t <- 14)+(port = 1) . (port <- 3)+zero+(port = 5) 
+. (port <- 7)+(port = 8) . (port <- 10)) . ((((por
+t = 3) . (port <- 5)) + ((port = 4) . (port <- 6))
+ + ((port = 7) . (port <- 8)) + ((port = 9) . (por
+t <- 11)) + ((port = 10) . (port <- 12)) + ((port 
+= 13) . (port <- 15)) + ((port = 14) . (port <- 16
+)))) . (((port = 2) . (port <- 4)+(port = 12) . (p
+ort <- 14)+(port = 1) . (port <- 3)+zero+(port = 5
+) . (port <- 7)+(port = 8) . (port <- 10)) . ((((p
+ort = 3) . (port <- 5)) + ((port = 4) . (port <- 6
+)) + ((port = 7) . (port <- 8)) + ((port = 9) . (p
+ort <- 11)) + ((port = 10) . (port <- 12)) + ((por
+t = 13) . (port <- 15)) + ((port = 14) . (port <- 
+16)))))*', 0)
+
+Reconstructed network policy:
+((port = 2) . (port <- 4)+(port = 12) . (port <- 1
+4)+(port = 1) . (port <- 3)+zero+(port = 5) . (por
+t <- 7)+(port = 8) . (port <- 10)) . ((((port = 3)
+ . (port <- 5)) + ((port = 4) . (port <- 6)) + ((p
+ort = 7) . (port <- 8)) + ((port = 9) . (port <- 1
+1)) + ((port = 10) . (port <- 12)) + ((port = 13) 
+. (port <- 15)) + ((port = 14) . (port <- 16)))) .
+ (((port = 2) . (port <- 4)+(port = 12) . (port <-
+ 14)+(port = 1) . (port <- 3)+zero+(port = 5) . (p
+ort <- 7)+(port = 8) . (port <- 10)) . ((((port = 
+3) . (port <- 5)) + ((port = 4) . (port <- 6)) + (
+(port = 7) . (port <- 8)) + ((port = 9) . (port <-
+ 11)) + ((port = 10) . (port <- 12)) + ((port = 13
+) . (port <- 15)) + ((port = 14) . (port <- 16))))
+)*", color="#FF2400", penwidth=2.0];
+n5 [label=<SW, CT, CT<br/>[[5, 2, 1], [0, 2, 0], <font color="#FF2400">[0, 0, 1]</font>]>, shape=rectangle, style=filled, fillcolor="#F2F4FB"];
+n4 -> n5 [label="rcfg(upS6, '(port = 8) . (port <- 9)', 2, 0)
+
+Reconstructed network policy:
+(((port = 2) . (port <- 4) + (port = 12) . (port <
+- 14) + (port = 1) . (port <- 3) + zero + (port = 
+5) . (port <- 7) + (port = 8) . (port <- 9)) . (((
+(port = 3) . (port <- 5)) + ((port = 4) . (port <-
+ 6)) + ((port = 7) . (port <- 8)) + ((port = 9) . 
+(port <- 11)) + ((port = 10) . (port <- 12)) + ((p
+ort = 13) . (port <- 15)) + ((port = 14) . (port <
+- 16))))) . (((port = 2) . (port <- 4) + (port = 1
+2) . (port <- 14) + (port = 1) . (port <- 3) + zer
+o + (port = 5) . (port <- 7) + (port = 8) . (port 
+<- 9)) . ((((port = 3) . (port <- 5)) + ((port = 4
+) . (port <- 6)) + ((port = 7) . (port <- 8)) + ((
+port = 9) . (port <- 11)) + ((port = 10) . (port <
+- 12)) + ((port = 13) . (port <- 15)) + ((port = 1
+4) . (port <- 16)))))*", color="#FF2400", penwidth=2.0];
+n6 [label=<SW, CT, CT<br/>[[6, 2, 1], [0, 2, 0], [0, 0, 1]]>, shape=rectangle, style=filled, fillcolor="#F2F4FB"];
+n5 -> n6 [label="proc('((port = 2) . (port <- 4)+(port = 12) . (por
+t <- 14)+(port = 1) . (port <- 3)+zero+(port = 5) 
+. (port <- 7)+(port = 8) . (port <- 9)) . ((((port
+ = 3) . (port <- 5)) + ((port = 4) . (port <- 6)) 
++ ((port = 7) . (port <- 8)) + ((port = 9) . (port
+ <- 11)) + ((port = 10) . (port <- 12)) + ((port =
+ 13) . (port <- 15)) + ((port = 14) . (port <- 16)
+))) . (((port = 2) . (port <- 4)+(port = 12) . (po
+rt <- 14)+(port = 1) . (port <- 3)+zero+(port = 5)
+ . (port <- 7)+(port = 8) . (port <- 9)) . ((((por
+t = 3) . (port <- 5)) + ((port = 4) . (port <- 6))
+ + ((port = 7) . (port <- 8)) + ((port = 9) . (por
+t <- 11)) + ((port = 10) . (port <- 12)) + ((port 
+= 13) . (port <- 15)) + ((port = 14) . (port <- 16
+)))))*', 0)", color="#000000", penwidth=1.0];
+n7 [label=<SW, CT, CT<br/>[[7, 3, 1], [0, 3, 0], [0, 0, 1]]>, shape=rectangle, style=filled, fillcolor="#F2F4FB"];
+n6 -> n7 [label="rcfg(upS1, 'zero', 1, 0)", color="#000000", penwidth=1.0];
+}

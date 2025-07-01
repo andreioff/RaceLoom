@@ -1,0 +1,16 @@
+{
+  "Properties": {
+    "CT->SW": {
+      "Expression": "(port = 1) . @Network . (port = 8)",
+      "MustBe": false
+    },
+    "CT->SW<-CT": {
+      "Expression": "(port = 1) . @Network . (port = 8)",
+      "MustBe": false
+    },
+    "CT->CT->SW": {
+      "Expression": "(port = 1) . @Network . (port = 8)",
+      "MustBe": false
+    }
+  }
+}

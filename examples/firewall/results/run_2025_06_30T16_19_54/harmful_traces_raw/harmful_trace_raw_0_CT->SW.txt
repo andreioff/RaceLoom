@@ -1,0 +1,4 @@
+[("", [[0, 0], [0, 0]]), ("rcfg(SSH, '(flag = 1)', 0, 1)", [[1, 0], [1, 1]]), ("proc('((flag = 0) . (pt = 1) . (pt <- 2)) . (one) . (((flag = 0) . (pt = 1) . (pt <- 2)) . (one))*', 0)", [[2, 0], [1, 1]]), ("rcfg(Up, '(flag = 0) . (type != 3) . (pt = 1) . (pt <- 2)', 1, 0)", [[3, 2], [1, 2]]), ("rcfg(UDP, '(flag = 2)', 0, 1)", [[4, 2], [4, 3]]), ("proc('((flag = 0) . (type != 3) . (pt = 1) . (pt <- 2)) . (one) . (((flag = 0) . (type != 3) . (pt = 1) . (pt <- 2)) . (one))*', 0)", [[5, 2], [4, 3]])]
+CT->SW
+(trans: 2, el: 0, networkPolicy: "((flag = 0) . (pt = 1) . (pt <- 2)) . (one) . (((flag = 0) . (pt = 1) . (pt <- 2)) . (one))*")
+(trans: 3, el: 1, networkPolicy: "(((flag = 0) . (type != 3) . (pt = 1) . (pt <- 2)) . (one)) . (((flag = 0) . (type != 3) . (pt = 1) . (pt <- 2)) . (one))*")

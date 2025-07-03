@@ -2,15 +2,15 @@
   "Properties": {
     "CT->SW": {
       "Expression": "(port = 5) . @Network . (port = 7)",
-      "MustBe": false
+      "AllowsPackets": false
     },
     "CT->SW<-CT": {
       "Expression": "(port = 5) . @Network . (port = 7)",
-      "MustBe": false
+      "AllowsPackets": false
     },
     "CT->CT->SW": {
       "Expression": "(port = 5) . @Network . (port = 7)",
-      "MustBe": false
+      "AllowsPackets": false
     }
   }
 }

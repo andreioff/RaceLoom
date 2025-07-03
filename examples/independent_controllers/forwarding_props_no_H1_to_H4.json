@@ -2,11 +2,11 @@
   "Properties": {
     "CT->SW": {
       "Expression": "(port=2) . @Network . (port=15)",
-      "MustBe": false 
+      "AllowsPackets": false
     },
     "CT->SW<-CT": {
       "Expression": "(port=2) . @Network . (port=15)",
-      "MustBe": false 
+      "AllowsPackets": false
     }
   }
 }

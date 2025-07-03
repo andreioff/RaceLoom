@@ -10,7 +10,7 @@ NonEmptyString = Annotated[str, StringConstraints(min_length=1)]
 
 class SafetyProperty(BaseModel):  # type: ignore
     Expression: NonEmptyString
-    MustBe: bool
+    AllowsPackets: bool
 
 
 class SafetyProperties(BaseModel):  # type: ignore
@@ -35,7 +35,7 @@ class SafetyProperties(BaseModel):  # type: ignore
         spDict: dict[RaceType, str] = {}
         for raceType, sp in self.Properties.items():
             rightSide = f"{NKPL_NOT_EQUIV} {NKPL_FALSE}"
-            if sp.MustBe is False:
+            if sp.AllowsPackets is False:
                 rightSide = f"{NKPL_EQUIV} {NKPL_FALSE}"
             spDict[raceType] = f"{sp.Expression} {rightSide}"
         return spDict

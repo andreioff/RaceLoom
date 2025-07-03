@@ -23,8 +23,6 @@ OUTPUT_DIR_PATH = os.path.join(PROJECT_DIR_PATH, "output")
 MAUDE_FILES_DIR_PATH = os.path.join(PROJECT_DIR_PATH, "src", "maude")
 KATCH_EXEC_PATH = os.path.join(PROJECT_DIR_PATH, "bin", "katch", "katch.sh")
 RUN_DIR_NAME = "run"
-
-TRACES_GEN_STATS_FILE_NAME = "trace_generation_stats"
 STATS_FILE_NAME = "final_stats"
 
 
@@ -122,7 +120,6 @@ def main() -> None:
         print()
         print(stats.toPrettyStr())
         print()
-        logRunStats(stats, TRACES_GEN_STATS_FILE_NAME)
 
         print("Analyzing traces...")
         tracer.analyzeTraces()

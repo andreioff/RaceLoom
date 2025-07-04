@@ -36,7 +36,6 @@ class MaudeSorts(StrEnum):
 
 
 class MaudeModules(StrEnum):
-    TRACER = "TRACER"
     DNK_MODEL = "DNK-MODEL"
     DNK_MODEL_UTIL = "DNK-MODEL-UTIL"
     HEAD_NORMAL_FORM = "HEAD-NORMAL-FORM"

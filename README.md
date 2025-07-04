@@ -30,6 +30,26 @@ source venv/bin/activate
 
 ## 🚀 Installation
 
+### Via Docker
+
+Before you continue, ensure that [Docker](https://www.docker.com/get-started/) is installed on your system and the `docker` command is available in the system's `PATH`.
+
+Build the Docker image of the repository:
+
+```bash
+docker build -t raceloom:latest .
+```
+
+then run a new container from the image:
+
+```bash
+docker run -it -v $PWD/output:/raceloom/output raceloom:latest
+```
+
+Note that the above command will put you inside the Docker container and mount an `output` directory from your file system into the container. This will allow you to access any output produced by the tool from outside the container.
+
+### Manual installation
+
 Clone the repository and install the tool using `pip`:
 
 ```bash
@@ -76,9 +96,14 @@ python3 main.py -d 10 -t 5 -s pbfs -v ./examples/firewall/firewall.json ./exampl
 ### NetKAT and DyNetKAT encoding
 
 > [!IMPORTANT]
-> For NetKAT expressions: - The `dup` operator is forbidden - Packet field values can only be integers
+> For NetKAT expressions:
 >
-> For DyNetKAT expressions: - The parallel operator `||`is forbidden
+> - The `dup` operator is forbidden
+> - Packet field values can only be integers
+>
+> For DyNetKAT expressions:
+>
+> - The parallel operator `||` is forbidden
 
 For [NetKAT](https://netkat.org/) expressions, the following syntax rules apply:
 

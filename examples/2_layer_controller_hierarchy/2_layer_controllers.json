@@ -4,13 +4,11 @@
       "DirectUpdates": [
         {
           "Channel": "upS1",
-          "Policy": "(port = 1) . (port <- 2)",
-          "Append": false
+          "Policy": "(port = 1) . (port <- 2)"
         },
         {
           "Channel": "upS1",
-          "Policy": "(port = 5) . (port <- 2)",
-          "Append": false
+          "Policy": "(port = 5) . (port <- 2)"
         }
       ],
       "RequestedUpdates": []
@@ -19,13 +17,11 @@
       "DirectUpdates": [
         {
           "Channel": "upS2",
-          "Policy": "(port = 3) . (port <- 4)",
-          "Append": false
+          "Policy": "(port = 3) . (port <- 4)"
         },
         {
           "Channel": "upS2",
-          "Policy": "(port = 3) . (port <- 6)",
-          "Append": false
+          "Policy": "(port = 3) . (port <- 6)"
         }
       ],
       "RequestedUpdates": []

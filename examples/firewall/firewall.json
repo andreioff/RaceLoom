@@ -8,29 +8,25 @@
           "RequestChannel": "SSH",
           "RequestPolicy": "(flag = 1)",
           "ResponseChannel": "Up",
-          "ResponsePolicy": "(flag = 0) . (type != 3) . (pt = 1) . (pt <- 2)",
-          "Append": false
+          "ResponsePolicy": "(flag = 0) . (type != 3) . (pt = 1) . (pt <- 2)"
         },
         {
           "RequestChannel": "UDP",
           "RequestPolicy": "(flag = 2)",
           "ResponseChannel": "Up",
-          "ResponsePolicy": "(flag = 0) . (type != 4) . (pt = 1) . (pt <- 2)",
-          "Append": false
+          "ResponsePolicy": "(flag = 0) . (type != 4) . (pt = 1) . (pt <- 2)"
         },
         {
           "RequestChannel": "SSH",
           "RequestPolicy": "(flag = 1)",
           "ResponseChannel": "Up",
-          "ResponsePolicy": "(flag = 0) . (type != 3) . (type != 4) . (pt = 1) . (pt <- 2)",
-          "Append": false
+          "ResponsePolicy": "(flag = 0) . (type != 3) . (type != 4) . (pt = 1) . (pt <- 2)"
         },
         {
           "RequestChannel": "UDP",
           "RequestPolicy": "(flag = 2)",
           "ResponseChannel": "Up",
-          "ResponsePolicy": "(flag = 0) . (type != 3) . (type != 4) . (pt = 1) . (pt <- 2)",
-          "Append": false
+          "ResponsePolicy": "(flag = 0) . (type != 3) . (type != 4) . (pt = 1) . (pt <- 2)"
         }
       ]
     }

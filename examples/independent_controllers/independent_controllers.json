@@ -5,8 +5,7 @@
       "DirectUpdates": [
         {
           "Channel": "upS1",
-          "Policy": "zero",
-          "Append": false
+          "Policy": "zero"
         }
       ],
       "RequestedUpdates": []
@@ -16,8 +15,7 @@
       "DirectUpdates": [
         {
           "Channel": "upS2",
-          "Policy": "zero",
-          "Append": false
+          "Policy": "zero"
         }
       ],
       "RequestedUpdates": []
@@ -27,8 +25,7 @@
       "DirectUpdates": [
         {
           "Channel": "upS3",
-          "Policy": "(port = 1) . (port <- 3)",
-          "Append": false
+          "Policy": "(port = 1) . (port <- 3)"
         }
       ],
       "RequestedUpdates": []
@@ -38,8 +35,7 @@
       "DirectUpdates": [
         {
           "Channel": "upS4",
-          "Policy": "(port = 11) . (port <- 13)",
-          "Append": false
+          "Policy": "(port = 11) . (port <- 13)"
         }
       ],
       "RequestedUpdates": []
@@ -49,8 +45,7 @@
       "DirectUpdates": [
         {
           "Channel": "upS5",
-          "Policy": "(port = 5) . (port <- 7)",
-          "Append": false
+          "Policy": "(port = 5) . (port <- 7)"
         }
       ],
       "RequestedUpdates": []
@@ -60,8 +55,7 @@
       "DirectUpdates": [
         {
           "Channel": "upS6",
-          "Policy": "(port = 8) . (port <- 9)",
-          "Append": false
+          "Policy": "(port = 8) . (port <- 9)"
         }
       ],
       "RequestedUpdates": []

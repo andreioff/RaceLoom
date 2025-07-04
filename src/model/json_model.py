@@ -12,7 +12,6 @@ VarNameString = Annotated[str, StringConstraints(pattern=r"^[A-Za-z](-?[A-Za-z0-
 class DNKDirectUpdate(BaseModel):  # type: ignore
     Channel: VarNameString
     Policy: NonEmptyString
-    Append: bool
 
 
 class DNKRequestedUpdate(BaseModel):  # type: ignore
@@ -20,7 +19,6 @@ class DNKRequestedUpdate(BaseModel):  # type: ignore
     RequestPolicy: NonEmptyString
     ResponseChannel: VarNameString
     ResponsePolicy: NonEmptyString
-    Append: bool
 
 
 class DNKSwitch(BaseModel):  # type: ignore

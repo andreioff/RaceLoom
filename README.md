@@ -15,7 +15,33 @@ Given a DyNetKAT network model, a set of forwarding properties, and a trace dept
 
 ---
 
-## ⚙️ Prerequisites
+## 🚀 Installation
+
+### Via Docker
+
+Before you continue, ensure that [Docker](https://www.docker.com/get-started/) is installed on your system and the `docker` command is available in the system's `PATH`.
+
+From the main folder of the repository, build the Docker image:
+
+```bash
+docker build -t raceloom:latest .
+```
+
+then run a new container from the built image:
+
+```bash
+docker run -it -v $PWD/output:/raceloom/output raceloom:latest
+```
+
+Note that the above command will put you inside the Docker container and mount an `output` directory from your file system into the container. This will allow you to access any output produced by the tool from outside the container.
+
+Once in the Docker container, the tool can be used via the command line.
+
+### Manual installation
+
+If the Docker installation is not desired, the tool can also be installed manually.
+
+#### ⚙️ Prerequisites
 
 1. **Python**: 3.12.8 or higher
 2. **Java Runtime**: 8 or higher
@@ -28,27 +54,7 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-## 🚀 Installation
-
-### Via Docker
-
-Before you continue, ensure that [Docker](https://www.docker.com/get-started/) is installed on your system and the `docker` command is available in the system's `PATH`.
-
-Build the Docker image of the repository:
-
-```bash
-docker build -t raceloom:latest .
-```
-
-then run a new container from the image:
-
-```bash
-docker run -it -v $PWD/output:/raceloom/output raceloom:latest
-```
-
-Note that the above command will put you inside the Docker container and mount an `output` directory from your file system into the container. This will allow you to access any output produced by the tool from outside the container.
-
-### Manual installation
+#### Installation steps
 
 Clone the repository and install the tool using `pip`:
 

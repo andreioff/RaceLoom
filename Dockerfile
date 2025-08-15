@@ -11,6 +11,10 @@ RUN apt-get update && \
 COPY bin bin 
 RUN test $(bin/katch/test_katch.sh) = "OK!"
 
+# Copy benchmarks
+COPY benchmarks benchmarks
+COPY run_benchmarks.sh run_benchmarks.sh
+
 # Copy source files
 COPY src src
 COPY main.py main.py
@@ -21,6 +25,8 @@ RUN pip3 install .
 
 # Copy other relevant files
 COPY examples examples
+COPY LICENSE LICENSE
+COPY README.md README.md
 
 # Run shell
 CMD ["/bin/bash"]

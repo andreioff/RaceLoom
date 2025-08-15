@@ -1,0 +1,162 @@
+{
+  "Switches": {
+    "SW0": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP0",
+          "Policy": "(dst=1) . (port=102) . (port<-70)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW1": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP1",
+          "Policy": "(dst=1) . (port=71) . (port<-74)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW10": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP10",
+          "Policy": "(dst=1) . (port=15) . (port<-10)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW11": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP11",
+          "Policy": "(dst=1) . (port=11) . (port<-78)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW12": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP12",
+          "Policy": "(dst=1) . (port=79) . (port<-100)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW13": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP13",
+          "Policy": "(dst=1) . (port=101) . (port<-86)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW14": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP14",
+          "Policy": "(dst=1) . (port=87) . (port<-25)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW15": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP15",
+          "Policy": "(dst=1) . (port=24) . (port<-22)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW16": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP16",
+          "Policy": "(dst=1) . (port=23) . (port<-103)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW2": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP2",
+          "Policy": "(dst=1) . (port=75) . (port<-65)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW3": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP3",
+          "Policy": "(dst=1) . (port=64) . (port<-66)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW4": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP4",
+          "Policy": "(dst=1) . (port=67) . (port<-61)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW5": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP5",
+          "Policy": "(dst=1) . (port=60) . (port<-58)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW6": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP6",
+          "Policy": "(dst=1) . (port=59) . (port<-47)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW7": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP7",
+          "Policy": "(dst=1) . (port=46) . (port<-43)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW8": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP8",
+          "Policy": "(dst=1) . (port=42) . (port<-44)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW9": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP9",
+          "Policy": "(dst=1) . (port=45) . (port<-14)"
+        }
+      ],
+      "RequestedUpdates": []
+    }
+  },
+  "Links": "(dst=1) . (port=70) . (port<-71) + (dst=1) . (port=74) . (port<-75) + (dst=1) . (port=65) . (port<-64) + (dst=1) . (port=66) . (port<-67) + (dst=1) . (port=61) . (port<-60) + (dst=1) . (port=58) . (port<-59) + (dst=1) . (port=47) . (port<-46) + (dst=1) . (port=43) . (port<-42) + (dst=1) . (port=44) . (port<-45) + (dst=1) . (port=14) . (port<-15) + (dst=1) . (port=10) . (port<-11) + (dst=1) . (port=78) . (port<-79) + (dst=1) . (port=100) . (port<-101) + (dst=1) . (port=86) . (port<-87) + (dst=1) . (port=25) . (port<-24) + (dst=1) . (port=22) . (port<-23)",
+  "RecursiveVariables": {
+    "C0": "(UP0 ! \"(dst=1) . (port=102) . (port<-70)\") ; ((UP1 ! \"(dst=1) . (port=71) . (port<-74)\") ; ((UP2 ! \"(dst=1) . (port=75) . (port<-65)\") ; ((UP3 ! \"(dst=1) . (port=64) . (port<-66)\") ; ((UP4 ! \"(dst=1) . (port=67) . (port<-61)\") ; ((UP5 ! \"(dst=1) . (port=60) . (port<-58)\") ; ((UP6 ! \"(dst=1) . (port=59) . (port<-47)\") ; ((UP7 ! \"(dst=1) . (port=46) . (port<-43)\") ; ((UP8 ! \"(dst=1) . (port=42) . (port<-44)\") ; ((UP9 ! \"(dst=1) . (port=45) . (port<-14)\") ; ((UP10 ! \"(dst=1) . (port=15) . (port<-10)\") ; ((UP11 ! \"(dst=1) . (port=11) . (port<-78)\") ; ((UP12 ! \"(dst=1) . (port=79) . (port<-100)\") ; ((UP13 ! \"(dst=1) . (port=101) . (port<-86)\") ; ((UP14 ! \"(dst=1) . (port=87) . (port<-25)\") ; ((UP15 ! \"(dst=1) . (port=24) . (port<-22)\") ; ((UP16 ! \"(dst=1) . (port=23) . (port<-103)\") ; C0))))))))))))))))"
+  },
+  "Controllers": ["C0"]
+}

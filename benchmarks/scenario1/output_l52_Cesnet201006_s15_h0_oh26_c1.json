@@ -1,0 +1,72 @@
+{
+  "Switches": {
+    "SW0": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP0",
+          "Policy": "(dst=1) . (port=126) . (port<-90)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW1": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP1",
+          "Policy": "(dst=1) . (port=91) . (port<-94)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW2": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP2",
+          "Policy": "(dst=1) . (port=95) . (port<-43)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW3": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP3",
+          "Policy": "(dst=1) . (port=42) . (port<-38)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW4": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP4",
+          "Policy": "(dst=1) . (port=39) . (port<-66)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW5": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP5",
+          "Policy": "(dst=1) . (port=67) . (port<-99)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW6": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP6",
+          "Policy": "(dst=1) . (port=98) . (port<-127)"
+        }
+      ],
+      "RequestedUpdates": []
+    }
+  },
+  "Links": "(dst=1) . (port=90) . (port<-91) + (dst=1) . (port=94) . (port<-95) + (dst=1) . (port=43) . (port<-42) + (dst=1) . (port=38) . (port<-39) + (dst=1) . (port=66) . (port<-67) + (dst=1) . (port=99) . (port<-98)",
+  "RecursiveVariables": {
+    "C0": "(UP0 ! \"(dst=1) . (port=126) . (port<-90)\") ; ((UP1 ! \"(dst=1) . (port=91) . (port<-94)\") ; ((UP2 ! \"(dst=1) . (port=95) . (port<-43)\") ; ((UP3 ! \"(dst=1) . (port=42) . (port<-38)\") ; ((UP4 ! \"(dst=1) . (port=39) . (port<-66)\") ; ((UP5 ! \"(dst=1) . (port=67) . (port<-99)\") ; ((UP6 ! \"(dst=1) . (port=98) . (port<-127)\") ; C0))))))"
+  },
+  "Controllers": ["C0"]
+}

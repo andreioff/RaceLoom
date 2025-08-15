@@ -1,0 +1,81 @@
+{
+  "Switches": {
+    "SW0": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP0",
+          "Policy": "(dst=1) . (port=56) . (port<-12)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW1": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP1",
+          "Policy": "(dst=1) . (port=13) . (port<-3)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW2": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP2",
+          "Policy": "(dst=1) . (port=2) . (port<-4)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW3": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP3",
+          "Policy": "(dst=1) . (port=5) . (port<-33)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW4": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP4",
+          "Policy": "(dst=1) . (port=32) . (port<-21)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW5": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP5",
+          "Policy": "(dst=1) . (port=20) . (port<-18)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW6": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP6",
+          "Policy": "(dst=1) . (port=19) . (port<-28)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW7": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP7",
+          "Policy": "(dst=1) . (port=29) . (port<-57)"
+        }
+      ],
+      "RequestedUpdates": []
+    }
+  },
+  "Links": "(dst=1) . (port=12) . (port<-13) + (dst=1) . (port=3) . (port<-2) + (dst=1) . (port=4) . (port<-5) + (dst=1) . (port=33) . (port<-32) + (dst=1) . (port=21) . (port<-20) + (dst=1) . (port=18) . (port<-19) + (dst=1) . (port=28) . (port<-29)",
+  "RecursiveVariables": {
+    "C0": "(UP0 ! \"(dst=1) . (port=56) . (port<-12)\") ; ((UP1 ! \"(dst=1) . (port=13) . (port<-3)\") ; ((UP2 ! \"(dst=1) . (port=2) . (port<-4)\") ; ((UP3 ! \"(dst=1) . (port=5) . (port<-33)\") ; ((UP4 ! \"(dst=1) . (port=32) . (port<-21)\") ; ((UP5 ! \"(dst=1) . (port=20) . (port<-18)\") ; ((UP6 ! \"(dst=1) . (port=19) . (port<-28)\") ; ((UP7 ! \"(dst=1) . (port=29) . (port<-57)\") ; C0)))))))"
+  },
+  "Controllers": ["C0"]
+}

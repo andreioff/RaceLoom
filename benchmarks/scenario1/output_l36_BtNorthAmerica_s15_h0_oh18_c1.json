@@ -1,0 +1,72 @@
+{
+  "Switches": {
+    "SW0": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP0",
+          "Policy": "(dst=1) . (port=152) . (port<-52)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW1": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP1",
+          "Policy": "(dst=1) . (port=53) . (port<-36)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW2": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP2",
+          "Policy": "(dst=1) . (port=37) . (port<-27)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW3": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP3",
+          "Policy": "(dst=1) . (port=26) . (port<-24)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW4": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP4",
+          "Policy": "(dst=1) . (port=25) . (port<-50)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW5": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP5",
+          "Policy": "(dst=1) . (port=51) . (port<-151)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW6": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP6",
+          "Policy": "(dst=1) . (port=150) . (port<-153)"
+        }
+      ],
+      "RequestedUpdates": []
+    }
+  },
+  "Links": "(dst=1) . (port=52) . (port<-53) + (dst=1) . (port=36) . (port<-37) + (dst=1) . (port=27) . (port<-26) + (dst=1) . (port=24) . (port<-25) + (dst=1) . (port=50) . (port<-51) + (dst=1) . (port=151) . (port<-150)",
+  "RecursiveVariables": {
+    "C0": "(UP0 ! \"(dst=1) . (port=152) . (port<-52)\") ; ((UP1 ! \"(dst=1) . (port=53) . (port<-36)\") ; ((UP2 ! \"(dst=1) . (port=37) . (port<-27)\") ; ((UP3 ! \"(dst=1) . (port=26) . (port<-24)\") ; ((UP4 ! \"(dst=1) . (port=25) . (port<-50)\") ; ((UP5 ! \"(dst=1) . (port=51) . (port<-151)\") ; ((UP6 ! \"(dst=1) . (port=150) . (port<-153)\") ; C0))))))"
+  },
+  "Controllers": ["C0"]
+}

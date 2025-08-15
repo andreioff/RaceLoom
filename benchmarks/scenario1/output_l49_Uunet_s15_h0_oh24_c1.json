@@ -1,0 +1,90 @@
+{
+  "Switches": {
+    "SW0": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP0",
+          "Policy": "(dst=1) . (port=168) . (port<-22)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW1": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP1",
+          "Policy": "(dst=1) . (port=23) . (port<-95)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW2": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP2",
+          "Policy": "(dst=1) . (port=94) . (port<-93)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW3": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP3",
+          "Policy": "(dst=1) . (port=92) . (port<-33)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW4": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP4",
+          "Policy": "(dst=1) . (port=32) . (port<-30)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW5": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP5",
+          "Policy": "(dst=1) . (port=31) . (port<-70)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW6": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP6",
+          "Policy": "(dst=1) . (port=71) . (port<-143)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW7": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP7",
+          "Policy": "(dst=1) . (port=142) . (port<-144)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW8": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP8",
+          "Policy": "(dst=1) . (port=145) . (port<-169)"
+        }
+      ],
+      "RequestedUpdates": []
+    }
+  },
+  "Links": "(dst=1) . (port=22) . (port<-23) + (dst=1) . (port=95) . (port<-94) + (dst=1) . (port=93) . (port<-92) + (dst=1) . (port=33) . (port<-32) + (dst=1) . (port=30) . (port<-31) + (dst=1) . (port=70) . (port<-71) + (dst=1) . (port=143) . (port<-142) + (dst=1) . (port=144) . (port<-145)",
+  "RecursiveVariables": {
+    "C0": "(UP0 ! \"(dst=1) . (port=168) . (port<-22)\") ; ((UP1 ! \"(dst=1) . (port=23) . (port<-95)\") ; ((UP2 ! \"(dst=1) . (port=94) . (port<-93)\") ; ((UP3 ! \"(dst=1) . (port=92) . (port<-33)\") ; ((UP4 ! \"(dst=1) . (port=32) . (port<-30)\") ; ((UP5 ! \"(dst=1) . (port=31) . (port<-70)\") ; ((UP6 ! \"(dst=1) . (port=71) . (port<-143)\") ; ((UP7 ! \"(dst=1) . (port=142) . (port<-144)\") ; ((UP8 ! \"(dst=1) . (port=145) . (port<-169)\") ; C0))))))))"
+  },
+  "Controllers": ["C0"]
+}

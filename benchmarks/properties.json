@@ -1,0 +1,16 @@
+{
+  "Properties": {
+    "CT->SW": {
+      "Expression": "@Network . (dst=999)",
+      "AllowsPackets": false
+    },
+    "CT->SW<-CT": {
+      "Expression": "@Network . (dst=999)",
+      "AllowsPackets": false
+    },
+    "CT->CT->SW": {
+      "Expression": "@Network . (dst=999)",
+      "AllowsPackets": false
+    }
+  }
+}

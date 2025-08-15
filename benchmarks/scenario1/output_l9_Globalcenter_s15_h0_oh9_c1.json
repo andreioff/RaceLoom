@@ -1,0 +1,27 @@
+{
+  "Switches": {
+    "SW0": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP0",
+          "Policy": "(dst=1) . (port=72) . (port<-0)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW1": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP1",
+          "Policy": "(dst=1) . (port=1) . (port<-73)"
+        }
+      ],
+      "RequestedUpdates": []
+    }
+  },
+  "Links": "(dst=1) . (port=0) . (port<-1)",
+  "RecursiveVariables": {
+    "C0": "(UP0 ! \"(dst=1) . (port=72) . (port<-0)\") ; ((UP1 ! \"(dst=1) . (port=1) . (port<-73)\") ; C0)"
+  },
+  "Controllers": ["C0"]
+}

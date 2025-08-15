@@ -1,0 +1,45 @@
+{
+  "Switches": {
+    "SW0": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP0",
+          "Policy": "(dst=1) . (port=26) . (port<-0)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW1": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP1",
+          "Policy": "(dst=1) . (port=1) . (port<-2)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW2": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP2",
+          "Policy": "(dst=1) . (port=3) . (port<-15)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW3": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP3",
+          "Policy": "(dst=1) . (port=14) . (port<-27)"
+        }
+      ],
+      "RequestedUpdates": []
+    }
+  },
+  "Links": "(dst=1) . (port=0) . (port<-1) + (dst=1) . (port=2) . (port<-3) + (dst=1) . (port=15) . (port<-14)",
+  "RecursiveVariables": {
+    "C0": "(UP0 ! \"(dst=1) . (port=26) . (port<-0)\") ; ((UP1 ! \"(dst=1) . (port=1) . (port<-2)\") ; ((UP2 ! \"(dst=1) . (port=3) . (port<-15)\") ; ((UP3 ! \"(dst=1) . (port=14) . (port<-27)\") ; C0)))"
+  },
+  "Controllers": ["C0"]
+}

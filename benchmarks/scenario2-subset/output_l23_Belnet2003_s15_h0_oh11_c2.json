@@ -1,0 +1,62 @@
+{
+  "Switches": {
+    "SW0": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP0",
+          "Policy": "(dst=1) . (port=78) . (port<-0)"
+        },
+        {
+          "Channel": "UP0",
+          "Policy": "(dst=0) . (port=0) . (port<-78)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW1": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP1",
+          "Policy": "(dst=1) . (port=1) . (port<-6)"
+        },
+        {
+          "Channel": "UP1",
+          "Policy": "(dst=0) . (port=6) . (port<-1)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW2": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP2",
+          "Policy": "(dst=1) . (port=7) . (port<-73)"
+        },
+        {
+          "Channel": "UP2",
+          "Policy": "(dst=0) . (port=73) . (port<-7)"
+        }
+      ],
+      "RequestedUpdates": []
+    },
+    "SW3": {
+      "DirectUpdates": [
+        {
+          "Channel": "UP3",
+          "Policy": "(dst=1) . (port=72) . (port<-79)"
+        },
+        {
+          "Channel": "UP3",
+          "Policy": "(dst=0) . (port=79) . (port<-72)"
+        }
+      ],
+      "RequestedUpdates": []
+    }
+  },
+  "Links": "(dst=1) . (port=0) . (port<-1) + (dst=1) . (port=6) . (port<-7) + (dst=1) . (port=73) . (port<-72) + (dst=0) . (port=72) . (port<-73) + (dst=0) . (port=7) . (port<-6) + (dst=0) . (port=1) . (port<-0)",
+  "RecursiveVariables": {
+    "C0": "(UP0 ! \"(dst=1) . (port=78) . (port<-0)\") ; ((UP1 ! \"(dst=1) . (port=1) . (port<-6)\") ; ((UP2 ! \"(dst=1) . (port=7) . (port<-73)\") ; ((UP3 ! \"(dst=1) . (port=72) . (port<-79)\") ; C0)))",
+    "C1": "(UP3 ! \"(dst=0) . (port=79) . (port<-72)\") ; ((UP2 ! \"(dst=0) . (port=73) . (port<-7)\") ; ((UP1 ! \"(dst=0) . (port=6) . (port<-1)\") ; ((UP0 ! \"(dst=0) . (port=0) . (port<-78)\") ; C1)))"
+  },
+  "Controllers": ["C0", "C1"]
+}

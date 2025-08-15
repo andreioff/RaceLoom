@@ -1,0 +1,78 @@
+python3 main.py -d 5 -t 5 -s pbfs -v ./examples/firewall/firewall.json ./examples/firewall/forwarding_props.json
+
+Generating traces...
+INFO:Generator:---------- Calculating depth 5 ----------
+INFO:Generator:Current layer contains: 1 nodes
+INFO:Generator:Total unique DNK data entries: 1
+INFO:Generator:Cached entries: 0
+INFO:Generator:Remaining inputs for Maude: 1
+INFO:Generator:Passing input to Maude...
+INFO:Generator:Processing Maude result...
+INFO:Generator:---------- Done ----------
+INFO:Generator:---------- Calculating depth 4 ----------
+INFO:Generator:Current layer contains: 5 nodes
+INFO:Generator:Total unique DNK data entries: 5
+INFO:Generator:Cached entries: 0
+INFO:Generator:Remaining inputs for Maude: 5
+INFO:Generator:Passing input to Maude...
+INFO:Generator:Processing Maude result...
+INFO:Generator:---------- Done ----------
+INFO:Generator:---------- Calculating depth 3 ----------
+INFO:Generator:Current layer contains: 10 nodes
+INFO:Generator:Total unique DNK data entries: 10
+INFO:Generator:Cached entries: 4
+INFO:Generator:Remaining inputs for Maude: 6
+INFO:Generator:Passing input to Maude...
+INFO:Generator:Processing Maude result...
+INFO:Generator:---------- Done ----------
+INFO:Generator:---------- Calculating depth 2 ----------
+INFO:Generator:Current layer contains: 14 nodes
+INFO:Generator:Total unique DNK data entries: 12
+INFO:Generator:Cached entries: 4
+INFO:Generator:Remaining inputs for Maude: 8
+INFO:Generator:Passing input to Maude...
+INFO:Generator:Processing Maude result...
+INFO:Generator:---------- Done ----------
+INFO:Generator:---------- Calculating depth 1 ----------
+INFO:Generator:Current layer contains: 24 nodes
+INFO:Generator:Total unique DNK data entries: 13
+INFO:Generator:Cached entries: 8
+INFO:Generator:Remaining inputs for Maude: 5
+INFO:Generator:Passing input to Maude...
+INFO:Generator:Processing Maude result...
+INFO:Generator:---------- Done ----------
+
+Date: 2025-08-15;21:22:04
+SDN model file: firewall.json
+Forwarding properties file: forwarding_props.json
+Trace generation strategy: pbfs
+Depth: 5
+Network model branches: C:2;C-SSH:1;C-UDP:1;BSw:5
+Trace(s) generation time: 0.10849020699970424
+Maude execution time: 0.09401113699914276
+Trace generation cache hits: 16
+Trace generation cache misses: 25
+Generated traces: 42
+
+Analyzing traces...
+
+========== Final Stats ==========
+Date: 2025-08-15;21:22:04
+SDN model file: firewall.json
+Forwarding properties file: forwarding_props.json
+Trace generation strategy: pbfs
+Depth: 5
+Network model branches: C:2;C-SSH:1;C-UDP:1;BSw:5
+Trace(s) generation time: 0.10849020699970424
+Maude execution time: 0.09401113699914276
+Trace generation cache hits: 16
+Trace generation cache misses: 25
+Generated traces: 42
+KATch total execution time: 2.0055779800013624
+KATch total cache hits: 18
+KATch total cache misses: 6
+Harmful races found: 2
+Trace Analyzer execution time: 2.0075057240001115
+Total execution time: 2.1159959309998158
+=================================
+Output written to: ./output/run_2025_08_15T21_22_04

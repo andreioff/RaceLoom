@@ -1,0 +1,78 @@
+python3 main.py -d 5 -t 5 -s pbfs -v ./examples/independent_controllers/independent_controllers.json ./examples/independent_controllers/forwarding_props_no_H3_to_H2.json
+
+Generating traces...
+INFO:Generator:---------- Calculating depth 5 ----------
+INFO:Generator:Current layer contains: 1 nodes
+INFO:Generator:Total unique DNK data entries: 1
+INFO:Generator:Cached entries: 0
+INFO:Generator:Remaining inputs for Maude: 1
+INFO:Generator:Passing input to Maude...
+INFO:Generator:Processing Maude result...
+INFO:Generator:---------- Done ----------
+INFO:Generator:---------- Calculating depth 4 ----------
+INFO:Generator:Current layer contains: 7 nodes
+INFO:Generator:Total unique DNK data entries: 7
+INFO:Generator:Cached entries: 0
+INFO:Generator:Remaining inputs for Maude: 7
+INFO:Generator:Passing input to Maude...
+INFO:Generator:Processing Maude result...
+INFO:Generator:---------- Done ----------
+INFO:Generator:---------- Calculating depth 3 ----------
+INFO:Generator:Current layer contains: 48 nodes
+INFO:Generator:Total unique DNK data entries: 36
+INFO:Generator:Cached entries: 6
+INFO:Generator:Remaining inputs for Maude: 30
+INFO:Generator:Passing input to Maude...
+INFO:Generator:Processing Maude result...
+INFO:Generator:---------- Done ----------
+INFO:Generator:---------- Calculating depth 2 ----------
+INFO:Generator:Current layer contains: 330 nodes
+INFO:Generator:Total unique DNK data entries: 89
+INFO:Generator:Cached entries: 36
+INFO:Generator:Remaining inputs for Maude: 53
+INFO:Generator:Passing input to Maude...
+INFO:Generator:Processing Maude result...
+INFO:Generator:---------- Done ----------
+INFO:Generator:---------- Calculating depth 1 ----------
+INFO:Generator:Current layer contains: 2268 nodes
+INFO:Generator:Total unique DNK data entries: 139
+INFO:Generator:Cached entries: 89
+INFO:Generator:Remaining inputs for Maude: 50
+INFO:Generator:Passing input to Maude...
+INFO:Generator:Processing Maude result...
+INFO:Generator:---------- Done ----------
+
+Date: 2025-08-15;21:25:50
+SDN model file: independent_controllers.json
+Forwarding properties file: forwarding_props_no_H3_to_H2.json
+Trace generation strategy: pbfs
+Depth: 5
+Network model branches: C1:3;C2:3;BSw:7
+Trace(s) generation time: 0.5353041070002291
+Maude execution time: 0.1666543430001184
+Trace generation cache hits: 131
+Trace generation cache misses: 141
+Generated traces: 15588
+
+Analyzing traces...
+
+========== Final Stats ==========
+Date: 2025-08-15;21:25:50
+SDN model file: independent_controllers.json
+Forwarding properties file: forwarding_props_no_H3_to_H2.json
+Trace generation strategy: pbfs
+Depth: 5
+Network model branches: C1:3;C2:3;BSw:7
+Trace(s) generation time: 0.5353041070002291
+Maude execution time: 0.1666543430001184
+Trace generation cache hits: 131
+Trace generation cache misses: 141
+Generated traces: 15588
+KATch total execution time: 36.866437378850605
+KATch total cache hits: 64060
+KATch total cache misses: 104
+Harmful races found: 20
+Trace Analyzer execution time: 37.651426782999806
+Total execution time: 38.186730890000035
+=================================
+Output written to: ./output/run_2025_08_15T21_25_50

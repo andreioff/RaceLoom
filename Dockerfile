@@ -7,6 +7,9 @@ RUN apt-get update && \
     apt-get install -y openjdk-17-jdk && \
     apt-get clean;
 
+# Install Graphviz for visualizing generated traces
+RUN apt-get install -y graphviz 
+
 # Copy KATch folder and test the tool
 COPY bin bin 
 RUN test $(bin/katch/test_katch.sh) = "OK!"
